@@ -71,7 +71,11 @@ func (p *WeatherPlugin) processDay(d *WeatherDay) error {
 }
 
 func (p *WeatherPlugin) weather(loc string) (*WeatherDay, error) {
-	var query string = strings.TrimSpace(loc)
+	query := strings.TrimSpace(loc)
+	if len(query) == 0 {
+		return nil, errors.New("missing location")
+	}
+
 	if _, err := strconv.Atoi(query); err == nil {
 		// It's a number - append ,USA
 		query = query + ",USA"
@@ -97,7 +101,11 @@ func (p *WeatherPlugin) weather(loc string) (*WeatherDay, error) {
 }
 
 func (p *WeatherPlugin) forecast(loc string, count int) (*WeatherResponse, error) {
-	var query string = strings.TrimSpace(loc)
+	query := strings.TrimSpace(loc)
+	if len(query) == 0 {
+		return nil, errors.New("missing location")
+	}
+
 	if _, err := strconv.Atoi(query); err == nil {
 		// It's a number - append ,USA
 		query = query + ",USA"
@@ -132,6 +140,7 @@ func (p *WeatherPlugin) Forecast(e *irc.Event) {
 	weather, err := p.forecast(e.Message, 3)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
+		return
 	}
 	p.Bot.MentionReply(e, "3 day forecast for %s, %s.", weather.City.Name, weather.City.Country)
 	for _, loc := range weather.List {
@@ -146,6 +155,7 @@ func (p *WeatherPlugin) Weather(e *irc.Event) {
 	loc, err := p.weather(e.Message)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
+		return
 	}
 	p.Bot.MentionReply(e,
 		"%s, %s. Currently %.1f. High %.2f, Low %.2f, %s.",
