@@ -142,12 +142,12 @@ func (b *Bot) part(e *irc.Event) {
 
 	if e.Nick != b.Conn.GetNick() {
 		if user, ok := b.Users[e.Nick]; ok {
-			b.removeChannelFromUser(e.Arguments[1], user)
+			b.removeChannelFromUser(e.Arguments[0], user)
 		}
 	} else {
 		// At this point, we left, so clean up that chanel
 		for _, user := range b.Users {
-			b.removeChannelFromUser(e.Arguments[1], user)
+			b.removeChannelFromUser(e.Arguments[0], user)
 		}
 	}
 }
