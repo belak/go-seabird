@@ -1,15 +1,16 @@
 package plugins
 
 import (
-	"../../seabird"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/thoj/go-ircevent"
 	"net/http"
 	"net/url"
 	"strconv"
 	"strings"
+
+	"../../seabird"
+	"github.com/thoj/go-ircevent"
 )
 
 var country_replacements = map[string]string{
@@ -137,7 +138,7 @@ func (p *WeatherPlugin) forecast(loc string, count int) (*WeatherResponse, error
 }
 
 func (p *WeatherPlugin) Forecast(e *irc.Event) {
-	weather, err := p.forecast(e.Message, 3)
+	weather, err := p.forecast(e.Message(), 3)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
@@ -152,7 +153,7 @@ func (p *WeatherPlugin) Forecast(e *irc.Event) {
 }
 
 func (p *WeatherPlugin) Weather(e *irc.Event) {
-	loc, err := p.weather(e.Message)
+	loc, err := p.weather(e.Message())
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return

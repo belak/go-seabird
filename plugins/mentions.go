@@ -1,8 +1,9 @@
 package plugins
 
 import (
-	"../../seabird"
 	"encoding/json"
+
+	"../../seabird"
 	"github.com/thoj/go-ircevent"
 )
 
@@ -20,7 +21,7 @@ func NewMentionsPlugin(b *seabird.Bot, d json.RawMessage) {
 }
 
 func (p *MentionsPlugin) SnackCallback(e *irc.Event) {
-	switch e.Message {
+	switch e.Message() {
 	case "scoobysnack", "scooby snack":
 		p.Bot.Reply(e, "Scooby Dooby Doo!")
 	case "botsnack", "bot snack":

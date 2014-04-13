@@ -29,24 +29,26 @@ func (b *Bot) msg(e *irc.Event) {
 	// TODO: Handle actual mentions?
 
 	// This callback only handles stuff we've added callbacks for
-	if strings.HasPrefix(e.Message, b.Config.Prefix) {
-		msgParts := strings.SplitN(e.Message, " ", 2)
+	msg := e.Arguments[len(e.Arguments)-1]
+	if strings.HasPrefix(msg, b.Config.Prefix) {
+		// NOTE: We need a copy to not mess up other PRIVMSG handlers
+		msgParts := strings.SplitN(msg, " ", 2)
 		switch len(msgParts) {
 		case 2:
-			e.Message = msgParts[1]
+			e.Arguments[len(e.Arguments)-1] = msgParts[1]
 		case 1:
-			e.Message = ""
+			e.Arguments[len(e.Arguments)-1] = ""
 		}
 		cmd := msgParts[0][len(b.Config.Prefix):]
 		if cb, ok := b.Commands[cmd]; ok {
 			cb(e)
 		}
-	} else if strings.HasPrefix(e.Message, nick) {
+	} else if strings.HasPrefix(msg, nick) {
 		// TODO: We may want to ensure at least one space between nick and msg
 		// NOTE: We need a copy to not mess up other PRIVMSG handlers
 		m := *e
-		m.Message = e.Message[len(nick):]
-		m.Message = strings.TrimLeftFunc(m.Message, func(r rune) bool {
+		m.Arguments[len(e.Arguments)-1] = e.Arguments[len(e.Arguments)-1][len(nick):]
+		m.Arguments[len(e.Arguments)-1] = strings.TrimLeftFunc(e.Arguments[len(e.Arguments)-1], func(r rune) bool {
 			// http://weknowgifs.com/wp-content/uploads/2013/03/its-magic-shia-labeouf-gif.gif
 			return unicode.IsPunct(r) || unicode.IsSpace(r)
 		})
@@ -61,12 +63,12 @@ func (b *Bot) join(e *irc.Event) {
 	defer b.UserLock.Unlock()
 
 	if e.Nick != b.Conn.GetNick() {
-		b.addChannelToNick(e.Message, e.Nick)
+		b.addChannelToNick(e.Message(), e.Nick)
 	} else {
 		// For safety, if we join the channel,
 		// make sure we aren't tracking anyone there yet
 		for _, user := range b.Users {
-			b.removeChannelFromUser(e.Message, user)
+			b.removeChannelFromUser(e.Message(), user)
 		}
 	}
 }
@@ -94,10 +96,10 @@ func (b *Bot) nick(e *irc.Event) {
 		return
 	}
 
-	data.CurrentNick = e.Message
+	data.CurrentNick = e.Message()
 
 	delete(b.Users, e.Nick)
-	b.Users[e.Message] = data
+	b.Users[e.Message()] = data
 }
 
 func (b *Bot) addChannelToNick(channel string, nick string) {

@@ -5,13 +5,14 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	"../../seabird"
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
 	"hash"
 	"io"
 	"strings"
+
+	"../../seabird"
 
 	"fmt"
 )
@@ -62,12 +63,12 @@ func (p *GenericAuthPlugin) GetHash() hash.Hash {
 
 func (p *GenericAuthPlugin) join(e *irc.Event) {
 	if e.Nick == p.Bot.Conn.GetNick() {
-		p.Bot.Conn.SendRawf("WHO %s", e.Message)
+		p.Bot.Conn.SendRawf("WHO %s", e.Message())
 	}
 }
 
 func (p *GenericAuthPlugin) Whois(e *irc.Event) {
-	u := p.Bot.GetUser(e.Message)
+	u := p.Bot.GetUser(e.Message())
 	if u.Account != "" {
 		p.Bot.MentionReply(e, "%s is logged in as %s", u.CurrentNick, u.Account)
 	} else {
@@ -83,7 +84,7 @@ func (p *GenericAuthPlugin) Login(e *irc.Event) {
 		return
 	}
 
-	args := strings.SplitN(e.Message, " ", 2)
+	args := strings.SplitN(e.Message(), " ", 2)
 	if len(args) != 2 {
 		p.Bot.MentionReply(e, "usage: !login username password")
 		return
@@ -129,7 +130,7 @@ func (p *GenericAuthPlugin) Register(e *irc.Event) {
 		return
 	}
 
-	args := strings.SplitN(e.Message, " ", 2)
+	args := strings.SplitN(e.Message(), " ", 2)
 	if len(args) < 2 {
 		p.Bot.MentionReply(e, "usage: !register username password")
 		return
@@ -172,7 +173,7 @@ func (p *GenericAuthPlugin) AddPerm(e *irc.Event) {
 		return
 	}
 
-	args := strings.SplitN(e.Message, " ", 2)
+	args := strings.SplitN(e.Message(), " ", 2)
 	if len(args) < 2 {
 		p.Bot.MentionReply(e, "usage: !addperm username perm")
 		return
@@ -215,7 +216,7 @@ func (p *GenericAuthPlugin) DelPerm(e *irc.Event) {
 		return
 	}
 
-	args := strings.SplitN(e.Message, " ", 2)
+	args := strings.SplitN(e.Message(), " ", 2)
 	if len(args) < 2 {
 		p.Bot.MentionReply(e, "usage: !delperm username perm")
 		return

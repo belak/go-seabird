@@ -1,13 +1,14 @@
 package plugins
 
 import (
-	"../../seabird"
 	"encoding/json"
+	"regexp"
+	"strings"
+
+	"../../seabird"
 	"github.com/thoj/go-ircevent"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-	"regexp"
-	"strings"
 )
 
 func init() {
@@ -44,11 +45,11 @@ func (p *KarmaPlugin) GetKarmaFor(name string) *Karma {
 }
 
 func (p *KarmaPlugin) Karma(e *irc.Event) {
-	p.Bot.MentionReply(e, "%s's karma is %d", e.Message, p.GetKarmaFor(e.Message).Score)
+	p.Bot.MentionReply(e, "%s's karma is %d", e.Message(), p.GetKarmaFor(e.Message()).Score)
 }
 
 func (p *KarmaPlugin) Msg(e *irc.Event) {
-	matches := regex.FindAllStringSubmatch(e.Message, -1)
+	matches := regex.FindAllStringSubmatch(e.Message(), -1)
 	if len(matches) > 0 && !p.Bot.Auth.UserCan(p.Bot.GetUser(e.Nick), "karma.deny") {
 		for _, v := range matches {
 			if len(v) < 3 {
