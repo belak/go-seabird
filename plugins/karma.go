@@ -34,7 +34,7 @@ func NewKarmaPlugin(b *seabird.Bot, c json.RawMessage) {
 }
 
 func (p *KarmaPlugin) GetKarmaFor(name string) *Karma {
-	name = strings.ToLower(name)
+	name = strings.Trim(strings.ToLower(name))
 	k := &Karma{}
 	err := p.C.Find(bson.M{"name": name}).One(k)
 	if err != nil {
