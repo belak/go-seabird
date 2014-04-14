@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"regexp"
 	"strings"
+	"unicode"
 
 	"../../seabird"
 	"github.com/thoj/go-ircevent"
@@ -34,7 +35,7 @@ func NewKarmaPlugin(b *seabird.Bot, c json.RawMessage) {
 }
 
 func (p *KarmaPlugin) GetKarmaFor(name string) *Karma {
-	name = strings.Trim(strings.ToLower(name))
+	name = strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
 	k := &Karma{}
 	err := p.C.Find(bson.M{"name": name}).One(k)
 	if err != nil {
