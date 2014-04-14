@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/url"
-	"strconv"
 	"strings"
 
 	"../../seabird"
@@ -45,6 +44,20 @@ type WeatherResponse struct {
 	List []*WeatherDay
 }
 
+// Grabs a lat and lon from a location
+type WeatherLocationResponse struct {
+	Results []struct {
+		Address  string `json:"formatted_address"`
+		Geometry struct {
+			Location struct {
+				Lat float64 `json:"lat"`
+				Lon float64 `json:"lng"`
+			} `json:"location"`
+		} `json:"geometry"`
+	} `json:"results"`
+	Status string `json:"status"`
+}
+
 func init() {
 	seabird.RegisterPlugin("weather", NewWeatherPlugin)
 }
@@ -77,12 +90,19 @@ func (p *WeatherPlugin) weather(loc string) (*WeatherDay, error) {
 		return nil, errors.New("missing location")
 	}
 
-	if _, err := strconv.Atoi(query); err == nil {
-		// It's a number - append ,USA
-		query = query + ",USA"
+	l, err := p.locationQuery(query)
+	if err != nil {
+		return nil, err
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/weather?units=imperial&q=%s", url.QueryEscape(query)))
+	resp, err := http.Get(
+		fmt.Sprintf(
+			"http://api.openweathermap.org/data/2.5/weather?units=imperial&lat=%.4f&lon=%.4f",
+			l.Results[0].Geometry.Location.Lat,
+			l.Results[0].Geometry.Location.Lon,
+		),
+	)
+
 	if err != nil {
 		return nil, errors.New("network error")
 	}
@@ -101,18 +121,54 @@ func (p *WeatherPlugin) weather(loc string) (*WeatherDay, error) {
 	return &weather, nil
 }
 
+func (p *WeatherPlugin) locationQuery(name string) (*WeatherLocationResponse, error) {
+	v := url.Values{}
+	v.Set("address", name)
+	v.Set("sensor", "false")
+
+	u, _ := url.Parse("http://maps.googleapis.com/maps/api/geocode/json")
+	u.RawQuery = v.Encode()
+
+	r, err := http.Get(u.String())
+	if err != nil {
+		return nil, err
+	}
+
+	loc := WeatherLocationResponse{}
+	dec := json.NewDecoder(r.Body)
+	defer r.Body.Close()
+	dec.Decode(&loc)
+
+	if len(loc.Results) == 0 {
+		return nil, errors.New("No location results found")
+	} else if len(loc.Results) > 1 {
+		// TODO: display results
+		return nil, errors.New("More than 1 result")
+	}
+
+	return &loc, nil
+}
+
 func (p *WeatherPlugin) forecast(loc string, count int) (*WeatherResponse, error) {
 	query := strings.TrimSpace(loc)
 	if len(query) == 0 {
 		return nil, errors.New("missing location")
 	}
 
-	if _, err := strconv.Atoi(query); err == nil {
-		// It's a number - append ,USA
-		query = query + ",USA"
+	l, err := p.locationQuery(query)
+	if err != nil {
+		return nil, err
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://api.openweathermap.org/data/2.5/forecast/daily?cnt=%d&units=imperial&q=%s", count, url.QueryEscape(query)))
+	resp, err := http.Get(
+		fmt.Sprintf(
+			"http://api.openweathermap.org/data/2.5/forecast/daily?cnt=%d&units=imperial&lat=%.4f&lon=%.4f",
+			count,
+			l.Results[0].Geometry.Location.Lat,
+			l.Results[0].Geometry.Location.Lon,
+		),
+	)
+
 	if err != nil {
 		return nil, errors.New("network error")
 	}
