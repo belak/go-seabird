@@ -31,7 +31,7 @@ func init() {
 var configFile string
 
 func loadConfig(filename string) *seabird.Config {
-	file, err := os.Open(configFile)
+	file, err := os.Open(filename)
 	if err != nil {
 		log.Fatalln(err)
 	}
