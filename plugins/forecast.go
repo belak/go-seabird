@@ -180,11 +180,11 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 	p.Bot.MentionReply(e, "7 day forecast for %s.", l.Results[0].Address)
 	for _, block := range f.Daily.Data {
 		p.Bot.MentionReply(e,
-			"High %.2f, Low %.2f, %s, %.f%% Humidity",
+			"High %.2f, Low %.2f, %s %.f%% Humidity",
 			block.TemperatureMax,
 			block.TemperatureMin,
 			block.Summary,
-			block.Humidity)
+			block.Humidity*100)
 	}
 }
 
@@ -200,5 +200,5 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 		l.Results[0].Address,
 		f.Currently.Temperature,
 		f.Currently.Summary,
-		f.Currently.Humidity)
+		f.Currently.Humidity*100)
 }
