@@ -8,7 +8,7 @@ import (
 	"net/url"
 	"strings"
 
-	"../../seabird"
+	seabird ".."
 	"github.com/thoj/go-ircevent"
 )
 

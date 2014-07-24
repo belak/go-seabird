@@ -1,7 +1,7 @@
 package plugins
 
 import (
-	"../../seabird"
+	seabird ".."
 
 	"encoding/json"
 	"errors"

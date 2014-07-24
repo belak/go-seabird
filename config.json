@@ -1,0 +1,26 @@
+{
+	"Prefix": "!",
+
+	"Nick": "HelloWorld",
+	"User": "seabird",
+	"Name": "seabird",
+	"Pass": "pass",
+
+	"Host":        "chat.freenode.net:6697",
+	"TLS":         true,
+	"TLSNoVerify": false,
+
+	"Cmds": [
+		"JOIN #encoded"
+	],
+
+	"AuthPlugin": "generic",
+	"AuthPlugins": {
+		"generic": {
+			"Salt": "random"
+		}
+	},
+	"Plugins": {
+		"forecast": "forecast.io api key"
+	}
+}

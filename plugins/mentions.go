@@ -3,7 +3,7 @@ package plugins
 import (
 	"encoding/json"
 
-	"../../seabird"
+	seabird ".."
 	"github.com/thoj/go-ircevent"
 )
 

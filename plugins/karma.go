@@ -6,7 +6,7 @@ import (
 	"strings"
 	"unicode"
 
-	"../../seabird"
+	seabird ".."
 	"github.com/thoj/go-ircevent"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"

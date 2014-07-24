@@ -4,7 +4,7 @@ import (
 	_ "../auth"
 	_ "../plugins"
 
-	"../../seabird"
+	seabird ".."
 
 	"encoding/json"
 	"flag"

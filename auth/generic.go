@@ -12,7 +12,7 @@ import (
 	"io"
 	"strings"
 
-	"../../seabird"
+	".."
 
 	"fmt"
 )
