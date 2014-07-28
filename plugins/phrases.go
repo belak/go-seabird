@@ -3,21 +3,19 @@
 package plugins
 
 import (
-	"github.com/thoj/go-ircevent"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
 	seabird ".."
+	irc "github.com/thoj/go-ircevent"
 
 	"encoding/json"
 	"errors"
 	"log"
 	"strings"
-	"unicode"
 )
 
 // TODO: Replace any special characters with nothing when inserting and querying
-// TODO: Add permissions
 // TODO: Add way to remove old entries
 // TODO: Add way to list old entries
 
@@ -46,11 +44,12 @@ func NewPhrasesPlugin(b *seabird.Bot, d json.RawMessage) {
 	b.RegisterFunction("get", p.GetCallback)
 	b.RegisterFunction("rem", p.RememberCallback)
 
-	b.RegisterFunction("forget", p.ForgetCallback)
-	b.RegisterFunction("list", p.ListCallback)
+	//b.RegisterFunction("forget", p.ForgetCallback)
+	//b.RegisterFunction("list", p.ListCallback)
 }
 
 func (p *PhrasesPlugin) FetchNewest(name string) *Phrase {
+	name = strings.ToLower(name)
 	phrase := &Phrase{}
 	err := p.C.Find(bson.M{"name": name, "active": true}).Sort("-version").One(phrase)
 	if err != nil {
@@ -60,10 +59,13 @@ func (p *PhrasesPlugin) FetchNewest(name string) *Phrase {
 }
 
 func (p *PhrasesPlugin) Update(name string, data string) error {
+	// Grab the original phrase
 	phrase := p.FetchNewest(name)
 	if data == phrase.Data {
 		return errors.New("Phrase already exists with that data")
 	}
+
+	// Update it and reinsert
 	phrase.Version++
 	phrase.Data = data
 	phrase.Active = true
@@ -78,7 +80,7 @@ func (p *PhrasesPlugin) Update(name string, data string) error {
 }
 
 func (p *PhrasesPlugin) GiveCallback(e *irc.Event) {
-	args := strings.Fields(e.Message)
+	args := strings.Fields(e.Message())
 	if len(args) != 2 {
 		return
 	}
@@ -91,7 +93,7 @@ func (p *PhrasesPlugin) GiveCallback(e *irc.Event) {
 }
 
 func (p *PhrasesPlugin) GetCallback(e *irc.Event) {
-	args := strings.Fields(e.Message)
+	args := strings.Fields(e.Message())
 	if len(args) != 1 {
 		return
 	}
@@ -106,14 +108,14 @@ func (p *PhrasesPlugin) GetCallback(e *irc.Event) {
 
 func (p *PhrasesPlugin) RememberCallback(e *irc.Event) {
 	// NOTE: This uses SplitN because there is no FieldsN
-	args := strings.SplitN(e.Message, " ", 2)
+	args := strings.SplitN(e.Message(), " ", 2)
 	if len(args) != 2 {
 		return
 	}
 
 	// Clean up the args just in case
 	for k := range args {
-		args[k] = strings.TrimFunc(args[k], unicode.IsSpace)
+		args[k] = strings.TrimSpace(args[k])
 	}
 
 	err := p.Update(args[0], args[1])

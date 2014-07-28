@@ -6,8 +6,9 @@ import (
 	"strings"
 	"unicode"
 
+	irc "github.com/thoj/go-ircevent"
+
 	seabird ".."
-	"github.com/thoj/go-ircevent"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 )
