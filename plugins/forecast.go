@@ -2,12 +2,11 @@ package plugins
 
 import (
 	seabird ".."
+	"../util"
 
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net/http"
-	"net/url"
 
 	"github.com/thoj/go-ircevent"
 )
@@ -79,66 +78,17 @@ type ForecastResponse struct {
 	APICalls  int
 }
 
-// Grabs a lat and lon from a location
-type LocationResponse struct {
-	Results []struct {
-		Address  string `json:"formatted_address"`
-		Geometry struct {
-			Location struct {
-				Lat float64 `json:"lat"`
-				Lon float64 `json:"lng"`
-			} `json:"location"`
-		} `json:"geometry"`
-	} `json:"results"`
-	Status string `json:"status"`
-}
 
-func (p *ForecastPlugin) locationQuery(name string) (*LocationResponse, error) {
-	v := url.Values{}
-	v.Set("address", name)
-	v.Set("sensor", "false")
-
-	u, _ := url.Parse("http://maps.googleapis.com/maps/api/geocode/json")
-	u.RawQuery = v.Encode()
-
-	r, err := http.Get(u.String())
-	if err != nil {
-		return nil, err
-	}
-
-	loc := LocationResponse{}
-	dec := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	dec.Decode(&loc)
-
-	if len(loc.Results) == 0 {
-		return nil, errors.New("No location results found")
-	} else if len(loc.Results) > 1 {
-		// TODO: display results
-		return nil, errors.New("More than 1 result")
-	}
-
-	return &loc, nil
-}
-
-func (p *ForecastPlugin) forecastQuery(m string) (*ForecastResponse, *LocationResponse, error) {
-	if m == "" {
-		return nil, nil, errors.New("Empty query string")
-	}
-
-	loc, err := p.locationQuery(m)
-	if err != nil {
-		return nil, nil, err
-	}
+func (p *ForecastPlugin) forecastQuery(loc *util.Location) (*ForecastResponse, error) {
 
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
 		p.Key,
-		loc.Results[0].Geometry.Location.Lat,
-		loc.Results[0].Geometry.Location.Lon)
+		loc.Lat,
+		loc.Lon)
 
 	r, err := http.Get(link)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	f := ForecastResponse{}
@@ -146,7 +96,7 @@ func (p *ForecastPlugin) forecastQuery(m string) (*ForecastResponse, *LocationRe
 	defer r.Body.Close()
 	dec.Decode(&f)
 
-	return &f, loc, nil
+	return &f, nil
 }
 
 type ForecastPlugin struct {
@@ -171,14 +121,20 @@ func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
 }
 
 func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
-	f, l, err := p.forecastQuery(e.Message())
+	loc, err := util.FetchLocation(e.Message())
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
 	}
 
-	p.Bot.MentionReply(e, "7 day forecast for %s.", l.Results[0].Address)
-	for _, block := range f.Daily.Data {
+	fc, err := p.forecastQuery(loc)
+	if err != nil {
+		p.Bot.MentionReply(e, "%s", err.Error())
+		return
+	}
+
+	p.Bot.MentionReply(e, "7 day forecast for %s.", loc.Address)
+	for _, block := range fc.Daily.Data {
 		p.Bot.MentionReply(e,
 			"High %.2f, Low %.2f, %s %.f%% Humidity.",
 			block.TemperatureMax,
@@ -189,7 +145,13 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 }
 
 func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
-	f, l, err := p.forecastQuery(e.Message())
+	loc, err := util.FetchLocation(e.Message())
+	if err != nil {
+		p.Bot.MentionReply(e, "%s", err.Error())
+		return
+	}
+
+	fc, err := p.forecastQuery(loc)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
@@ -197,8 +159,8 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 
 	p.Bot.MentionReply(e,
 		"%s. Currently %.1f. %s. %.f%% Humidity.",
-		l.Results[0].Address,
-		f.Currently.Temperature,
-		f.Currently.Summary,
-		f.Currently.Humidity*100)
+		loc.Address,
+		fc.Currently.Temperature,
+		fc.Currently.Summary,
+		fc.Currently.Humidity*100)
 }
