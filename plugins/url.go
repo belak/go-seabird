@@ -34,18 +34,18 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 		go func() {
 			r, err := http.Get(url)
 			if err != nil {
-				continue
+				return
 			}
 			defer r.Body.Close()
 
 			if r.StatusCode != 200 {
-				continue
+				return
 			}
 
 			// We search the first 1K and if a title isn't in there, we deal with it
 			z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
 			if err != nil {
-				continue
+				return
 			}
 
 			// DFS that searches the tree for any node named title then
