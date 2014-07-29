@@ -7,6 +7,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/thoj/go-ircevent"
 )
@@ -14,7 +15,7 @@ import (
 // Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
 // TODO: cleanup
 type DataPoint struct {
-	Time                   float64
+	Time                   int64
 	Summary                string
 	Icon                   string
 	SunriseTime            float64
@@ -133,10 +134,13 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 		return
 	}
 
-	p.Bot.MentionReply(e, "7 day forecast for %s.", loc.Address)
-	for _, block := range fc.Daily.Data {
+	p.Bot.MentionReply(e, "3 day forecast for %s.", loc.Address)
+	for _, block := range fc.Daily.Data[1:4] {
+		day := time.Unix(block.Time, 0).Weekday()
+
 		p.Bot.MentionReply(e,
-			"High %.2f, Low %.2f, %s %.f%% Humidity.",
+			"%s: High %.2f, Low %.2f, %s %.f%% Humidity.",
+			day,
 			block.TemperatureMax,
 			block.TemperatureMin,
 			block.Summary,
