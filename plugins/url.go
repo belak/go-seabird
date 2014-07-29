@@ -31,45 +31,47 @@ func NewURLPlugin(b *seabird.Bot, c json.RawMessage) {
 
 func (p *URLPlugin) Msg(e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Message(), -1) {
-		r, err := http.Get(url)
-		if err != nil {
-			continue
-		}
-		defer r.Body.Close()
+		go func() {
+			r, err := http.Get(url)
+			if err != nil {
+				continue
+			}
+			defer r.Body.Close()
 
-		if r.StatusCode != 200 {
-			continue
-		}
-
-		// We search the first 1K and if a title isn't in there, we deal with it
-		z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
-		if err != nil {
-			continue
-		}
-
-		// DFS that searches the tree for any node named title then
-		// returns the data of that node's first child
-		var f func(*html.Node) (string, bool)
-		f = func(n *html.Node) (string, bool) {
-			// If it's an element and it's a title node, look for a child
-			if n.Type == html.ElementNode && n.Data == "title" {
-				if n.FirstChild != nil {
-					return n.FirstChild.Data, true
-				}
+			if r.StatusCode != 200 {
+				continue
 			}
 
-			// Loop through all nodes and try recursing
-			for c := n.FirstChild; c != nil; c = c.NextSibling {
-				if str, ok := f(c); ok {
-					return str, true
-				}
+			// We search the first 1K and if a title isn't in there, we deal with it
+			z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
+			if err != nil {
+				continue
 			}
 
-			return "", false
-		}
+			// DFS that searches the tree for any node named title then
+			// returns the data of that node's first child
+			var f func(*html.Node) (string, bool)
+			f = func(n *html.Node) (string, bool) {
+				// If it's an element and it's a title node, look for a child
+				if n.Type == html.ElementNode && n.Data == "title" {
+					if n.FirstChild != nil {
+						return n.FirstChild.Data, true
+					}
+				}
 
-		if str, ok := f(z); ok {
-			p.Bot.Reply(e, "Title: %s", str)
-		}
+				// Loop through all nodes and try recursing
+				for c := n.FirstChild; c != nil; c = c.NextSibling {
+					if str, ok := f(c); ok {
+						return str, true
+					}
+				}
+
+				return "", false
+			}
+
+			if str, ok := f(z); ok {
+				p.Bot.Reply(e, "Title: %s", str)
+			}
+		}()
 	}
 }
