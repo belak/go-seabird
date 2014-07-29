@@ -79,7 +79,7 @@ type ForecastResponse struct {
 }
 
 
-func (p *ForecastPlugin) forecastQuery(loc *util.Location) (*ForecastResponse, error) {
+func (p *ForecastPlugin) forecastQuery(loc util.Coordinates) (*ForecastResponse, error) {
 
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
 		p.Key,
@@ -127,7 +127,7 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 		return
 	}
 
-	fc, err := p.forecastQuery(loc)
+	fc, err := p.forecastQuery(loc.Coords)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
@@ -151,7 +151,7 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 		return
 	}
 
-	fc, err := p.forecastQuery(loc)
+	fc, err := p.forecastQuery(loc.Coords)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
