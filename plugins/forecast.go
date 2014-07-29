@@ -172,12 +172,12 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 		day := time.Unix(block.Time, 0).Weekday()
 
 		p.Bot.MentionReply(e,
-			"%s: High %.2f, Low %.2f, %s %.f%% Humidity.",
+			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s.",
 			day,
 			block.TemperatureMax,
 			block.TemperatureMin,
-			block.Summary,
-			block.Humidity*100)
+			block.Humidity*100,
+			block.Summary)
 	}
 
 	p.saveLocation(e, loc)
@@ -198,13 +198,13 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 
 	today := fc.Daily.Data[0]
 	p.Bot.MentionReply(e,
-		"%s. Currently %.1f. High %.2f, Low %.2f. %s. %.f%% Humidity.",
+		"%s. Currently %.1f. High %.2f, Low %.2f, Humidity %.f%%. %s",
 		loc.Address,
 		fc.Currently.Temperature,
 		today.TemperatureMax,
 		today.TemperatureMin,
-		fc.Currently.Summary,
-		fc.Currently.Humidity*100)
+		fc.Currently.Humidity*100,
+		fc.Currently.Summary)
 
 	p.saveLocation(e, loc)
 }
