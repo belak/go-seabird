@@ -161,10 +161,13 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 		return
 	}
 
+	today := fc.Daily.Data[0]
 	p.Bot.MentionReply(e,
-		"%s. Currently %.1f. %s. %.f%% Humidity.",
+		"%s. Currently %.1f. High %.2f, Low %.2f. %s. %.f%% Humidity.",
 		loc.Address,
 		fc.Currently.Temperature,
+		today.TemperatureMax,
+		today.TemperatureMin,
 		fc.Currently.Summary,
 		fc.Currently.Humidity*100)
 }
