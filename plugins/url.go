@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"crypto/tls"
+
 	"code.google.com/p/go.net/html"
 	irc "github.com/thoj/go-ircevent"
 
@@ -32,7 +34,13 @@ func NewURLPlugin(b *seabird.Bot, c json.RawMessage) {
 func (p *URLPlugin) Msg(e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Message(), -1) {
 		go func() {
-			r, err := http.Get(url)
+			// NOTE: This nasty work is done so we ignore invalid ssl certs
+			tr := &http.Transport{
+				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			}
+			client := &http.Client{Transport: tr}
+
+			r, err := client.Get(url)
 			if err != nil {
 				return
 			}
