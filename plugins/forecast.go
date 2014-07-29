@@ -10,7 +10,14 @@ import (
 	"time"
 
 	"github.com/thoj/go-ircevent"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
+
+type LastAddress struct {
+	Nick     string
+	Location util.Location
+}
 
 // Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
 // TODO: cleanup
@@ -102,6 +109,7 @@ func (p *ForecastPlugin) forecastQuery(loc util.Coordinates) (*ForecastResponse,
 type ForecastPlugin struct {
 	Bot *seabird.Bot
 	Key string
+	C   *mgo.Collection
 }
 
 func init() {
@@ -109,7 +117,7 @@ func init() {
 }
 
 func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
-	p := &ForecastPlugin{Bot: b}
+	p := &ForecastPlugin{Bot: b, C: b.DB.C("weather")}
 
 	err := json.Unmarshal(c, &p.Key)
 	if err != nil {
@@ -120,8 +128,30 @@ func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
 	b.RegisterFunction("weather", p.ForecastCurrent)
 }
 
-func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
+func (p *ForecastPlugin) getLocation(e *irc.Event) (*util.Location, error) {
 	loc, err := util.FetchLocation(e.Message())
+	if err == nil {
+		return loc, nil
+	}
+
+	la := &LastAddress{}
+	cerr := p.C.Find(bson.M{"nick": e.Nick}).One(la)
+	if cerr != nil {
+		// intentionally use the err from other call.
+		// not finding the entry in the DB is ok.
+		return nil, err
+	}
+
+	return &la.Location, nil
+}
+
+func (p *ForecastPlugin) saveLocation(e *irc.Event, loc *util.Location) {
+	la := LastAddress{e.Nick, *loc}
+	p.C.Upsert(bson.M{"nick": e.Nick}, la)
+}
+
+func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
+	loc, err := p.getLocation(e)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
@@ -145,10 +175,12 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 			block.Summary,
 			block.Humidity*100)
 	}
+
+	p.saveLocation(e, loc)
 }
 
 func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
-	loc, err := util.FetchLocation(e.Message())
+	loc, err := p.getLocation(e)
 	if err != nil {
 		p.Bot.MentionReply(e, "%s", err.Error())
 		return
@@ -169,4 +201,6 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 		today.TemperatureMin,
 		fc.Currently.Summary,
 		fc.Currently.Humidity*100)
+
+	p.saveLocation(e, loc)
 }
