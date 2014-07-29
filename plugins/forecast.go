@@ -129,9 +129,13 @@ func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
 }
 
 func (p *ForecastPlugin) getLocation(e *irc.Event) (*util.Location, error) {
-	loc, err := util.FetchLocation(e.Message())
+	l := e.Message()
+
+	loc, err := util.FetchLocation(l)
 	if err == nil {
 		return loc, nil
+	} else if l != "" {
+		return nil, err
 	}
 
 	la := &LastAddress{}
