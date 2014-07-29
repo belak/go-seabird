@@ -1,17 +1,18 @@
 package plugins
 
 import (
-	seabird ".."
-	"../util"
-
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/thoj/go-ircevent"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
+
+	seabird ".."
+	"../util"
 )
 
 type LastAddress struct {
@@ -87,7 +88,6 @@ type ForecastResponse struct {
 }
 
 func (p *ForecastPlugin) forecastQuery(loc util.Coordinates) (*ForecastResponse, error) {
-
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
 		p.Key,
 		loc.Lat,
@@ -129,7 +129,7 @@ func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
 }
 
 func (p *ForecastPlugin) getLocation(e *irc.Event) (*util.Location, error) {
-	l := e.Message()
+	l := strings.TrimSpace(e.Message())
 
 	loc, err := util.FetchLocation(l)
 	if err == nil {
@@ -172,7 +172,7 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 		day := time.Unix(block.Time, 0).Weekday()
 
 		p.Bot.MentionReply(e,
-			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s.",
+			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
 			block.TemperatureMin,
@@ -198,7 +198,7 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 
 	today := fc.Daily.Data[0]
 	p.Bot.MentionReply(e,
-		"%s. Currently %.1f. High %.2f, Low %.2f, Humidity %.f%%. %s",
+		"%s. Currently %.1f. High %.2f, Low %.2f, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,
 		today.TemperatureMax,
