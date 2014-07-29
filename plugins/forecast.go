@@ -116,8 +116,8 @@ func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
 		fmt.Println(err)
 	}
 
-	b.RegisterFunction("fforecast", p.ForecastDaily)
-	b.RegisterFunction("fweather", p.ForecastCurrent)
+	b.RegisterFunction("forecast", p.ForecastDaily)
+	b.RegisterFunction("weather", p.ForecastCurrent)
 }
 
 func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
