@@ -1,10 +1,10 @@
 package util
 
 import (
-	"errors"
 	"encoding/json"
-	"net/url"
+	"errors"
 	"net/http"
+	"net/url"
 )
 
 type LocationResult struct {
@@ -30,11 +30,11 @@ type Coordinates struct {
 
 type Location struct {
 	Address string
-	Coords Coordinates
+	Coords  Coordinates
 }
 
 func FetchLocation(where string) (*Location, error) {
-	if where == ""{
+	if where == "" {
 		return nil, errors.New("Empty query string")
 	}
 
@@ -62,14 +62,13 @@ func FetchLocation(where string) (*Location, error) {
 		return nil, errors.New("More than 1 result")
 	}
 
-	coords := Coordinates {
+	coords := Coordinates{
 		Lat: loc.Results[0].Geometry.Location.Lat,
 		Lon: loc.Results[0].Geometry.Location.Lon}
 
 	ret := Location{
 		Address: loc.Results[0].Address,
-		Coords: coords}
+		Coords:  coords}
 
 	return &ret, nil
 }
-

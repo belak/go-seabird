@@ -79,7 +79,6 @@ type ForecastResponse struct {
 	APICalls  int
 }
 
-
 func (p *ForecastPlugin) forecastQuery(loc util.Coordinates) (*ForecastResponse, error) {
 
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
