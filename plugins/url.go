@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"regexp"
+	"strings"
 
 	"crypto/tls"
 
@@ -63,7 +64,11 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 				// If it's an element and it's a title node, look for a child
 				if n.Type == html.ElementNode && n.Data == "title" {
 					if n.FirstChild != nil {
-						return n.FirstChild.Data, true
+						t := strings.TrimSpace(n.FirstChild.Data)
+						// XXX assume we've found "the" title and quit?
+						if t != "" {
+							return t, true
+						}
 					}
 				}
 
