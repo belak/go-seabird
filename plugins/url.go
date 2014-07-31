@@ -70,7 +70,7 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 				if n.Type == html.ElementNode && n.Data == "title" {
 					if n.FirstChild != nil {
 						t := n.FirstChild.Data
-						t = string(titleRegex.ReplaceAll([]byte(t), []byte(" ")))
+						t = titleRegex.ReplaceAllString(t, " ")
 						t = strings.TrimSpace(t)
 
 						if t != "" {
