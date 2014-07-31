@@ -26,6 +26,7 @@ type URLPlugin struct {
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
 // and I don't know if it's worth the time to make it better.
 var urlRegex = regexp.MustCompile(`https?://[^ ]+`)
+var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
 
 func NewURLPlugin(b *seabird.Bot, c json.RawMessage) {
 	p := &URLPlugin{b}
@@ -64,13 +65,9 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 				// If it's an element and it's a title node, look for a child
 				if n.Type == html.ElementNode && n.Data == "title" {
 					if n.FirstChild != nil {
-						t := strings.TrimSpace(n.FirstChild.Data)
-						t = strings.Map(func(r rune) rune {
-							if r == '\r' || r == '\n' {
-								return -1
-							}
-							return r
-						}, t)
+						t := n.FirstChild.Data
+						t = string(titleRegex.ReplaceAll([]byte(t), []byte(" ")))
+						t = strings.TrimSpace(t)
 
 						if t != "" {
 							return t, true
