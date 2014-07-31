@@ -65,6 +65,13 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 				if n.Type == html.ElementNode && n.Data == "title" {
 					if n.FirstChild != nil {
 						t := strings.TrimSpace(n.FirstChild.Data)
+						t = strings.Map(func(r rune) rune {
+							if r == '\r' || r == '\n' {
+								return -1
+							}
+							return r
+						}, t)
+
 						// XXX assume we've found "the" title and quit?
 						if t != "" {
 							return t, true
