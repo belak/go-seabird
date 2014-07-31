@@ -33,7 +33,7 @@ func NewURLPlugin(b *seabird.Bot, c json.RawMessage) {
 
 func (p *URLPlugin) Msg(e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Message(), -1) {
-		go func() {
+		go func(url string) {
 			// NOTE: This nasty work is done so we ignore invalid ssl certs
 			tr := &http.Transport{
 				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -80,6 +80,6 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 			if str, ok := f(z); ok {
 				p.Bot.Reply(e, "Title: %s", str)
 			}
-		}()
+		}(url)
 	}
 }
