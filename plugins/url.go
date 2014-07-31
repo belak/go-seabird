@@ -72,9 +72,10 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 							return r
 						}, t)
 
-						// XXX assume we've found "the" title and quit?
 						if t != "" {
 							return t, true
+						} else {
+							return "", false
 						}
 					}
 				}
