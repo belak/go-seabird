@@ -1,12 +1,12 @@
 package plugins
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"io"
 	"net/http"
 	"regexp"
-
-	"crypto/tls"
+	"time"
 
 	"code.google.com/p/go.net/html"
 	irc "github.com/thoj/go-ircevent"
@@ -35,10 +35,12 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Message(), -1) {
 		go func(url string) {
 			// NOTE: This nasty work is done so we ignore invalid ssl certs
-			tr := &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+			client := &http.Client{
+				Transport: &http.Transport{
+					TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+				},
+				Timeout: 5 * time.Second,
 			}
-			client := &http.Client{Transport: tr}
 
 			r, err := client.Get(url)
 			if err != nil {
