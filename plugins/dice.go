@@ -62,6 +62,6 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 	}
 
 	if output.Len() > 0 {
-		p.Bot.Reply(e, output.String())
+		p.Bot.MentionReply(e, output.String())
 	}
 }
