@@ -4,11 +4,12 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
+	"time"
 
 	"crypto/tls"
-
 	"code.google.com/p/go.net/html"
 	irc "github.com/thoj/go-ircevent"
 
@@ -31,17 +32,20 @@ var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
 func NewURLPlugin(b *seabird.Bot, c json.RawMessage) {
 	p := &URLPlugin{b}
 	b.RegisterCallback("PRIVMSG", p.Msg)
+	b.RegisterFunction("down", p.IsItDown)
+}
+
+// NOTE: This nasty work is done so we ignore invalid ssl certs
+var client = &http.Client{
+	Transport: &http.Transport{
+		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+	},
+	Timeout: 5 * time.Second,
 }
 
 func (p *URLPlugin) Msg(e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Message(), -1) {
-		go func() {
-			// NOTE: This nasty work is done so we ignore invalid ssl certs
-			tr := &http.Transport{
-				TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-			}
-			client := &http.Client{Transport: tr}
-
+		go func(url string) {
 			r, err := client.Get(url)
 			if err != nil {
 				return
@@ -90,6 +94,28 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 			if str, ok := f(z); ok {
 				p.Bot.Reply(e, "Title: %s", str)
 			}
-		}()
+		}(url)
 	}
+}
+
+func (p *URLPlugin) IsItDown(e *irc.Event) {
+	go func() {
+		url, err := url.Parse(strings.TrimSpace(e.Message()))
+		if err != nil {
+			p.Bot.Reply(e, "URL doesn't appear to be valid")
+			return
+		}
+
+		if url.Scheme == "" {
+			url.Scheme = "http"
+		}
+
+		r, err := client.Head(url.String())
+		if err != nil || r.StatusCode != 200 {
+			p.Bot.Reply(e, "It's not just you! %s looks down from here.", url)
+			return
+		}
+
+		p.Bot.Reply(e, "It's just you! %s looks up from here!", url)
+	}()
 }
