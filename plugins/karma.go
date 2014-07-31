@@ -51,6 +51,10 @@ func (p *KarmaPlugin) Karma(e *irc.Event) {
 }
 
 func (p *KarmaPlugin) Msg(e *irc.Event) {
+	if len(e.Arguments) < 2 || e.Arguments[0][0] != '#' {
+		return
+	}
+
 	matches := regex.FindAllStringSubmatch(e.Message(), -1)
 	if len(matches) > 0 && !p.Bot.Auth.UserCan(p.Bot.GetUser(e.Nick), "karma.deny") {
 		for _, v := range matches {
