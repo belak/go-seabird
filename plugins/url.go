@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"io"
 	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
@@ -89,13 +90,23 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 }
 
 func (p *URLPlugin) IsItDown(e *irc.Event) {
-	url := strings.TrimSpace(e.Message())
+	go func() {
+		url, err := url.Parse(strings.TrimSpace(e.Message()))
+		if err != nil {
+			p.Bot.Reply(e, "URL doesn't appear to be valid")
+			return
+		}
 
-	r, err := client.Head(url)
-	if err != nil || r.StatusCode != 200 {
-		p.Bot.Reply(e, "It's not just you! %s looks down from here.", url)
-		return
-	}
+		if url.Scheme == "" {
+			url.Scheme = "http"
+		}
 
-	p.Bot.Reply(e, "It's just you! %s looks up from here!", url)
+		r, err := client.Head(url.String())
+		if err != nil || r.StatusCode != 200 {
+			p.Bot.Reply(e, "It's not just you! %s looks down from here.", url)
+			return
+		}
+
+		p.Bot.Reply(e, "It's just you! %s looks up from here!", url)
+	}()
 }
