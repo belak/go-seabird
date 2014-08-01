@@ -1,12 +1,12 @@
 package plugins
 
 import (
-	"bytes"
 	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
 	"strconv"
+	"strings"
 
 	irc "github.com/thoj/go-ircevent"
 
@@ -29,9 +29,9 @@ func NewDicePlugin(b *seabird.Bot, c json.RawMessage) {
 }
 
 func (p *DicePlugin) Msg(e *irc.Event) {
-	var output bytes.Buffer
+	var rolls []string
+	totalCount := 0
 
-	first := true
 	matches := diceRe.FindAllStringSubmatch(e.Message(), -1)
 	for _, match := range matches {
 		if len(match) != 3 {
@@ -39,29 +39,41 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 		}
 
 		// Grab the count, otherwise 1
-		count, err := strconv.Atoi(match[1])
-		if err != nil {
+		count, _ := strconv.Atoi(match[1])
+
+		// Clamp count
+		if count < 1 {
 			count = 1
+		}
+
+		totalCount += count
+		if totalCount > 100 {
+			p.Bot.MentionReply(e, "You cannot request more than 100 dice")
+			return
 		}
 
 		// How big is the die?
 		size, _ := strconv.Atoi(match[2])
 
-		if !first {
-			output.WriteString(" ")
+		if size > 100 {
+			p.Bot.MentionReply(e, "You cannot request dice larger than 100")
+			return
 		}
 
-		output.WriteString(fmt.Sprintf("%dd%d: %d", count, size, rand.Intn(size)+1))
-		for i := 1; i < count; i++ {
-			output.WriteString(fmt.Sprintf(", %d", rand.Intn(size)+1))
+		// Clamp size
+		if size < 1 {
+			size = 1
 		}
 
-		if first {
-			first = !first
+		var dice []string
+		for i := 0; i < count; i++ {
+			dice = append(dice, fmt.Sprintf("%d", rand.Intn(size)+1))
 		}
+
+		rolls = append(rolls, fmt.Sprintf("%dd%d: %s", count, size, strings.Join(dice, ", ")))
 	}
 
-	if output.Len() > 0 {
-		p.Bot.MentionReply(e, output.String())
+	if len(rolls) > 0 {
+		p.Bot.MentionReply(e, "%s", strings.Join(rolls, " "))
 	}
 }
