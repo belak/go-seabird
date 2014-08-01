@@ -43,7 +43,8 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 
 		// Clamp count
 		if count < 1 {
-			count = 1
+			p.Bot.MentionReply(e, "You cannot request a non-positive number of rolls")
+			return
 		}
 
 		totalCount += count
@@ -62,7 +63,8 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 
 		// Clamp size
 		if size < 1 {
-			size = 1
+			p.Bot.MentionReply(e, "You cannot request a non-positive die size")
+			return
 		}
 
 		var dice []string
