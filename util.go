@@ -1,4 +1,4 @@
-package util
+package seabird
 
 import (
 	"encoding/json"

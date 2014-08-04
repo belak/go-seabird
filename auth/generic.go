@@ -1,20 +1,19 @@
+// +build ignore
+
 package auth
 
 import (
-	"github.com/thoj/go-ircevent"
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
-
 	"crypto/md5"
 	"encoding/hex"
 	"encoding/json"
+	"fmt"
 	"hash"
 	"io"
 	"strings"
 
-	".."
-
-	"fmt"
+	"github.com/thoj/go-ircevent"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 // TODO: Log actions

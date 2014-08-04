@@ -14,12 +14,6 @@
 		"JOIN #encoded"
 	],
 
-	"AuthPlugin": "generic",
-	"AuthPlugins": {
-		"generic": {
-			"Salt": "random"
-		}
-	},
 	"Plugins": {
 		"forecast": "forecast.io api key"
 	}

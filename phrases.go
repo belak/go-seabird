@@ -1,12 +1,11 @@
 // +build ignore
 
-package plugins
+package seabird
 
 import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	seabird ".."
 	irc "github.com/thoj/go-ircevent"
 
 	"encoding/json"

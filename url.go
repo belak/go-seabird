@@ -1,7 +1,7 @@
-package plugins
+package seabird
 
 import (
-	"encoding/json"
+	"crypto/tls"
 	"io"
 	"net/http"
 	"net/url"
@@ -9,31 +9,14 @@ import (
 	"strings"
 	"time"
 
-	"crypto/tls"
+	"bitbucket.org/belak/irc"
 	"code.google.com/p/go.net/html"
-	irc "github.com/thoj/go-ircevent"
-
-	seabird ".."
 )
-
-func init() {
-	seabird.RegisterPlugin("url", NewURLPlugin)
-}
-
-type URLPlugin struct {
-	Bot *seabird.Bot
-}
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
 // and I don't know if it's worth the time to make it better.
 var urlRegex = regexp.MustCompile(`https?://[^ ]+`)
 var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
-
-func NewURLPlugin(b *seabird.Bot, c json.RawMessage) {
-	p := &URLPlugin{b}
-	b.RegisterCallback("PRIVMSG", p.Msg)
-	b.RegisterFunction("down", p.IsItDown)
-}
 
 // NOTE: This nasty work is done so we ignore invalid ssl certs
 var client = &http.Client{
@@ -43,8 +26,8 @@ var client = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
-func (p *URLPlugin) Msg(e *irc.Event) {
-	for _, url := range urlRegex.FindAllString(e.Message(), -1) {
+func URLHandler(c *irc.Client, e *irc.Event) {
+	for _, url := range urlRegex.FindAllString(e.Trailing(), -1) {
 		go func(url string) {
 			r, err := client.Get(url)
 			if err != nil {
@@ -92,17 +75,17 @@ func (p *URLPlugin) Msg(e *irc.Event) {
 			}
 
 			if str, ok := f(z); ok {
-				p.Bot.Reply(e, "Title: %s", str)
+				c.Reply(e, "Title: %s", str)
 			}
 		}(url)
 	}
 }
 
-func (p *URLPlugin) IsItDown(e *irc.Event) {
+func IsItDown(c *irc.Client, e *irc.Event) {
 	go func() {
-		url, err := url.Parse(strings.TrimSpace(e.Message()))
+		url, err := url.Parse(strings.TrimSpace(e.Trailing()))
 		if err != nil {
-			p.Bot.Reply(e, "URL doesn't appear to be valid")
+			c.Reply(e, "URL doesn't appear to be valid")
 			return
 		}
 
@@ -112,10 +95,10 @@ func (p *URLPlugin) IsItDown(e *irc.Event) {
 
 		r, err := client.Head(url.String())
 		if err != nil || r.StatusCode != 200 {
-			p.Bot.Reply(e, "It's not just you! %s looks down from here.", url)
+			c.Reply(e, "It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		p.Bot.Reply(e, "It's just you! %s looks up from here!", url)
+		c.Reply(e, "It's just you! %s looks up from here!", url)
 	}()
 }
