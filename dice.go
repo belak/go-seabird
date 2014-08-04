@@ -1,38 +1,22 @@
-package plugins
+package seabird
 
 import (
-	"encoding/json"
 	"fmt"
 	"math/rand"
 	"regexp"
 	"strconv"
 	"strings"
 
-	irc "github.com/thoj/go-ircevent"
-
-	seabird ".."
+	"bitbucket.org/belak/irc"
 )
-
-func init() {
-	seabird.RegisterPlugin("dice", NewDicePlugin)
-}
-
-type DicePlugin struct {
-	Bot *seabird.Bot
-}
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-func NewDicePlugin(b *seabird.Bot, c json.RawMessage) {
-	p := &DicePlugin{b}
-	b.RegisterCallback("PRIVMSG", p.Msg)
-}
-
-func (p *DicePlugin) Msg(e *irc.Event) {
+func DiceHandler(c *irc.Client, e *irc.Event) {
 	var rolls []string
 	totalCount := 0
 
-	matches := diceRe.FindAllStringSubmatch(e.Message(), -1)
+	matches := diceRe.FindAllStringSubmatch(e.Trailing(), -1)
 	for _, match := range matches {
 		if len(match) != 3 {
 			continue
@@ -43,13 +27,13 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 
 		// Clamp count
 		if count < 0 {
-			p.Bot.MentionReply(e, "You cannot request a negative number of rolls")
+			c.MentionReply(e, "You cannot request a negative number of rolls")
 			return
 		}
 
 		totalCount += count
 		if totalCount > 100 {
-			p.Bot.MentionReply(e, "You cannot request more than 100 dice")
+			c.MentionReply(e, "You cannot request more than 100 dice")
 			return
 		}
 
@@ -57,13 +41,13 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 		size, _ := strconv.Atoi(match[2])
 
 		if size > 100 {
-			p.Bot.MentionReply(e, "You cannot request dice larger than 100")
+			c.MentionReply(e, "You cannot request dice larger than 100")
 			return
 		}
 
 		// Clamp size
 		if size < 1 {
-			p.Bot.MentionReply(e, "You cannot request a non-positive die size")
+			c.MentionReply(e, "You cannot request a non-positive die size")
 			return
 		}
 
@@ -76,6 +60,6 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 	}
 
 	if len(rolls) > 0 {
-		p.Bot.MentionReply(e, "%s", strings.Join(rolls, " "))
+		c.MentionReply(e, "%s", strings.Join(rolls, " "))
 	}
 }

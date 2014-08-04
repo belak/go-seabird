@@ -3,19 +3,13 @@
 package auth
 
 import (
+	"encoding/json"
+	"fmt"
+	"strings"
+
 	"github.com/thoj/go-ircevent"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-
-	"../seabird"
-	"crypto/md5"
-	"encoding/hex"
-	"encoding/json"
-	"hash"
-	"io"
-	"strings"
-
-	"fmt"
 )
 
 // TODO: Log actions

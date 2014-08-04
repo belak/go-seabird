@@ -1,4 +1,4 @@
-package plugins
+package seabird
 
 import (
 	"encoding/json"
@@ -7,17 +7,14 @@ import (
 	"strings"
 	"time"
 
-	"github.com/thoj/go-ircevent"
+	"bitbucket.org/belak/irc"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
-
-	seabird ".."
-	"../util"
 )
 
 type LastAddress struct {
 	Nick     string
-	Location util.Location
+	Location Location
 }
 
 // Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
@@ -87,9 +84,14 @@ type ForecastResponse struct {
 	APICalls  int
 }
 
-func (p *ForecastPlugin) forecastQuery(loc util.Coordinates) (*ForecastResponse, error) {
+type ForecastHandler struct {
+	key string
+	c   *mgo.Collection
+}
+
+func (h *ForecastHandler) forecastQuery(loc Coordinates) (*ForecastResponse, error) {
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
-		p.Key,
+		h.key,
 		loc.Lat,
 		loc.Lon)
 
@@ -106,32 +108,25 @@ func (p *ForecastPlugin) forecastQuery(loc util.Coordinates) (*ForecastResponse,
 	return &f, nil
 }
 
-type ForecastPlugin struct {
-	Bot *seabird.Bot
-	Key string
-	C   *mgo.Collection
-}
-
-func init() {
-	seabird.RegisterPlugin("forecast", NewForecastPlugin)
-}
-
-func NewForecastPlugin(b *seabird.Bot, c json.RawMessage) {
-	p := &ForecastPlugin{Bot: b, C: b.DB.C("weather")}
-
-	err := json.Unmarshal(c, &p.Key)
-	if err != nil {
-		fmt.Println(err)
+func NewForecastHandler(key string, c *mgo.Collection) *ForecastHandler {
+	return &ForecastHandler{
+		key,
+		c,
 	}
-
-	b.RegisterFunction("forecast", p.ForecastDaily)
-	b.RegisterFunction("weather", p.ForecastCurrent)
 }
 
-func (p *ForecastPlugin) getLocation(e *irc.Event) (*util.Location, error) {
-	l := strings.TrimSpace(e.Message())
+func (h *ForecastHandler) HandleEvent(c *irc.Client, e *irc.Event) {
+	if e.Command == "forecast" {
+		h.ForecastDaily(c, e)
+	} else if e.Command == "weather" {
+		h.ForecastCurrent(c, e)
+	}
+}
 
-	loc, err := util.FetchLocation(l)
+func (h *ForecastHandler) getLocation(e *irc.Event) (*Location, error) {
+	l := strings.TrimSpace(e.Trailing())
+
+	loc, err := FetchLocation(l)
 	if err == nil {
 		return loc, nil
 	} else if l != "" {
@@ -139,7 +134,7 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*util.Location, error) {
 	}
 
 	la := &LastAddress{}
-	cerr := p.C.Find(bson.M{"nick": e.Nick}).One(la)
+	cerr := h.c.Find(bson.M{"nick": e.Identity.Nick}).One(la)
 	if cerr != nil {
 		// intentionally use the err from other call.
 		// not finding the entry in the DB is ok.
@@ -149,29 +144,29 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*util.Location, error) {
 	return &la.Location, nil
 }
 
-func (p *ForecastPlugin) saveLocation(e *irc.Event, loc *util.Location) {
-	la := LastAddress{e.Nick, *loc}
-	p.C.Upsert(bson.M{"nick": e.Nick}, la)
+func (h *ForecastHandler) saveLocation(e *irc.Event, loc *Location) {
+	la := LastAddress{e.Identity.Nick, *loc}
+	h.c.Upsert(bson.M{"nick": e.Identity.Nick}, la)
 }
 
-func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
-	loc, err := p.getLocation(e)
+func (h *ForecastHandler) ForecastDaily(c *irc.Client, e *irc.Event) {
+	loc, err := h.getLocation(e)
 	if err != nil {
-		p.Bot.MentionReply(e, "%s", err.Error())
+		c.MentionReply(e, "%s", err.Error())
 		return
 	}
 
-	fc, err := p.forecastQuery(loc.Coords)
+	fc, err := h.forecastQuery(loc.Coords)
 	if err != nil {
-		p.Bot.MentionReply(e, "%s", err.Error())
+		c.MentionReply(e, "%s", err.Error())
 		return
 	}
 
-	p.Bot.MentionReply(e, "3 day forecast for %s.", loc.Address)
+	c.MentionReply(e, "3 day forecast for %s.", loc.Address)
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(block.Time, 0).Weekday()
 
-		p.Bot.MentionReply(e,
+		c.MentionReply(e,
 			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
@@ -180,24 +175,24 @@ func (p *ForecastPlugin) ForecastDaily(e *irc.Event) {
 			block.Summary)
 	}
 
-	p.saveLocation(e, loc)
+	h.saveLocation(e, loc)
 }
 
-func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
-	loc, err := p.getLocation(e)
+func (h *ForecastHandler) ForecastCurrent(c *irc.Client, e *irc.Event) {
+	loc, err := h.getLocation(e)
 	if err != nil {
-		p.Bot.MentionReply(e, "%s", err.Error())
+		c.MentionReply(e, "%s", err.Error())
 		return
 	}
 
-	fc, err := p.forecastQuery(loc.Coords)
+	fc, err := h.forecastQuery(loc.Coords)
 	if err != nil {
-		p.Bot.MentionReply(e, "%s", err.Error())
+		c.MentionReply(e, "%s", err.Error())
 		return
 	}
 
 	today := fc.Daily.Data[0]
-	p.Bot.MentionReply(e,
+	c.MentionReply(e,
 		"%s. Currently %.1f. High %.2f, Low %.2f, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,
@@ -206,5 +201,5 @@ func (p *ForecastPlugin) ForecastCurrent(e *irc.Event) {
 		fc.Currently.Humidity*100,
 		fc.Currently.Summary)
 
-	p.saveLocation(e, loc)
+	h.saveLocation(e, loc)
 }
