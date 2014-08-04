@@ -101,6 +101,9 @@ func main() {
 	// Dice rolling
 	ment.EventFunc(seabird.DiceHandler)
 
+	// Mentions
+	ment.EventFunc(seabird.MentionsHandler)
+
 	// Add karma
 	k := seabird.NewKarmaHandler(db.C("karma"))
 	cmds.EventFunc("karma", k.Karma)
