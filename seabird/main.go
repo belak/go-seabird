@@ -12,7 +12,7 @@ import (
 
 	"labix.org/v2/mgo"
 
-	"bitbucket.org/belak/go-seabird"
+	"bitbucket.org/belak/seabird"
 	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/irc/mux"
 )
