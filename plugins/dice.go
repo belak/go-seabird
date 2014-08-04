@@ -42,8 +42,8 @@ func (p *DicePlugin) Msg(e *irc.Event) {
 		count, _ := strconv.Atoi(match[1])
 
 		// Clamp count
-		if count < 1 {
-			p.Bot.MentionReply(e, "You cannot request a non-positive number of rolls")
+		if count < 0 {
+			p.Bot.MentionReply(e, "You cannot request a negative number of rolls")
 			return
 		}
 
