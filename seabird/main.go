@@ -12,9 +12,9 @@ import (
 
 	"labix.org/v2/mgo"
 
-	"bitbucket.org/belak/seabird"
 	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/irc/mux"
+	"bitbucket.org/belak/seabird"
 )
 
 type Config struct {
@@ -130,8 +130,12 @@ func main() {
 			InsecureSkipVerify: config.TLSNoVerify,
 		}
 
-		c.DialTLS(config.Host, conf)
+		err = c.DialTLS(config.Host, conf)
 	} else {
-		c.Dial(config.Host)
+		err = c.Dial(config.Host)
+	}
+
+	if err != nil {
+		fmt.Println(err)
 	}
 }
