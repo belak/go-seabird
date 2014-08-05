@@ -62,6 +62,11 @@ func (h *KarmaHandler) Msg(c *irc.Client, e *irc.Event) {
 			}
 
 			name := strings.ToLower(v[1])
+			if name == e.Identity.Nick {
+				// penalize self-karma
+				diff = -1
+			}
+
 			h.c.Upsert(bson.M{"name": name}, bson.M{"$inc": bson.M{"score": diff}})
 			c.Reply(e, "%s's karma is now %d", v[1], h.GetKarmaFor(name).Score)
 		}
