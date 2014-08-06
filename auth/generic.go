@@ -71,6 +71,7 @@ func (au *GenericAuth) loginHandler(c *irc.Client, e *irc.Event) {
 	if cnt > 0 {
 		u.Account = args[0]
 		au.Client.MentionReply(e, "you are now logged in as %s", args[0])
+		au.Users[u.CurrentNick] = u
 	} else {
 		au.Client.MentionReply(e, "login failed")
 	}
