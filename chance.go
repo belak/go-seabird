@@ -28,10 +28,10 @@ func CoinKickHandler(c *irc.Client, e *irc.Event) {
 
 	if guess == -1 {
 		c.Writef(
-			"KICK %s %s :%s",
+			"KICK %s %s :That's not a valid coin side. Options are: %s",
 			e.Args[0],
 			e.Identity.Nick,
-			"That's not a valid coin side. Options are: %s", strings.Join(coinNames, ", "),
+			strings.Join(coinNames, ", "),
 		)
 		return
 	}
