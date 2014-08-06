@@ -234,11 +234,11 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string)
 	au.trackUsers()
 
 	cmds := mux.NewCommandMux(prefix)
-	cmds.EventFunc("login", au.loginHandler)
-	cmds.EventFunc("logout", au.logoutHandler)
-	cmds.EventFunc("register", au.registerHandler)
-	cmds.EventFunc("addperm", au.addPermHandler)
-	cmds.EventFunc("delperm", au.delPermHandler)
+	cmds.PrivateFunc("login", au.loginHandler)
+	cmds.PrivateFunc("logout", au.logoutHandler)
+	cmds.PrivateFunc("register", au.registerHandler)
+	cmds.PrivateFunc("addperm", au.addPermHandler)
+	cmds.PrivateFunc("delperm", au.delPermHandler)
 	// TODO: !checkperms <user>
 	c.Event("PRIVMSG", cmds)
 
