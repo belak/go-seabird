@@ -94,7 +94,7 @@ func main() {
 
 	// Chance
 	cmds.ChannelFunc("coin", seabird.CoinKickHandler)
-	cmds.ChannelFunc("roulette", seabird.NewRouletteHandler(6))
+	cmds.Channel("roulette", seabird.NewRouletteHandler(6))
 
 	// URL stuff
 	c.EventFunc("PRIVMSG", seabird.URLHandler)

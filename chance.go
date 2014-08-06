@@ -21,13 +21,12 @@ func NewRouletteHandler(gunSize int) *RouletteHandler {
 	return &RouletteHandler{gunSize, 0}
 }
 
-func (h *RouletteHandler) HandleEvent(c *Client, e *Event) {
+func (h *RouletteHandler) HandleEvent(c *irc.Client, e *irc.Event) {
 	if !e.FromChannel() {
 		return
 	}
 
 	var msg string
-
 	if h.shotsLeft < 1 {
 		h.shotsLeft = rand.Intn(h.gunSize) + 1
 		msg = "Reloading the gun... "
@@ -35,10 +34,10 @@ func (h *RouletteHandler) HandleEvent(c *Client, e *Event) {
 
 	h.shotsLeft -= 1
 	if h.shotsLeft < 1 {
-		c.ReplyMention(e, "%sBANG!")
+		c.MentionReply(e, "%sBANG!", msg)
 		c.Writef("KICK %s %s", e.Args[0], e.Identity.Nick)
 	} else {
-		c.ReplyMention(e, "Click.")
+		c.MentionReply(e, "%sClick.", msg)
 	}
 }
 
