@@ -24,6 +24,9 @@ func DiceHandler(c *irc.Client, e *irc.Event) {
 
 		// Grab the count, otherwise 1
 		count, _ := strconv.Atoi(match[1])
+		if count == 0 {
+			count = 1
+		}
 
 		// Clamp count
 		if count < 0 {
