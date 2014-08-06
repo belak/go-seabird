@@ -1,9 +1,17 @@
 package auth
 
 import (
+	"encoding/hex"
+	"crypto/md5"
+	"fmt"
+	"hash"
+	"io"
+	"strings"
+
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/irc/mux"
 )
 
 type GenericAccount struct {
@@ -22,15 +30,62 @@ type GenericAuth struct {
 	Client *irc.Client
 	C      *mgo.Collection
 	Users  map[string]*User
-	salt   string
+	Salt   string
+}
+
+func (au *GenericAuth) getHash() hash.Hash {
+	h := md5.New()
+	io.WriteString(h, au.Salt)
+	return h
+}
+
+func (au *GenericAuth) loginHandler(c *irc.Client, e *irc.Event) {
+	u := au.GetUser(e.Identity.Nick)
+	if u.Account != "" {
+		c.MentionReply(e, "you are already logged in")
+		return
+	}
+
+	args := strings.SplitN(e.Trailing(), " ", 2)
+	if len(args) != 2 {
+		c.MentionReply(e, "usage: !login username password")
+		return
+	}
+
+	h := au.getHash()
+	io.WriteString(h, args[1])
+
+	pw :=hex.EncodeToString(h.Sum(nil))
+	fmt.Printf("%s --- %s --- %s\n", au.Salt, args[1], pw)
+
+	cnt, err := au.C.Find(bson.M{
+		"name": args[0],
+		"password": pw,
+	}).Count()
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if cnt > 0 {
+		u.Account = args[0]
+		au.Client.MentionReply(e, "you are now logged in as %s", args[0])
+	} else {
+		au.Client.MentionReply(e, "login failed")
+	}
 }
 
 func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth{
-	p := &GenericAuth{Client: c, C: db.C("generic_auth_accounts"), salt: salt}
-	p.trackUsers()
+	au := &GenericAuth{Client: c, C: db.C("generic_auth_accounts"), Salt: salt}
+	au.trackUsers()
 
+	cmds := mux.NewCommandMux("!")
+	cmds.EventFunc("login", au.loginHandler)
 
-	return p
+	c.Event("PRIVMSG", cmds)
+
+	return au
 }
 
 func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
@@ -40,6 +95,8 @@ func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
 func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc{
 	return f
 }
+
+
 
 // user tracking utilities
 

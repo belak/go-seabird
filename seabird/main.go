@@ -15,6 +15,7 @@ import (
 	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/irc/mux"
 	"bitbucket.org/belak/seabird"
+	"bitbucket.org/belak/seabird/auth"
 )
 
 type Config struct {
@@ -38,6 +39,8 @@ type Config struct {
 	Plugins struct {
 		Forecast string
 	}
+
+	AuthSalt string
 }
 
 func init() {
@@ -78,7 +81,6 @@ func main() {
 	config := loadConfig(configFile)
 
 	c := irc.NewClient(config.Nick, config.User, config.Name, config.Pass)
-	//au := auth.GenericAuth(c)
 
 	// Connect to mongo
 	sess, err := mgo.Dial("localhost")
@@ -88,6 +90,7 @@ func main() {
 	}
 
 	db := sess.DB("seabird")
+	au := auth.NewGenericAuth(c, db, config.AuthSalt)
 
 	// Add seabird
 	cmds := mux.NewCommandMux(config.Prefix)
@@ -116,6 +119,7 @@ func main() {
 
 	// Add say
 	cmds.PrivateFunc("say", seabird.SayHandler)
+	cmds.PrivateFunc("say", au.CheckPermFunc("admin", seabird.SayHandler))
 
 	// Add our muxes to the bot
 	c.Event("PRIVMSG", cmds)
