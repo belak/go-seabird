@@ -50,7 +50,7 @@ func DiceHandler(c *irc.Client, e *irc.Event) {
 
 		// Clamp size
 		if size < 1 {
-			c.MentionReply(e, "You cannot request a non-positive die size")
+			c.MentionReply(e, "You cannot request dice smaller than 1")
 			return
 		}
 
