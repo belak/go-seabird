@@ -92,8 +92,9 @@ func main() {
 	cmds := mux.NewCommandMux(config.Prefix)
 	ment := mux.NewMentionMux()
 
-	// Coin Kick
+	// Chance
 	cmds.ChannelFunc("coin", seabird.CoinKickHandler)
+	cmds.ChannelFunc("roulette", seabird.NewRouletteHandler(6))
 
 	// URL stuff
 	c.EventFunc("PRIVMSG", seabird.URLHandler)

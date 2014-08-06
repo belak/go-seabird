@@ -12,6 +12,36 @@ var coinNames = []string{
 	"tails",
 }
 
+type RouletteHandler struct {
+	gunSize   int
+	shotsLeft int
+}
+
+func NewRouletteHandler(gunSize int) *RouletteHandler {
+	return &RouletteHandler{gunSize, 0}
+}
+
+func (h *RouletteHandler) HandleEvent(c *Client, e *Event) {
+	if !e.FromChannel() {
+		return
+	}
+
+	var msg string
+
+	if h.shotsLeft < 1 {
+		h.shotsLeft = rand.Intn(h.gunSize) + 1
+		msg = "Reloading the gun... "
+	}
+
+	h.shotsLeft -= 1
+	if h.shotsLeft < 1 {
+		c.ReplyMention(e, "%sBANG!")
+		c.Writef("KICK %s %s", e.Args[0], e.Identity.Nick)
+	} else {
+		c.ReplyMention(e, "Click.")
+	}
+}
+
 func CoinKickHandler(c *irc.Client, e *irc.Event) {
 	if !e.FromChannel() {
 		return
