@@ -88,15 +88,39 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth{
 	return au
 }
 
+func (au *GenericAuth) userCan(u *User, p string) bool{
+	if u.Account == "" {
+		return false
+	}
+
+	c, err := au.C.Find(bson.M{
+		"name": u.Account,
+		"perms": p,
+	}).Count()
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	return c > 0
+}
+
 func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
 	return h
 }
 
 func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc{
-	return f
+	return func (c *irc.Client, e *irc.Event) {
+		fmt.Println("xxxxx")
+		u := au.GetUser(e.Identity.Nick)
+		if au.userCan(u, p) {
+			f(c, e)
+		} else {
+			c.MentionReply(e, "You do not have the required permission: %s", p)
+		}
+	}
 }
-
-
 
 // user tracking utilities
 

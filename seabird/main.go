@@ -118,8 +118,7 @@ func main() {
 	cmds.Event("*", f)
 
 	// Add say
-	cmds.PrivateFunc("say", seabird.SayHandler)
-	cmds.PrivateFunc("say", au.CheckPermFunc("admin", seabird.SayHandler))
+	cmds.EventFunc("say", au.CheckPermFunc("admin", seabird.SayHandler))
 
 	// Add our muxes to the bot
 	c.Event("PRIVMSG", cmds)
