@@ -89,11 +89,11 @@ func (au *GenericAuth) logoutHandler(c *irc.Client, e *irc.Event) {
 	c.MentionReply(e, "you have bene logged out")
 }
 
-func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth {
+func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string) *GenericAuth {
 	au := &GenericAuth{Client: c, C: db.C("generic_auth_accounts"), Salt: salt}
 	au.trackUsers()
 
-	cmds := mux.NewCommandMux("!")
+	cmds := mux.NewCommandMux(prefix)
 	cmds.EventFunc("login", au.loginHandler)
 	cmds.EventFunc("logout", au.logoutHandler)
 

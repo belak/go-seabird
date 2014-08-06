@@ -90,7 +90,7 @@ func main() {
 	}
 
 	db := sess.DB("seabird")
-	au := auth.NewGenericAuth(c, db, config.AuthSalt)
+	au := auth.NewGenericAuth(c, db, config.Prefix, config.AuthSalt)
 
 	// Add seabird
 	cmds := mux.NewCommandMux(config.Prefix)
