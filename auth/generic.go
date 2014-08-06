@@ -33,6 +33,24 @@ type GenericAuth struct {
 	Salt   string
 }
 
+func (au *GenericAuth) userCan(u *User, p string) bool {
+	if u.Account == "" {
+		return false
+	}
+
+	c, err := au.C.Find(bson.M{
+		"name":  u.Account,
+		"perms": p,
+	}).Count()
+
+	if err != nil {
+		fmt.Println(err)
+		return false
+	}
+
+	return c > 0
+}
+
 func (au *GenericAuth) getHash() hash.Hash {
 	h := md5.New()
 	io.WriteString(h, au.Salt)
@@ -42,7 +60,7 @@ func (au *GenericAuth) getHash() hash.Hash {
 func (au *GenericAuth) loginHandler(c *irc.Client, e *irc.Event) {
 	u := au.GetUser(e.Identity.Nick)
 	if u.Account != "" {
-		c.MentionReply(e, "you are already logged in")
+		c.MentionReply(e, "you are already logged in as '%s'", u.Account)
 		return
 	}
 
@@ -70,7 +88,7 @@ func (au *GenericAuth) loginHandler(c *irc.Client, e *irc.Event) {
 
 	if cnt > 0 {
 		u.Account = args[0]
-		au.Client.MentionReply(e, "you are now logged in as %s", args[0])
+		au.Client.MentionReply(e, "you are now logged in as '%s'", args[0])
 		au.Users[u.CurrentNick] = u
 	} else {
 		au.Client.MentionReply(e, "login failed")
@@ -86,7 +104,129 @@ func (au *GenericAuth) logoutHandler(c *irc.Client, e *irc.Event) {
 
 	u.Account = ""
 	au.Users[u.CurrentNick] = u
-	c.MentionReply(e, "you have bene logged out")
+	c.MentionReply(e, "you have been logged out")
+}
+
+func (au *GenericAuth) registerHandler(c *irc.Client, e *irc.Event) {
+	u := au.GetUser(e.Identity.Nick)
+	if u.Account != "" {
+		c.MentionReply(e, "you are already logged in as '%s'", u.Account)
+		return
+	}
+
+	args := strings.SplitN(e.Trailing(), " ", 2)
+	if len(args) < 2 {
+		c.MentionReply(e, "usage: !register <username> <password>")
+		return
+	}
+
+	cnt, err := au.C.Find(bson.M{
+		"name": args[0],
+	}).Count()
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	if cnt > 0 {
+		c.MentionReply(e, "there is already a user with that name")
+		return
+	}
+
+	h := au.getHash()
+	io.WriteString(h, args[1])
+
+	err = au.C.Insert(bson.M{
+		"name":     args[0],
+		"password": hex.EncodeToString(h.Sum(nil)),
+	})
+
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	u.Account = args[0]
+	delete(au.Users, e.Identity.Nick)
+	au.Users[e.Identity.Nick] = u
+
+	c.MentionReply(e, "you have been registered and logged in")
+}
+
+func (au *GenericAuth) addPermHandler(c *irc.Client, e *irc.Event) {
+	u := au.GetUser(e.Identity.Nick)
+	if u.Account == "" {
+		c.MentionReply(e, "you are not logged in")
+		return
+	}
+
+	if !au.userCan(u, "admin") && !au.userCan(u, "generic_auth.addperm") {
+		c.MentionReply(e, "you don't have permission to add permissions")
+		return
+	}
+
+	args := strings.Split(e.Trailing(), " ")
+	if len(args) != 2 {
+		c.MentionReply(e, "usage: !addperm <user> <perm>")
+		return
+	}
+
+	a := GenericAccount{}
+	err := au.C.Find(bson.M{"name": args[0]}).One(&a)
+	if err != nil {
+		// NOTE: This may be another error?
+		c.MentionReply(e, "account '%s' does not exist", args[0])
+		return
+	}
+
+	if args[1] == "admin" && !au.userCan(u, "admin") {
+		c.MentionReply(e, "only users with the 'admin' permission can add admins")
+		return
+	}
+
+	for _, v := range a.Perms {
+		if v == args[1] {
+			c.MentionReply(e, "user '%s' already has perm '%s'", args[0], args[1])
+			return
+		}
+	}
+
+	au.C.UpdateId(a.Id, bson.M{"$push": bson.M{"perms": args[1]}})
+	c.MentionReply(e, "added perm '%s' to user '%s'", args[1], args[0])
+}
+
+func (au *GenericAuth) delPermHandler(c *irc.Client, e *irc.Event) {
+	u := au.GetUser(e.Identity.Nick)
+	if u.Account == "" {
+		c.MentionReply(e, "you are not logged in")
+		return
+	}
+
+	if !au.userCan(u, "admin") && !au.userCan(u, "generic_auth.delperm") {
+		c.MentionReply(e, "you don't have permission to remove permissions")
+		return
+	}
+
+	args := strings.Split(e.Trailing(), " ")
+	if len(args) != 2 {
+		c.MentionReply(e, "usage: !delperm <user> <perm>")
+		return
+	}
+
+	if args[1] == "admin" && !au.userCan(u, "admin") {
+		c.MentionReply(e, "only users with the 'admin' permission can remove admins")
+		return
+	}
+
+	err := au.C.Update(bson.M{"name": args[0]}, bson.M{"$pull": bson.M{"perms": args[1]}})
+	if err != nil {
+		c.MentionReply(e, "account '%s' does not exist", args[0])
+		return
+	}
+
+	c.MentionReply(e, "removed perm '%s' to user '%s'", args[1], args[0])
+
 }
 
 func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string) *GenericAuth {
@@ -96,28 +236,13 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string)
 	cmds := mux.NewCommandMux(prefix)
 	cmds.EventFunc("login", au.loginHandler)
 	cmds.EventFunc("logout", au.logoutHandler)
-
+	cmds.EventFunc("register", au.registerHandler)
+	cmds.EventFunc("addperm", au.addPermHandler)
+	cmds.EventFunc("delperm", au.delPermHandler)
+	// TODO: !checkperms <user>
 	c.Event("PRIVMSG", cmds)
 
 	return au
-}
-
-func (au *GenericAuth) userCan(u *User, p string) bool {
-	if u.Account == "" {
-		return false
-	}
-
-	c, err := au.C.Find(bson.M{
-		"name":  u.Account,
-		"perms": p,
-	}).Count()
-
-	if err != nil {
-		fmt.Println(err)
-		return false
-	}
-
-	return c > 0
 }
 
 func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
