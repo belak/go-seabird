@@ -1,17 +1,17 @@
 package auth
 
 import (
-	"encoding/hex"
 	"crypto/md5"
+	"encoding/hex"
 	"fmt"
 	"hash"
 	"io"
 	"strings"
 
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
 	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/irc/mux"
+	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 )
 
 type GenericAccount struct {
@@ -22,8 +22,8 @@ type GenericAccount struct {
 
 type User struct {
 	CurrentNick string
-	Account string
-	Channels []string
+	Account     string
+	Channels    []string
 }
 
 type GenericAuth struct {
@@ -55,11 +55,11 @@ func (au *GenericAuth) loginHandler(c *irc.Client, e *irc.Event) {
 	h := au.getHash()
 	io.WriteString(h, args[1])
 
-	pw :=hex.EncodeToString(h.Sum(nil))
+	pw := hex.EncodeToString(h.Sum(nil))
 	fmt.Printf("%s --- %s --- %s\n", au.Salt, args[1], pw)
 
 	cnt, err := au.C.Find(bson.M{
-		"name": args[0],
+		"name":     args[0],
 		"password": pw,
 	}).Count()
 
@@ -89,7 +89,7 @@ func (au *GenericAuth) logoutHandler(c *irc.Client, e *irc.Event) {
 	c.MentionReply(e, "you have bene logged out")
 }
 
-func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth{
+func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth {
 	au := &GenericAuth{Client: c, C: db.C("generic_auth_accounts"), Salt: salt}
 	au.trackUsers()
 
@@ -102,13 +102,13 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth{
 	return au
 }
 
-func (au *GenericAuth) userCan(u *User, p string) bool{
+func (au *GenericAuth) userCan(u *User, p string) bool {
 	if u.Account == "" {
 		return false
 	}
 
 	c, err := au.C.Find(bson.M{
-		"name": u.Account,
+		"name":  u.Account,
 		"perms": p,
 	}).Count()
 
@@ -124,8 +124,8 @@ func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
 	return h
 }
 
-func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc{
-	return func (c *irc.Client, e *irc.Event) {
+func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc {
+	return func(c *irc.Client, e *irc.Event) {
 		fmt.Println("xxxxx")
 		u := au.GetUser(e.Identity.Nick)
 		if au.userCan(u, p) {
@@ -138,7 +138,7 @@ func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFun
 
 // user tracking utilities
 
-func (au *GenericAuth) GetUser(nick string) *User{
+func (au *GenericAuth) GetUser(nick string) *User {
 	u, ok := au.Users[nick]
 	if !ok {
 		u = &User{CurrentNick: nick}
@@ -220,10 +220,9 @@ func (au *GenericAuth) quitHandler(c *irc.Client, e *irc.Event) {
 }
 
 func (au *GenericAuth) trackUsers() {
-	au.Client.EventFunc("001",  au.connectHandler)
+	au.Client.EventFunc("001", au.connectHandler)
 	au.Client.EventFunc("JOIN", au.joinHandler)
 	au.Client.EventFunc("NICK", au.nickHandler)
 	au.Client.EventFunc("PART", au.partHandler)
 	au.Client.EventFunc("QUIT", au.quitHandler)
 }
-
