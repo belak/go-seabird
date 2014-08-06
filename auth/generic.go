@@ -77,12 +77,25 @@ func (au *GenericAuth) loginHandler(c *irc.Client, e *irc.Event) {
 	}
 }
 
+func (au *GenericAuth) logoutHandler(c *irc.Client, e *irc.Event) {
+	u := au.GetUser(e.Identity.Nick)
+	if u.Account == "" {
+		c.MentionReply(e, "you are not logged in")
+		return
+	}
+
+	u.Account = ""
+	au.Users[u.CurrentNick] = u
+	c.MentionReply(e, "you have bene logged out")
+}
+
 func NewGenericAuth(c *irc.Client, db *mgo.Database, salt string) *GenericAuth{
 	au := &GenericAuth{Client: c, C: db.C("generic_auth_accounts"), Salt: salt}
 	au.trackUsers()
 
 	cmds := mux.NewCommandMux("!")
 	cmds.EventFunc("login", au.loginHandler)
+	cmds.EventFunc("logout", au.logoutHandler)
 
 	c.Event("PRIVMSG", cmds)
 
