@@ -254,8 +254,23 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string)
 	return au
 }
 
+type genericAuthHandler struct {
+	au *GenericAuth
+	h  irc.Handler
+	p  string
+}
+
+func (h genericAuthHandler) HandleEvent(c *irc.Client, e *irc.Event) {
+	u := h.au.GetUser(e.Identity.Nick)
+	if h.au.userCan(u, h.p) {
+		h.h.HandleEvent(c, e)
+	} else {
+		c.MentionReply(e, "You do not have the required permissions: %s", h.p)
+	}
+}
+
 func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
-	return h
+	return genericAuthHandler{au: au, h: h, p: p}
 }
 
 func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc {
