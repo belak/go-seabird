@@ -14,13 +14,13 @@ import (
 	"labix.org/v2/mgo/bson"
 )
 
-type GenericAccount struct {
+type genericAccount struct {
 	Id    bson.ObjectId `bson:"_id"`
 	Name  string        `bson:"name"`
 	Perms []string      `bson:"perms,omitempty"`
 }
 
-type User struct {
+type user struct {
 	CurrentNick string
 	Account     string
 	Channels    []string
@@ -29,11 +29,11 @@ type User struct {
 type GenericAuth struct {
 	Client *irc.Client
 	C      *mgo.Collection
-	Users  map[string]*User
+	users  map[string]*user
 	Salt   string
 }
 
-func (au *GenericAuth) userCan(u *User, p string) bool {
+func (au *GenericAuth) userCan(u *user, p string) bool {
 	if u.Account == "" {
 		return false
 	}
@@ -59,7 +59,7 @@ func (au *GenericAuth) getHash() hash.Hash {
 
 func (au *GenericAuth) newLoginHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account != "" {
 			c.MentionReply(e, "you are already logged in as '%s'", u.Account)
 			return
@@ -90,7 +90,7 @@ func (au *GenericAuth) newLoginHandler(prefix string) irc.HandlerFunc {
 		if cnt > 0 {
 			u.Account = args[0]
 			au.Client.MentionReply(e, "you are now logged in as '%s'", args[0])
-			au.Users[u.CurrentNick] = u
+			au.users[u.CurrentNick] = u
 		} else {
 			au.Client.MentionReply(e, "login failed")
 		}
@@ -99,21 +99,21 @@ func (au *GenericAuth) newLoginHandler(prefix string) irc.HandlerFunc {
 
 func (au *GenericAuth) newLogoutHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account == "" {
 			c.MentionReply(e, "you are not logged in")
 			return
 		}
 
 		u.Account = ""
-		au.Users[u.CurrentNick] = u
+		au.users[u.CurrentNick] = u
 		c.MentionReply(e, "you have been logged out")
 	}
 }
 
 func (au *GenericAuth) newRegisterHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account != "" {
 			c.MentionReply(e, "you are already logged in as '%s'", u.Account)
 			return
@@ -153,8 +153,8 @@ func (au *GenericAuth) newRegisterHandler(prefix string) irc.HandlerFunc {
 		}
 
 		u.Account = args[0]
-		delete(au.Users, e.Identity.Nick)
-		au.Users[e.Identity.Nick] = u
+		delete(au.users, e.Identity.Nick)
+		au.users[e.Identity.Nick] = u
 
 		c.MentionReply(e, "you have been registered and logged in")
 	}
@@ -162,7 +162,7 @@ func (au *GenericAuth) newRegisterHandler(prefix string) irc.HandlerFunc {
 
 func (au *GenericAuth) newAddPermHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account == "" {
 			c.MentionReply(e, "you are not logged in")
 			return
@@ -179,7 +179,7 @@ func (au *GenericAuth) newAddPermHandler(prefix string) irc.HandlerFunc {
 			return
 		}
 
-		a := GenericAccount{}
+		a := genericAccount{}
 		err := au.C.Find(bson.M{"name": args[0]}).One(&a)
 		if err != nil {
 			// NOTE: This may be another error?
@@ -206,7 +206,7 @@ func (au *GenericAuth) newAddPermHandler(prefix string) irc.HandlerFunc {
 
 func (au *GenericAuth) newDelPermHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account == "" {
 			c.MentionReply(e, "you are not logged in")
 			return
@@ -240,7 +240,7 @@ func (au *GenericAuth) newDelPermHandler(prefix string) irc.HandlerFunc {
 
 func (au *GenericAuth) newCheckPermHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account == "" {
 			c.MentionReply(e, "you are not logged in")
 			return
@@ -257,7 +257,7 @@ func (au *GenericAuth) newCheckPermHandler(prefix string) irc.HandlerFunc {
 			return
 		}
 
-		a := GenericAccount{}
+		a := genericAccount{}
 		err := au.C.Find(bson.M{"name": args[0]}).One(&a)
 		if err != nil {
 			c.MentionReply(e, "account '%s' does not exist", args[0])
@@ -270,7 +270,7 @@ func (au *GenericAuth) newCheckPermHandler(prefix string) irc.HandlerFunc {
 
 func (au *GenericAuth) newWhoisHandler(prefix string) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if u.Account == "" {
 			c.MentionReply(e, "you are not logged in")
 			return
@@ -287,7 +287,7 @@ func (au *GenericAuth) newWhoisHandler(prefix string) irc.HandlerFunc {
 			return
 		}
 
-		if cu, ok := au.Users[args[0]]; ok && cu.Account != ""{
+		if cu, ok := au.users[args[0]]; ok && cu.Account != "" {
 			c.MentionReply(e, "nick '%s' is user '%s'", args[0], cu.Account)
 		} else {
 			c.MentionReply(e, "nick '%s' is not logged in", args[0])
@@ -320,7 +320,7 @@ type genericAuthHandler struct {
 }
 
 func (h genericAuthHandler) HandleEvent(c *irc.Client, e *irc.Event) {
-	u := h.au.GetUser(e.Identity.Nick)
+	u := h.au.getUser(e.Identity.Nick)
 	if h.au.userCan(u, h.p) {
 		h.h.HandleEvent(c, e)
 	} else {
@@ -335,7 +335,7 @@ func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
 func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
 		fmt.Println("xxxxx")
-		u := au.GetUser(e.Identity.Nick)
+		u := au.getUser(e.Identity.Nick)
 		if au.userCan(u, p) {
 			f(c, e)
 		} else {
@@ -346,17 +346,17 @@ func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFun
 
 // user tracking utilities
 
-func (au *GenericAuth) GetUser(nick string) *User {
-	u, ok := au.Users[nick]
+func (au *GenericAuth) getUser(nick string) *user {
+	u, ok := au.users[nick]
 	if !ok {
-		u = &User{CurrentNick: nick}
+		u = &user{CurrentNick: nick}
 	}
 
 	return u
 }
 
 func (au *GenericAuth) addChannelToNick(c, n string) {
-	u := au.GetUser(n)
+	u := au.getUser(n)
 
 	for i := 0; i < len(u.Channels); i++ {
 		if u.Channels[i] == c {
@@ -365,10 +365,10 @@ func (au *GenericAuth) addChannelToNick(c, n string) {
 	}
 
 	u.Channels = append(u.Channels, c)
-	au.Users[n] = u
+	au.users[n] = u
 }
 
-func (au *GenericAuth) removeChannelFromUser(c string, u *User) {
+func (au *GenericAuth) removeChannelFromUser(c string, u *user) {
 	for i := 0; i < len(u.Channels); i++ {
 		if u.Channels[i] == c {
 			// Swap with last element and shrink slice
@@ -380,44 +380,44 @@ func (au *GenericAuth) removeChannelFromUser(c string, u *User) {
 
 	if len(u.Channels) == 0 {
 		// Removing user
-		delete(au.Users, u.CurrentNick)
+		delete(au.users, u.CurrentNick)
 	}
 }
 
 // user tracking
 
 func (au *GenericAuth) connectHandler(c *irc.Client, e *irc.Event) {
-	au.Users = make(map[string]*User)
+	au.users = make(map[string]*user)
 }
 
 func (au *GenericAuth) joinHandler(c *irc.Client, e *irc.Event) {
 	if e.Identity.Nick != c.CurrentNick() {
 		au.addChannelToNick(e.Args[0], e.Identity.Nick)
 	} else {
-		for _, user := range au.Users {
+		for _, user := range au.users {
 			au.removeChannelFromUser(e.Args[0], user)
 		}
 	}
 }
 
 func (au *GenericAuth) nickHandler(c *irc.Client, e *irc.Event) {
-	u := au.GetUser(e.Identity.Nick)
+	u := au.getUser(e.Identity.Nick)
 	if len(u.Channels) == 0 {
 		return
 	}
 
 	u.CurrentNick = e.Args[1]
-	delete(au.Users, e.Identity.Nick)
-	au.Users[u.CurrentNick] = u
+	delete(au.users, e.Identity.Nick)
+	au.users[u.CurrentNick] = u
 }
 
 func (au *GenericAuth) partHandler(c *irc.Client, e *irc.Event) {
 	if e.Identity.Nick != c.CurrentNick() {
-		if u, ok := au.Users[e.Identity.Nick]; ok {
+		if u, ok := au.users[e.Identity.Nick]; ok {
 			au.removeChannelFromUser(e.Args[0], u)
 		}
 	} else {
-		for _, u := range au.Users {
+		for _, u := range au.users {
 			au.removeChannelFromUser(e.Args[0], u)
 		}
 	}
@@ -429,7 +429,7 @@ func (au *GenericAuth) quitHandler(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	delete(au.Users, e.Identity.Nick)
+	delete(au.users, e.Identity.Nick)
 }
 
 func (au *GenericAuth) trackUsers() {
