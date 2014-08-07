@@ -424,7 +424,12 @@ func (au *GenericAuth) partHandler(c *irc.Client, e *irc.Event) {
 }
 
 func (au *GenericAuth) quitHandler(c *irc.Client, e *irc.Event) {
-	// TODO implement this
+	if e.Identity.Nick == c.CurrentNick() {
+		// nop
+		return
+	}
+
+	delete(au.Users, e.Identity.Nick)
 }
 
 func (au *GenericAuth) trackUsers() {
