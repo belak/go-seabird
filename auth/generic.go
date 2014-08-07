@@ -282,7 +282,7 @@ func (au *GenericAuth) newWhoisHandler(prefix string) irc.HandlerFunc {
 		}
 
 		args := strings.Split(e.Trailing(), " ")
-		if len(args) != 1 {
+		if len(args) != 1 || args[0] == "" {
 			c.MentionReply(e, "usage: %swhois <user>", prefix)
 			return
 		}
@@ -292,6 +292,33 @@ func (au *GenericAuth) newWhoisHandler(prefix string) irc.HandlerFunc {
 		} else {
 			c.MentionReply(e, "nick '%s' is not logged in", args[0])
 		}
+	}
+}
+
+func (au *GenericAuth) newPasswdHandler(prefix string) irc.HandlerFunc {
+	return func(c *irc.Client, e *irc.Event) {
+		u := au.getUser(e.Identity.Nick)
+		if u.Account == "" {
+			c.MentionReply(e, "you are not logged in")
+			return
+		}
+
+		args := strings.Split(e.Trailing(), " ")
+		if len(args) != 1 || args[0] == ""{
+			c.MentionReply(e, "usage: %spasswd <newpass>", prefix)
+			return
+		}
+
+		h := au.getHash()
+		io.WriteString(h, args[0])
+
+		_, err := au.C.Upsert(bson.M{"name": u.Account}, bson.M{"$set": bson.M{"password": hex.EncodeToString(h.Sum(nil))}})
+		if err != nil {
+			fmt.Println(err)
+			return
+		}
+
+		c.MentionReply(e, "your password has been changed")
 	}
 }
 
@@ -307,7 +334,7 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string)
 	cmds.PrivateFunc("delperm", au.newDelPermHandler(prefix))
 	cmds.PrivateFunc("checkperms", au.newCheckPermHandler(prefix))
 	cmds.PrivateFunc("whois", au.newWhoisHandler(prefix))
-	// TODO !passwd <newpass> -> change password
+	cmds.PrivateFunc("passwd", au.newPasswdHandler(prefix))
 	c.Event("PRIVMSG", cmds)
 
 	return au
