@@ -253,7 +253,7 @@ func (au *GenericAuth) newCheckPermHandler(prefix string) irc.HandlerFunc {
 
 		args := strings.Split(e.Trailing(), " ")
 		if len(args) != 1 {
-			c.MentionReply(e, "usage: %scheckperms <nick>", prefix)
+			c.MentionReply(e, "usage: %scheckperms <user>", prefix)
 			return
 		}
 
@@ -268,6 +268,33 @@ func (au *GenericAuth) newCheckPermHandler(prefix string) irc.HandlerFunc {
 	}
 }
 
+func (au *GenericAuth) newWhoisHandler(prefix string) irc.HandlerFunc {
+	return func(c *irc.Client, e *irc.Event) {
+		u := au.GetUser(e.Identity.Nick)
+		if u.Account == "" {
+			c.MentionReply(e, "you are not logged in")
+			return
+		}
+
+		if !au.userCan(u, "admin") && !au.userCan(u, "generic_auth.whois") {
+			c.MentionReply(e, "you do not have permission to check a user account")
+			return
+		}
+
+		args := strings.Split(e.Trailing(), " ")
+		if len(args) != 1 {
+			c.MentionReply(e, "usage: %swhois <user>", prefix)
+			return
+		}
+
+		if cu, ok := au.Users[args[0]]; ok && cu.Account != ""{
+			c.MentionReply(e, "nick '%s' is user '%s'", args[0], cu.Account)
+		} else {
+			c.MentionReply(e, "nick '%s' is not logged in", args[0])
+		}
+	}
+}
+
 func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string) *GenericAuth {
 	au := &GenericAuth{Client: c, C: db.C("generic_auth_accounts"), Salt: salt}
 	au.trackUsers()
@@ -279,8 +306,8 @@ func NewGenericAuth(c *irc.Client, db *mgo.Database, prefix string, salt string)
 	cmds.PrivateFunc("addperm", au.newAddPermHandler(prefix))
 	cmds.PrivateFunc("delperm", au.newDelPermHandler(prefix))
 	cmds.PrivateFunc("checkperms", au.newCheckPermHandler(prefix))
-	// TODO !whois <nick>  ->  user account
-	// TODO !passwd <newpass>
+	cmds.PrivateFunc("whois", au.newWhoisHandler(prefix))
+	// TODO !passwd <newpass> -> change password
 	c.Event("PRIVMSG", cmds)
 
 	return au
