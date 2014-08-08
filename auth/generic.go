@@ -65,6 +65,11 @@ func (au *GenericAuth) newLoginHandler(prefix string) irc.HandlerFunc {
 			return
 		}
 
+		if len(u.Channels) == 0 {
+			c.MentionReply(e, "You cannot log in if you're not in a channel with me")
+			return
+		}
+
 		args := strings.SplitN(e.Trailing(), " ", 2)
 		if len(args) != 2 {
 			c.MentionReply(e, "usage: %slogin username password", prefix)
@@ -75,7 +80,6 @@ func (au *GenericAuth) newLoginHandler(prefix string) irc.HandlerFunc {
 		io.WriteString(h, args[1])
 
 		pw := hex.EncodeToString(h.Sum(nil))
-		fmt.Printf("%s --- %s --- %s\n", au.Salt, args[1], pw)
 
 		cnt, err := au.C.Find(bson.M{
 			"name":     args[0],
@@ -304,7 +308,7 @@ func (au *GenericAuth) newPasswdHandler(prefix string) irc.HandlerFunc {
 		}
 
 		args := strings.Split(e.Trailing(), " ")
-		if len(args) != 1 || args[0] == ""{
+		if len(args) != 1 || args[0] == "" {
 			c.MentionReply(e, "usage: %spasswd <newpass>", prefix)
 			return
 		}
@@ -361,7 +365,6 @@ func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
 
 func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
-		fmt.Println("xxxxx")
 		u := au.getUser(e.Identity.Nick)
 		if au.userCan(u, p) {
 			f(c, e)
@@ -433,9 +436,11 @@ func (au *GenericAuth) nickHandler(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	u.CurrentNick = e.Args[1]
-	delete(au.users, e.Identity.Nick)
+	u.CurrentNick = e.Trailing()
 	au.users[u.CurrentNick] = u
+
+	u = au.getUser(u.CurrentNick)
+	fmt.Println(u.CurrentNick)
 }
 
 func (au *GenericAuth) partHandler(c *irc.Client, e *irc.Event) {
@@ -459,10 +464,25 @@ func (au *GenericAuth) quitHandler(c *irc.Client, e *irc.Event) {
 	delete(au.users, e.Identity.Nick)
 }
 
+func (au *GenericAuth) namreplyHandler(c *irc.Client, e *irc.Event) {
+	ch := e.Args[len(e.Args)-2]
+	args := strings.Split(e.Trailing(), " ")
+
+	for i := 0; i < len(args); i++ {
+		n := args[i]
+		if (n[0] < 'a' || n[0] > 'z') && (n[0] < 'A' && n[0] > 'Z') {
+			n = n[1:]
+		}
+
+		au.addChannelToNick(ch, n)
+	}
+}
+
 func (au *GenericAuth) trackUsers() {
 	au.Client.EventFunc("001", au.connectHandler)
 	au.Client.EventFunc("JOIN", au.joinHandler)
 	au.Client.EventFunc("NICK", au.nickHandler)
 	au.Client.EventFunc("PART", au.partHandler)
 	au.Client.EventFunc("QUIT", au.quitHandler)
+	au.Client.EventFunc("353", au.namreplyHandler)
 }
