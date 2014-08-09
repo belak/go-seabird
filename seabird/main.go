@@ -15,6 +15,7 @@ import (
 	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/irc/mux"
 	"bitbucket.org/belak/seabird"
+	"bitbucket.org/belak/seabird/auth"
 )
 
 type Config struct {
@@ -38,6 +39,8 @@ type Config struct {
 	Plugins struct {
 		Forecast string
 	}
+
+	AuthSalt string
 }
 
 func init() {
@@ -87,6 +90,7 @@ func main() {
 	}
 
 	db := sess.DB("seabird")
+	au := auth.NewGenericAuth(c, db, config.Prefix, config.AuthSalt)
 
 	// Add seabird
 	cmds := mux.NewCommandMux(config.Prefix)
@@ -113,6 +117,13 @@ func main() {
 	// Add forecast
 	f := seabird.NewForecastHandler(config.Plugins.Forecast, db.C("weather"))
 	cmds.Event("*", f)
+
+	// Add say
+	cmds.PrivateFunc("say", au.CheckPermFunc("seabird.say", seabird.SayHandler))
+
+	// channops
+	cmds.EventFunc("join", au.CheckPermFunc("seabird.chanops.join", seabird.JoinHandler))
+	cmds.ChannelFunc("part", au.CheckPermFunc("seabird.chanops.part", seabird.PartHandler))
 
 	// Add our muxes to the bot
 	c.Event("PRIVMSG", cmds)
