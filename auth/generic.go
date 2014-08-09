@@ -48,6 +48,29 @@ func (au *GenericAuth) userCan(u *user, p string) bool {
 		return false
 	}
 
+	// glob matching
+	parts := strings.Split(p, ".")
+	for len(parts) > 0 {
+		parts[len(parts)-1] = ""
+		p = strings.Join(parts, ".")
+		p += "*"
+
+		c, err := au.C.Find(bson.M{
+			"name":  u.Account,
+			"perms": p,
+		}).Count()
+
+		if err != nil {
+			fmt.Println(err)
+			return false
+		}
+		if c > 0 {
+			return true
+		}
+
+		parts = parts[:len(parts)-1]
+	}
+
 	return c > 0
 }
 
@@ -238,7 +261,7 @@ func (au *GenericAuth) newDelPermHandler(prefix string) irc.HandlerFunc {
 			return
 		}
 
-		c.MentionReply(e, "removed perm '%s' to user '%s'", args[1], args[0])
+		c.MentionReply(e, "removed perm '%s' from user '%s'", args[1], args[0])
 	}
 }
 
