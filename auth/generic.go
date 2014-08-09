@@ -352,7 +352,7 @@ type genericAuthHandler struct {
 
 func (h genericAuthHandler) HandleEvent(c *irc.Client, e *irc.Event) {
 	u := h.au.getUser(e.Identity.Nick)
-	if h.au.userCan(u, h.p) {
+	if h.au.userCan(u, h.p) || h.au.userCan(u, "admin") {
 		h.h.HandleEvent(c, e)
 	} else {
 		c.MentionReply(e, "You do not have the required permissions: %s", h.p)
@@ -366,7 +366,7 @@ func (au *GenericAuth) CheckPerm(p string, h irc.Handler) irc.Handler {
 func (au *GenericAuth) CheckPermFunc(p string, f irc.HandlerFunc) irc.HandlerFunc {
 	return func(c *irc.Client, e *irc.Event) {
 		u := au.getUser(e.Identity.Nick)
-		if au.userCan(u, p) {
+		if au.userCan(u, p) || au.userCan(u, "admin") {
 			f(c, e)
 		} else {
 			c.MentionReply(e, "You do not have the required permission: %s", p)
