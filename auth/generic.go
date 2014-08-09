@@ -470,7 +470,7 @@ func (au *GenericAuth) namreplyHandler(c *irc.Client, e *irc.Event) {
 
 	for i := 0; i < len(args); i++ {
 		n := args[i]
-		if (n[0] < 'a' || n[0] > 'z') && (n[0] < 'A' && n[0] > 'Z') {
+		if (n[0] < 'a' || n[0] > 'z') && (n[0] < 'A' || n[0] > 'Z') {
 			n = n[1:]
 		}
 
