@@ -120,6 +120,10 @@ func main() {
 	// Add say
 	cmds.PrivateFunc("say", au.CheckPermFunc("admin", seabird.SayHandler))
 
+	// channops
+	cmds.EventFunc("join", au.CheckPermFunc("admin", seabird.JoinHandler))
+	cmds.ChannelFunc("part", au.CheckPermFunc("admin", seabird.PartHandler))
+
 	// Add our muxes to the bot
 	c.Event("PRIVMSG", cmds)
 	c.Event("PRIVMSG", ment)
