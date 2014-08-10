@@ -17,6 +17,7 @@ func NewChanOpsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &ChanOpsPlugin{}
 	b.Command("join", "[channel]", p.Join)
 	b.Command("part", "", p.Part)
+	b.Command("say", "[dest] [message]", p.Say)
 	return p, nil
 }
 
