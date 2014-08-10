@@ -33,6 +33,8 @@ type Bot struct {
 }
 
 type ClientConfig struct {
+	ConnectionName string
+
 	Nick string
 	User string
 	Name string
@@ -54,16 +56,11 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 	db := s.DB("seabird")
 
 	// Normally we'd use b.GetConfig, but we don't have a Bot object yet
-	col := db.C("config")
-	conf := make(map[string]*ClientConfig)
-	err := col.Find(bson.M{"name": "seabird"}).One(conf)
+	col := db.C("seabird")
+	c := &ClientConfig{}
+	err := col.Find(bson.M{"connection_name": server}).One(conf)
 	if err != nil {
 		return nil, err
-	}
-
-	c, ok := conf[server]
-	if !ok {
-		return nil, errors.New("Could not find config for server")
 	}
 
 	// NOTE: We load the client afterwords so we can put in the correct handler
