@@ -19,7 +19,7 @@ import (
 
 type Config struct {
 	Client  *bot.ClientConfig
-	Plugins map[string]interface{}
+	Plugins []map[string]interface{}
 }
 
 func main() {
@@ -39,14 +39,14 @@ func main() {
 
 	// Import/export config
 	if os.Args[1] == "import" {
-		if len(os.Args) < 3 {
-			log.Fatalf("usage: %s import [server name] [filename]\n", os.Args[0])
+		if len(os.Args) < 2 {
+			log.Fatalf("usage: %s import [filename]\n", os.Args[0])
 		}
 
 		data := &Config{}
 
 		// Open the file
-		file, err := os.Open(os.Args[3])
+		file, err := os.Open(os.Args[2])
 		defer file.Close()
 
 		// Read the json
@@ -56,9 +56,27 @@ func main() {
 			log.Fatalln(err)
 		}
 
-		_, err = sess.DB("seabird").C("seabird").Upsert(bson.M{"connection_name": os.Args[2]}, data.Client)
+		for _, v := range data.Plugins {
+			if v2, ok := v["pluginname"]; !ok {
+				log.Fatalln("At least one plugin config does not contain a pluginname")
+			} else {
+				if _, ok := v2.(string); !ok {
+					log.Fatalln("At least one plugin config contain a pluginname that is not a string")
+				}
+			}
+		}
+
+		_, err = sess.DB("seabird").C("seabird").Upsert(bson.M{"connectionname": os.Args[2]}, data.Client)
 		if err != nil {
 			log.Fatalln(err)
+		}
+
+		for _, v := range data.Plugins {
+			name := v["pluginname"].(string)
+			_, err = sess.DB("seabird").C("config").Upsert(bson.M{"pluginname": name}, v)
+			if err != nil {
+				log.Fatalln(err)
+			}
 		}
 	} else if os.Args[1] == "export" {
 		if len(os.Args) < 3 {
@@ -66,15 +84,20 @@ func main() {
 		}
 
 		data := &bot.ClientConfig{}
-		err = sess.DB("seabird").C("seabird").Find(bson.M{"connection_name": os.Args[2]}).One(data)
+		err = sess.DB("seabird").C("seabird").Find(bson.M{"connectionname": os.Args[2]}).One(data)
 		if err != nil {
 			log.Fatalln(err)
 		}
 
-		moreData := make(map[string]interface{})
-		err = sess.DB("seabird").C("config").Find(nil).All(data)
+		var moreData []map[string]interface{}
+		err = sess.DB("seabird").C("config").Find(nil).All(&moreData)
 		if err != nil {
 			log.Fatalln(err)
+		}
+
+		// Remove the internal mongo IDs
+		for k := range moreData {
+			delete(moreData[k], "_id")
 		}
 
 		dataOut := &Config{

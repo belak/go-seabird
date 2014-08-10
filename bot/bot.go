@@ -58,7 +58,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 	// Normally we'd use b.GetConfig, but we don't have a Bot object yet
 	col := db.C("seabird")
 	c := &ClientConfig{}
-	err := col.Find(bson.M{"connection_name": server}).One(c)
+	err := col.Find(bson.M{"connectionname": server}).One(c)
 	if err != nil {
 		return nil, err
 	}
@@ -177,7 +177,7 @@ func (b *Bot) MentionReply(e *irc.Event, format string, args ...interface{}) {
 
 func (b *Bot) LoadConfig(name string, config interface{}) error {
 	col := b.DB.C("config")
-	err := col.Find(bson.M{"plugin_name": name}).One(config)
+	err := col.Find(bson.M{"pluginname": name}).One(config)
 	if err != nil {
 		return err
 	}

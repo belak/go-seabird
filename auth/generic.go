@@ -344,7 +344,7 @@ type GenericAuthConfig struct {
 
 func (au *GenericAuth) Reload(b *bot.Bot) error {
 	conf := &GenericAuthConfig{}
-	err := b.LoadConfig("generic_auth", conf)
+	err := b.LoadConfig("auth_generic", conf)
 	if err != nil {
 		return err
 	}
