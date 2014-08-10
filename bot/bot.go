@@ -73,6 +73,9 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 		server,
 	}
 
+	b.basic.Event("PRIVMSG", b.cmds.HandleEvent)
+	b.basic.Event("PRIVMSG", b.ment.HandleEvent)
+
 	b.C = irc.NewClient(irc.HandlerFunc(b.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
 
 	b.Event("001", func(b *Bot, e *irc.Event) {
