@@ -97,7 +97,6 @@ type ForecastPlugin struct {
 
 func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &ForecastPlugin{}
-	p.c = b.DB.C("forecast")
 	err := p.Reload(b)
 	if err != nil {
 		return nil, err
@@ -114,6 +113,8 @@ func (p *ForecastPlugin) Reload(b *bot.Bot) error {
 	if err != nil {
 		return err
 	}
+
+	p.c = b.DB.C("weather")
 
 	return nil
 }
