@@ -1,12 +1,14 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
 
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 
 	"bitbucket.org/belak/seabird/bot"
 
@@ -15,9 +17,14 @@ import (
 	_ "bitbucket.org/belak/seabird/auth"
 )
 
+type Config struct {
+	Client  *bot.ClientConfig
+	Plugins map[string]interface{}
+}
+
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatalln("Not enough args. Please pass a server name.")
+		log.Fatalln("Not enough args. Please pass at least a server name.")
 	}
 
 	// Command line options (just in case)
@@ -30,15 +37,68 @@ func main() {
 		return
 	}
 
-	// Make the bot
-	b, err := bot.NewBot(sess, os.Args[1])
-	if err != nil {
-		log.Fatalln(err)
-	}
+	// Import/export config
+	if os.Args[1] == "import" {
+		if len(os.Args) < 3 {
+			log.Fatalf("usage: %s import [server name] [filename]\n", os.Args[0])
+		}
 
-	err = b.Run()
+		data := &Config{}
 
-	if err != nil {
-		log.Fatalln(err)
+		// Open the file
+		file, err := os.Open(os.Args[3])
+		defer file.Close()
+
+		// Read the json
+		r := json.NewDecoder(file)
+		err = r.Decode(data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		_, err = sess.DB("seabird").C("seabird").Upsert(bson.M{"connection_name": os.Args[2]}, data.Client)
+		if err != nil {
+			log.Fatalln(err)
+		}
+	} else if os.Args[1] == "export" {
+		if len(os.Args) < 3 {
+			log.Fatalf("usage: %s export [server name]\n", os.Args[0])
+		}
+
+		data := &bot.ClientConfig{}
+		err = sess.DB("seabird").C("seabird").Find(bson.M{"connection_name": os.Args[2]}).One(data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		moreData := make(map[string]interface{})
+		err = sess.DB("seabird").C("config").Find(nil).All(data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		dataOut := &Config{
+			data,
+			moreData,
+		}
+
+		out, err := json.MarshalIndent(dataOut, "", "\t")
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		fmt.Println(string(out))
+	} else {
+		// Make the bot
+		b, err := bot.NewBot(sess, os.Args[1])
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		err = b.Run()
+
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
 }

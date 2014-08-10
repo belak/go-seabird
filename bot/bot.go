@@ -58,7 +58,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 	// Normally we'd use b.GetConfig, but we don't have a Bot object yet
 	col := db.C("seabird")
 	c := &ClientConfig{}
-	err := col.Find(bson.M{"connection_name": server}).One(conf)
+	err := col.Find(bson.M{"connection_name": server}).One(c)
 	if err != nil {
 		return nil, err
 	}
