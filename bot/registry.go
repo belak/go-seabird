@@ -19,7 +19,7 @@ func RegisterPlugin(name string, p PluginFactory) error {
 	}
 
 	// TODO: Log for real
-	fmt.Printf("Plugin '%s' registered.", name)
+	fmt.Printf("Plugin '%s' registered.\n", name)
 
 	plugins[name] = p
 
@@ -32,7 +32,7 @@ func RegisterAuthPlugin(name string, p AuthPluginFactory) error {
 	}
 
 	// TODO: Log for real
-	fmt.Printf("AuthPlugin '%s' registered.", name)
+	fmt.Printf("AuthPlugin '%s' registered.\n", name)
 
 	authPlugins[name] = p
 

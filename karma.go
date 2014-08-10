@@ -32,6 +32,9 @@ func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
 		b.DB.C("karma"),
 	}
 
+	b.Command("karma", "[object]", p.Karma)
+	b.Event("PRIVMSG", p.Msg)
+
 	return p, nil
 }
 

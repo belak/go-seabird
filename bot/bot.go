@@ -91,7 +91,6 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 	// Initialize Auth plugin first because other plugins may need it
 	pf, ok := authPlugins[c.AuthPlugin]
 	if !ok {
-		fmt.Println(authPlugins)
 		return nil, errors.New(fmt.Sprintf("There is not an auth plugin named '%s'", c.AuthPlugin))
 	}
 
@@ -138,14 +137,14 @@ func (b *Bot) Run() error {
 }
 
 func (b *Bot) GetConfig() *ClientConfig {
-	conf := make(map[string]*ClientConfig)
-	b.LoadConfig("seabird", conf)
-
-	if v, ok := conf[b.name]; ok {
-		return v
+	c := &ClientConfig{}
+	col := b.DB.C("seabird")
+	err := col.Find(bson.M{"connectionname": b.name}).One(c)
+	if err != nil {
+		return nil
 	}
 
-	return nil
+	return c
 }
 
 func (b *Bot) Event(name string, h BotFunc) {
