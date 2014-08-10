@@ -5,6 +5,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterPlugin("mentions", NewMentionsPlugin)
+}
+
 type MentionsPlugin struct{}
 
 func NewMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {

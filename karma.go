@@ -12,6 +12,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterPlugin("karma", NewKarmaPlugin)
+}
+
 type Karma struct {
 	Name  string `bson:"name"`
 	Score int    `bson:"score"`

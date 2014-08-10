@@ -8,6 +8,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterPlugin("chance", NewChancePlugin)
+}
+
 var coinNames = []string{
 	"heads",
 	"tails",

@@ -11,6 +11,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterPlugin("dice", NewDicePlugin)
+}
+
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
 type DicePlugin struct{}

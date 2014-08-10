@@ -7,6 +7,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterPlugin("chanops", NewChanOpsPlugin)
+}
+
 type ChanOpsPlugin struct{}
 
 func NewChanOpsPlugin(b *bot.Bot) (bot.Plugin, error) {

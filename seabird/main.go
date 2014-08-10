@@ -8,9 +8,11 @@ import (
 
 	"labix.org/v2/mgo"
 
-	"bitbucket.org/belak/seabird"
-	"bitbucket.org/belak/seabird/auth"
 	"bitbucket.org/belak/seabird/bot"
+
+	// Load plugins
+	_ "bitbucket.org/belak/seabird"
+	_ "bitbucket.org/belak/seabird/auth"
 )
 
 func main() {
@@ -20,17 +22,6 @@ func main() {
 
 	// Command line options (just in case)
 	flag.Parse()
-
-	// Firstly, make a list of all possible plugin factories
-	bot.RegisterPlugin("chance", seabird.NewChancePlugin)
-	bot.RegisterPlugin("dice", seabird.NewDicePlugin)
-	bot.RegisterPlugin("forecast", seabird.NewForecastPlugin)
-	bot.RegisterPlugin("karma", seabird.NewKarmaPlugin)
-	bot.RegisterPlugin("mentions", seabird.NewMentionsPlugin)
-	bot.RegisterPlugin("url", seabird.NewURLPlugin)
-
-	// Now all the auth plugins
-	bot.RegisterAuthPlugin("generic", auth.NewGenericAuthPlugin)
 
 	// Connect to mongo
 	sess, err := mgo.Dial("localhost")

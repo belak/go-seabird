@@ -15,6 +15,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterAuthPlugin("generic", NewGenericAuthPlugin)
+}
+
 type genericAccount struct {
 	Id    bson.ObjectId `bson:"_id"`
 	Name  string        `bson:"name"`

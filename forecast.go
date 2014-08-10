@@ -14,6 +14,10 @@ import (
 	"bitbucket.org/belak/seabird/bot"
 )
 
+func init() {
+	bot.RegisterPlugin("forecast", NewForecastPlugin)
+}
+
 type LastAddress struct {
 	Nick     string
 	Location Location
