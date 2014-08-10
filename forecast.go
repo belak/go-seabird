@@ -114,7 +114,7 @@ func (p *ForecastPlugin) Reload(b *bot.Bot) error {
 		return err
 	}
 
-	p.c = b.DB.C("weather")
+	p.c = b.DB.C("forecast")
 
 	return nil
 }

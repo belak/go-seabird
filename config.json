@@ -23,12 +23,12 @@
 
 	"Plugins": [
 		{
-			"PluginName": "generic_auth",
-			"Salt": "%&U68hasda9AB%E&*OQO@&^#$o"
+			"pluginname": "generic_auth",
+			"salt": "%&U68hasda9AB%E&*OQO@&^#$o"
 		},
 		{
-			"PluginName": "forecast",
-			"Key": "78d7ed92a9dbb2f30be47cf4f83dc554"
+			"pluginname": "forecast",
+			"key": "78d7ed92a9dbb2f30be47cf4f83dc554"
 		}
 	]
 }
