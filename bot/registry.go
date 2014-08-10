@@ -14,9 +14,12 @@ var plugins map[string]PluginFactory
 var authPlugins map[string]AuthPluginFactory
 
 func RegisterPlugin(name string, p PluginFactory) error {
-	if _, ok := plugins[name]; !ok {
+	if _, ok := plugins[name]; ok {
 		return errors.New(fmt.Sprintf("There is already a plugin named '%s' registered.", name))
 	}
+
+	// TODO: Log for real
+	fmt.Printf("Plugin '%s' registered.", name)
 
 	plugins[name] = p
 
@@ -24,9 +27,12 @@ func RegisterPlugin(name string, p PluginFactory) error {
 }
 
 func RegisterAuthPlugin(name string, p AuthPluginFactory) error {
-	if _, ok := authPlugins[name]; !ok {
+	if _, ok := authPlugins[name]; ok {
 		return errors.New(fmt.Sprintf("There is already an auth plugin named '%s' registered.", name))
 	}
+
+	// TODO: Log for real
+	fmt.Printf("AuthPlugin '%s' registered.", name)
 
 	authPlugins[name] = p
 

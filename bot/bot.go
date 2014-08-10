@@ -91,6 +91,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 	// Initialize Auth plugin first because other plugins may need it
 	pf, ok := authPlugins[c.AuthPlugin]
 	if !ok {
+		fmt.Println(authPlugins)
 		return nil, errors.New(fmt.Sprintf("There is not an auth plugin named '%s'", c.AuthPlugin))
 	}
 

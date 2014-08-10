@@ -58,6 +58,7 @@ func main() {
 
 		for _, v := range data.Plugins {
 			if v2, ok := v["pluginname"]; !ok {
+				fmt.Println(v)
 				log.Fatalln("At least one plugin config does not contain a pluginname")
 			} else {
 				if _, ok := v2.(string); !ok {
@@ -66,7 +67,8 @@ func main() {
 			}
 		}
 
-		_, err = sess.DB("seabird").C("seabird").Upsert(bson.M{"connectionname": os.Args[2]}, data.Client)
+		fmt.Println(data.Client.ConnectionName)
+		_, err = sess.DB("seabird").C("seabird").Upsert(bson.M{"connectionname": data.Client.ConnectionName}, data.Client)
 		if err != nil {
 			log.Fatalln(err)
 		}
