@@ -9,8 +9,10 @@ import (
 	"strings"
 	"time"
 
-	"bitbucket.org/belak/irc"
 	"code.google.com/p/go.net/html"
+
+	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/seabird/bot"
 )
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
@@ -26,7 +28,23 @@ var client = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
-func URLHandler(c *irc.Client, e *irc.Event) {
+type URLPlugin struct{}
+
+func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &URLPlugin{}
+
+	b.Event("PRIVMSG", p.Msg)
+	b.Command("down", "[website]", p.IsItDown)
+
+	return p, nil
+}
+
+func (p *URLPlugin) Reload(b *bot.Bot) error {
+	// noop
+	return nil
+}
+
+func (p *URLPlugin) Msg(b *bot.Bot, e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Trailing(), -1) {
 		go func(url string) {
 			r, err := client.Get(url)
@@ -75,17 +93,17 @@ func URLHandler(c *irc.Client, e *irc.Event) {
 			}
 
 			if str, ok := f(z); ok {
-				c.Reply(e, "Title: %s", str)
+				b.Reply(e, "Title: %s", str)
 			}
 		}(url)
 	}
 }
 
-func IsItDown(c *irc.Client, e *irc.Event) {
+func (p *URLPlugin) IsItDown(b *bot.Bot, e *irc.Event) {
 	go func() {
 		url, err := url.Parse(strings.TrimSpace(e.Trailing()))
 		if err != nil {
-			c.Reply(e, "URL doesn't appear to be valid")
+			b.Reply(e, "URL doesn't appear to be valid")
 			return
 		}
 
@@ -95,10 +113,10 @@ func IsItDown(c *irc.Client, e *irc.Event) {
 
 		r, err := client.Head(url.String())
 		if err != nil || r.StatusCode != 200 {
-			c.Reply(e, "It's not just you! %s looks down from here.", url)
+			b.Reply(e, "It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		c.Reply(e, "It's just you! %s looks up from here!", url)
+		b.Reply(e, "It's just you! %s looks up from here!", url)
 	}()
 }

@@ -5,9 +5,11 @@ import (
 	"strings"
 	"unicode"
 
-	"bitbucket.org/belak/irc"
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
+
+	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/seabird/bot"
 )
 
 type Karma struct {
@@ -15,22 +17,28 @@ type Karma struct {
 	Score int    `bson:"score"`
 }
 
-type KarmaHandler struct {
+type KarmaPlugin struct {
 	c *mgo.Collection
 }
 
 var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaHandler(c *mgo.Collection) *KarmaHandler {
-	return &KarmaHandler{
-		c,
+func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &KarmaPlugin{
+		b.DB.C("karma"),
 	}
+
+	return p, nil
 }
 
-func (h *KarmaHandler) GetKarmaFor(name string) *Karma {
+func (p *KarmaPlugin) Reload(b *bot.Bot) error {
+	return nil
+}
+
+func (p *KarmaPlugin) GetKarmaFor(name string) *Karma {
 	name = strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
 	k := &Karma{}
-	err := h.c.Find(bson.M{"name": name}).One(k)
+	err := p.c.Find(bson.M{"name": name}).One(k)
 	if err != nil {
 		return &Karma{Name: name}
 	}
@@ -38,11 +46,11 @@ func (h *KarmaHandler) GetKarmaFor(name string) *Karma {
 	return k
 }
 
-func (h *KarmaHandler) Karma(c *irc.Client, e *irc.Event) {
-	c.MentionReply(e, "%s's karma is %d", e.Trailing(), h.GetKarmaFor(e.Trailing()).Score)
+func (p *KarmaPlugin) Karma(b *bot.Bot, e *irc.Event) {
+	b.MentionReply(e, "%s's karma is %d", e.Trailing(), p.GetKarmaFor(e.Trailing()).Score)
 }
 
-func (h *KarmaHandler) Msg(c *irc.Client, e *irc.Event) {
+func (p *KarmaPlugin) Msg(b *bot.Bot, e *irc.Event) {
 	if len(e.Args) < 2 || !e.FromChannel() {
 		return
 	}
@@ -67,8 +75,8 @@ func (h *KarmaHandler) Msg(c *irc.Client, e *irc.Event) {
 				diff = -1
 			}
 
-			h.c.Upsert(bson.M{"name": name}, bson.M{"$inc": bson.M{"score": diff}})
-			c.Reply(e, "%s's karma is now %d", v[1], h.GetKarmaFor(name).Score)
+			p.c.Upsert(bson.M{"name": name}, bson.M{"$inc": bson.M{"score": diff}})
+			b.Reply(e, "%s's karma is now %d", v[1], p.GetKarmaFor(name).Score)
 		}
 	}
 }

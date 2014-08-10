@@ -1,14 +1,30 @@
 package seabird
 
-import "bitbucket.org/belak/irc"
+import (
+	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/seabird/bot"
+)
 
-func MentionsHandler(c *irc.Client, e *irc.Event) {
+type MentionsPlugin struct{}
+
+func NewMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &MentionsPlugin{}
+	b.Mention(p.Mentions)
+	return p, nil
+}
+
+func (p *MentionsPlugin) Reload(b *bot.Bot) error {
+	// noop
+	return nil
+}
+
+func (p *MentionsPlugin) Mentions(b *bot.Bot, e *irc.Event) {
 	switch e.Trailing() {
 	case "ping":
-		c.MentionReply(e, "pong")
+		b.MentionReply(e, "pong")
 	case "scoobysnack", "scooby snack":
-		c.Reply(e, "Scooby Dooby Doo!")
+		b.Reply(e, "Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
-		c.Reply(e, ":)")
+		b.Reply(e, ":)")
 	}
 }

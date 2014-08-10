@@ -8,11 +8,25 @@ import (
 	"strings"
 
 	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/seabird/bot"
 )
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-func DiceHandler(c *irc.Client, e *irc.Event) {
+type DicePlugin struct{}
+
+func NewDicePlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &DicePlugin{}
+	b.Mention(p.Dice)
+	return p, nil
+}
+
+func (p *DicePlugin) Reload(b *bot.Bot) error {
+	// noop
+	return nil
+}
+
+func (p *DicePlugin) Dice(b *bot.Bot, e *irc.Event) {
 	var rolls []string
 	totalCount := 0
 
@@ -30,13 +44,13 @@ func DiceHandler(c *irc.Client, e *irc.Event) {
 
 		// Clamp count
 		if count < 0 {
-			c.MentionReply(e, "You cannot request a negative number of rolls")
+			b.MentionReply(e, "You cannot request a negative number of rolls")
 			return
 		}
 
 		totalCount += count
 		if totalCount > 100 {
-			c.MentionReply(e, "You cannot request more than 100 dice")
+			b.MentionReply(e, "You cannot request more than 100 dice")
 			return
 		}
 
@@ -44,13 +58,13 @@ func DiceHandler(c *irc.Client, e *irc.Event) {
 		size, _ := strconv.Atoi(match[2])
 
 		if size > 100 {
-			c.MentionReply(e, "You cannot request dice larger than 100")
+			b.MentionReply(e, "You cannot request dice larger than 100")
 			return
 		}
 
 		// Clamp size
 		if size < 1 {
-			c.MentionReply(e, "You cannot request dice smaller than 1")
+			b.MentionReply(e, "You cannot request dice smaller than 1")
 			return
 		}
 
@@ -63,6 +77,6 @@ func DiceHandler(c *irc.Client, e *irc.Event) {
 	}
 
 	if len(rolls) > 0 {
-		c.MentionReply(e, "%s", strings.Join(rolls, " "))
+		b.MentionReply(e, "%s", strings.Join(rolls, " "))
 	}
 }
