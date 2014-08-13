@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"bytes"
 	"crypto/md5"
 	"encoding/hex"
 	"fmt"
@@ -480,13 +481,22 @@ func (au *GenericAuth) quitHandler(b *bot.Bot, e *irc.Event) {
 	delete(au.users, e.Identity.Nick)
 }
 
+func isLetter(l byte) bool {
+	return ((l >= 'a' && l <= 'z') || (l >= 'A' && l <= 'Z'))
+}
+
+func isSpecial(l byte) bool {
+	specials := []byte("[]\\`_^{|}")
+	return bytes.IndexByte(specials, l) != -1
+}
+
 func (au *GenericAuth) namreplyHandler(b *bot.Bot, e *irc.Event) {
 	ch := e.Args[len(e.Args)-2]
 	args := strings.Split(e.Trailing(), " ")
 
 	for i := 0; i < len(args); i++ {
 		n := args[i]
-		if (n[0] < 'a' || n[0] > 'z') && (n[0] < 'A' || n[0] > 'Z') {
+		for !isLetter(n[0]) && !isSpecial(n[0]) {
 			n = n[1:]
 		}
 
