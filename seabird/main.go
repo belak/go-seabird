@@ -1,86 +1,34 @@
 package main
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"flag"
 	"fmt"
 	"log"
 	"os"
-	"os/user"
-	"path"
 
 	"labix.org/v2/mgo"
+	"labix.org/v2/mgo/bson"
 
-	"bitbucket.org/belak/irc"
-	"bitbucket.org/belak/irc/mux"
-	"bitbucket.org/belak/seabird"
-	"bitbucket.org/belak/seabird/auth"
+	"bitbucket.org/belak/seabird/bot"
+
+	// Load plugins
+	_ "bitbucket.org/belak/seabird"
+	_ "bitbucket.org/belak/seabird/auth"
 )
 
 type Config struct {
-	Prefix string
-
-	// Bot info
-	Nick string
-	User string
-	Name string
-	Pass string
-
-	// Host
-	Host        string
-	TLS         bool
-	TLSNoVerify bool
-
-	// Cmds for on connect
-	Cmds []string
-
-	// Plugin config
-	Plugins struct {
-		Forecast string
-	}
-
-	AuthSalt string
-}
-
-func init() {
-	// Try HOME first then fall back to user.Current() because it needs cgo
-	home := os.Getenv("HOME")
-	if home == "" {
-		user, err := user.Current()
-		if err != nil {
-			log.Fatalln(err)
-		}
-		home = user.HomeDir
-	}
-
-	flag.StringVar(&configFile, "F", path.Join(home, ".seabird", "main.json"), "alternate config file")
-}
-
-var configFile string
-
-func loadConfig(filename string) *Config {
-	file, err := os.Open(filename)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	defer file.Close()
-
-	config := &Config{}
-	dec := json.NewDecoder(file)
-	dec.Decode(config)
-
-	return config
+	Client  *bot.ClientConfig
+	Plugins []map[string]interface{}
 }
 
 func main() {
-	// Command line options
+	if len(os.Args) < 2 {
+		log.Fatalln("Not enough args. Please pass at least a server name.")
+	}
+
+	// Command line options (just in case)
 	flag.Parse()
-
-	// Load the config file
-	config := loadConfig(configFile)
-
-	c := irc.NewClient(config.Nick, config.User, config.Name, config.Pass)
 
 	// Connect to mongo
 	sess, err := mgo.Dial("localhost")
@@ -89,65 +37,93 @@ func main() {
 		return
 	}
 
-	db := sess.DB("seabird")
-	au := auth.NewGenericAuth(c, db, config.Prefix, config.AuthSalt)
-
-	// Add seabird
-	cmds := mux.NewCommandMux(config.Prefix)
-	ment := mux.NewMentionMux()
-
-	// Chance
-	cmds.ChannelFunc("coin", seabird.CoinKickHandler)
-	cmds.Channel("roulette", seabird.NewRouletteHandler(6))
-
-	// URL stuff
-	c.EventFunc("PRIVMSG", seabird.URLHandler)
-
-	// Dice rolling
-	ment.EventFunc(seabird.DiceHandler)
-
-	// Mentions
-	ment.EventFunc(seabird.MentionsHandler)
-
-	// Add karma
-	k := seabird.NewKarmaHandler(db.C("karma"))
-	cmds.EventFunc("karma", k.Karma)
-	c.EventFunc("PRIVMSG", k.Msg)
-
-	// Add forecast
-	f := seabird.NewForecastHandler(config.Plugins.Forecast, db.C("weather"))
-	cmds.Event("*", f)
-
-	// Add say
-	cmds.PrivateFunc("say", au.CheckPermFunc("seabird.say", seabird.SayHandler))
-
-	// channops
-	cmds.EventFunc("join", au.CheckPermFunc("seabird.chanops.join", seabird.JoinHandler))
-	cmds.ChannelFunc("part", au.CheckPermFunc("seabird.chanops.part", seabird.PartHandler))
-
-	// Add our muxes to the bot
-	c.Event("PRIVMSG", cmds)
-	c.Event("PRIVMSG", ment)
-
-	// Things to do on connect
-	c.EventFunc("001", func(c *irc.Client, e *irc.Event) {
-		for _, v := range config.Cmds {
-			c.Write(v)
-		}
-	})
-
-	if config.TLS {
-		// Have to work around self signed ssl cert
-		conf := &tls.Config{
-			InsecureSkipVerify: config.TLSNoVerify,
+	// Import/export config
+	if os.Args[1] == "import" {
+		if len(os.Args) < 2 {
+			log.Fatalf("usage: %s import [filename]\n", os.Args[0])
 		}
 
-		err = c.DialTLS(config.Host, conf)
+		data := &Config{}
+
+		// Open the file
+		file, err := os.Open(os.Args[2])
+		defer file.Close()
+
+		// Read the json
+		r := json.NewDecoder(file)
+		err = r.Decode(data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		for _, v := range data.Plugins {
+			if v2, ok := v["pluginname"]; !ok {
+				fmt.Println(v)
+				log.Fatalln("At least one plugin config does not contain a pluginname")
+			} else {
+				if _, ok := v2.(string); !ok {
+					log.Fatalln("At least one plugin config contain a pluginname that is not a string")
+				}
+			}
+		}
+
+		fmt.Println(data.Client.ConnectionName)
+		_, err = sess.DB("seabird").C("seabird").Upsert(bson.M{"connectionname": data.Client.ConnectionName}, data.Client)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		for _, v := range data.Plugins {
+			name := v["pluginname"].(string)
+			_, err = sess.DB("seabird").C("config").Upsert(bson.M{"pluginname": name}, v)
+			if err != nil {
+				log.Fatalln(err)
+			}
+		}
+	} else if os.Args[1] == "export" {
+		if len(os.Args) < 3 {
+			log.Fatalf("usage: %s export [server name]\n", os.Args[0])
+		}
+
+		data := &bot.ClientConfig{}
+		err = sess.DB("seabird").C("seabird").Find(bson.M{"connectionname": os.Args[2]}).One(data)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		var moreData []map[string]interface{}
+		err = sess.DB("seabird").C("config").Find(nil).All(&moreData)
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		// Remove the internal mongo IDs
+		for k := range moreData {
+			delete(moreData[k], "_id")
+		}
+
+		dataOut := &Config{
+			data,
+			moreData,
+		}
+
+		out, err := json.MarshalIndent(dataOut, "", "\t")
+		if err != nil {
+			log.Fatalln(err)
+		}
+
+		fmt.Println(string(out))
 	} else {
-		err = c.Dial(config.Host)
-	}
+		// Make the bot
+		b, err := bot.NewBot(sess, os.Args[1])
+		if err != nil {
+			log.Fatalln(err)
+		}
 
-	if err != nil {
-		fmt.Println(err)
+		err = b.Run()
+
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
 }

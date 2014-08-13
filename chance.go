@@ -5,43 +5,65 @@ import (
 	"strings"
 
 	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/seabird/bot"
 )
+
+func init() {
+	bot.RegisterPlugin("chance", NewChancePlugin)
+}
 
 var coinNames = []string{
 	"heads",
 	"tails",
 }
 
-type RouletteHandler struct {
-	gunSize   int
-	shotsLeft int
+type ChancePlugin struct {
+	RouletteGunSize   int
+	rouletteShotsLeft int
 }
 
-func NewRouletteHandler(gunSize int) *RouletteHandler {
-	return &RouletteHandler{gunSize, 0}
+func NewChancePlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &ChancePlugin{}
+	err := p.Reload(b)
+	if err != nil {
+		return nil, err
+	}
+
+	b.Command("roulette", "Click... click... BANG!", p.Roulette)
+	b.Command("coin", "[heads|tails]", p.Coin)
+
+	return p, nil
 }
 
-func (h *RouletteHandler) HandleEvent(c *irc.Client, e *irc.Event) {
+func (p *ChancePlugin) Reload(b *bot.Bot) error {
+	err := b.LoadConfig("chance", p)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (p *ChancePlugin) Roulette(b *bot.Bot, e *irc.Event) {
 	if !e.FromChannel() {
 		return
 	}
 
 	var msg string
-	if h.shotsLeft < 1 {
-		h.shotsLeft = rand.Intn(h.gunSize) + 1
+	if p.rouletteShotsLeft < 1 {
+		p.rouletteShotsLeft = rand.Intn(p.RouletteGunSize) + 1
 		msg = "Reloading the gun... "
 	}
 
-	h.shotsLeft -= 1
-	if h.shotsLeft < 1 {
-		c.MentionReply(e, "%sBANG!", msg)
-		c.Writef("KICK %s %s", e.Args[0], e.Identity.Nick)
+	p.rouletteShotsLeft -= 1
+	if p.rouletteShotsLeft < 1 {
+		b.MentionReply(e, "%sBANG!", msg)
+		b.C.Writef("KICK %s %s", e.Args[0], e.Identity.Nick)
 	} else {
-		c.MentionReply(e, "%sClick.", msg)
+		b.MentionReply(e, "%sClick.", msg)
 	}
 }
 
-func CoinKickHandler(c *irc.Client, e *irc.Event) {
+func (p *ChancePlugin) Coin(b *bot.Bot, e *irc.Event) {
 	if !e.FromChannel() {
 		return
 	}
@@ -56,7 +78,7 @@ func CoinKickHandler(c *irc.Client, e *irc.Event) {
 	}
 
 	if guess == -1 {
-		c.Writef(
+		b.C.Writef(
 			"KICK %s %s :That's not a valid coin side. Options are: %s",
 			e.Args[0],
 			e.Identity.Nick,
@@ -68,8 +90,8 @@ func CoinKickHandler(c *irc.Client, e *irc.Event) {
 	flip := rand.Intn(2)
 
 	if flip == guess {
-		c.MentionReply(e, "Lucky guess!")
+		b.MentionReply(e, "Lucky guess!")
 	} else {
-		c.Writef("KICK %s %s :%s", e.Args[0], e.Identity.Nick, "Sorry! Better luck next time!")
+		b.C.Writef("KICK %s %s :%s", e.Args[0], e.Identity.Nick, "Sorry! Better luck next time!")
 	}
 }
