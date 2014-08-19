@@ -145,6 +145,10 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
 	if err == nil {
 		return loc, nil
 	} else if l != "" {
+		// NOTE: we're checking whether the initial query was empty
+		// here, not the result from FetchLocation. If FetchLocation
+		// returns an error and location was not provided, we need to
+		// check our location cache before we decide what to do next.
 		return nil, err
 	}
 
