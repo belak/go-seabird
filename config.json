@@ -23,7 +23,7 @@
 
 	"Plugins": [
 		{
-			"pluginname": "generic_auth",
+			"pluginname": "auth_generic",
 			"salt": "%&U68hasda9AB%E&*OQO@&^#$o"
 		},
 		{
