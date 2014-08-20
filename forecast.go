@@ -97,10 +97,10 @@ type ForecastCacheEntry struct {
 }
 
 type ForecastPlugin struct {
-	Key string
+	Key           string
 	CacheDuration string
-	fc  *mgo.Collection
-	loc *mgo.Collection
+	fc            *mgo.Collection
+	loc           *mgo.Collection
 }
 
 func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
@@ -136,7 +136,7 @@ func (p *ForecastPlugin) Reload(b *bot.Bot) error {
 	}
 
 	p.fc.EnsureIndex(mgo.Index{
-		Key: []string{"created"},
+		Key:         []string{"created"},
 		ExpireAfter: ttl,
 	})
 
