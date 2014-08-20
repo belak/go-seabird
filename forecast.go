@@ -125,15 +125,20 @@ func (p *ForecastPlugin) Reload(b *bot.Bot) error {
 	p.loc = b.DB.C("forecast.location")
 	p.fc = b.DB.C("forecast.cache")
 
+	// We have to drop this collection in order to update
+	// the entry retention policy. mongo doesn't let us change
+	// it once we've already set it up.
+	p.fc.DropCollection()
+
 	ttl, err := time.ParseDuration(p.CacheDuration)
 	if err != nil {
 		return err
 	}
-	idx := mgo.Index{
-		Key:         []string{"created"},
+
+	p.fc.EnsureIndex(mgo.Index{
+		Key: []string{"created"},
 		ExpireAfter: ttl,
-	}
-	p.fc.EnsureIndex(idx)
+	})
 
 	return nil
 }
@@ -151,7 +156,6 @@ func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, erro
 		loc.Lat,
 		loc.Lon)
 
-	println("api query")
 	r, err := http.Get(link)
 	if err != nil {
 		return nil, err
