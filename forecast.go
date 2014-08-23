@@ -122,8 +122,8 @@ func (p *ForecastPlugin) Reload(b *bot.Bot) error {
 		return err
 	}
 
-	p.loc = b.DB.C("forecast.location")
-	p.fc = b.DB.C("forecast.cache")
+	p.loc = b.DB.C("forecast_location")
+	p.fc = b.DB.C("forecast_cache")
 
 	// We have to drop this collection in order to update
 	// the entry retention policy. mongo doesn't let us change
