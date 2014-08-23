@@ -28,7 +28,8 @@
 		},
 		{
 			"pluginname": "forecast",
-			"key": "78d7ed92a9dbb2f30be47cf4f83dc554"
+			"key": "78d7ed92a9dbb2f30be47cf4f83dc554",
+			"cacheduration": "3m"
 		}
 	]
 }

@@ -90,9 +90,17 @@ type ForecastResponse struct {
 	APICalls  int
 }
 
+type ForecastCacheEntry struct {
+	Coordinates Coordinates
+	Created     time.Time
+	Response    ForecastResponse
+}
+
 type ForecastPlugin struct {
-	Key string
-	c   *mgo.Collection
+	Key           string
+	CacheDuration string
+	fc            *mgo.Collection
+	loc           *mgo.Collection
 }
 
 func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
@@ -114,12 +122,35 @@ func (p *ForecastPlugin) Reload(b *bot.Bot) error {
 		return err
 	}
 
-	p.c = b.DB.C("forecast")
+	p.loc = b.DB.C("forecast_location")
+	p.fc = b.DB.C("forecast_cache")
+
+	// We have to drop this collection in order to update
+	// the entry retention policy. mongo doesn't let us change
+	// it once we've already set it up.
+	p.fc.DropCollection()
+
+	ttl, err := time.ParseDuration(p.CacheDuration)
+	if err != nil {
+		return err
+	}
+
+	p.fc.EnsureIndex(mgo.Index{
+		Key:         []string{"created"},
+		ExpireAfter: ttl,
+	})
 
 	return nil
 }
 
 func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, error) {
+
+	e := ForecastCacheEntry{}
+	err := p.fc.Find(bson.M{"coordinates": loc}).One(&e)
+	if err == nil {
+		return &e.Response, nil
+	}
+
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
 		p.Key,
 		loc.Lat,
@@ -133,7 +164,18 @@ func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, erro
 	f := ForecastResponse{}
 	dec := json.NewDecoder(r.Body)
 	defer r.Body.Close()
-	dec.Decode(&f)
+
+	err = dec.Decode(&f)
+	if err != nil {
+		return nil, err
+	}
+
+	e = ForecastCacheEntry{
+		Coordinates: loc,
+		Response:    f,
+		Created:     time.Now(),
+	}
+	p.fc.Insert(e)
 
 	return &f, nil
 }
@@ -153,7 +195,7 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
 	}
 
 	la := &LastAddress{}
-	cerr := p.c.Find(bson.M{"nick": e.Identity.Nick}).One(la)
+	cerr := p.loc.Find(bson.M{"nick": e.Identity.Nick}).One(la)
 	if cerr != nil {
 		// intentionally use the err from other call.
 		// not finding the entry in the DB is ok.
@@ -165,7 +207,7 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
 
 func (p *ForecastPlugin) saveLocation(e *irc.Event, loc *Location) {
 	la := LastAddress{e.Identity.Nick, *loc}
-	p.c.Upsert(bson.M{"nick": e.Identity.Nick}, la)
+	p.loc.Upsert(bson.M{"nick": e.Identity.Nick}, la)
 }
 
 func (p *ForecastPlugin) Forecast(b *bot.Bot, e *irc.Event) {
