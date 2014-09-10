@@ -175,6 +175,10 @@ func (b *Bot) MentionReply(e *irc.Event, format string, args ...interface{}) {
 	b.C.MentionReply(e, format, args...)
 }
 
+func (b *Bot) CtcpReply(e *irc.Event, format string, args ...interface{}) {
+	b.C.CtcpReply(e, format, args...)
+}
+
 func (b *Bot) LoadConfig(name string, config interface{}) error {
 	col := b.DB.C("config")
 	err := col.Find(bson.M{"pluginname": name}).One(config)
