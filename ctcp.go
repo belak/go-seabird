@@ -1,6 +1,7 @@
 package seabird
 
 import (
+	"runtime"
 	"strings"
 	"time"
 
@@ -51,5 +52,6 @@ func (p *CtcpPlugin) Version(b *bot.Bot, e *irc.Event) {
 		return
 	}
 
-	b.CtcpReply(e, "VERSION belak/seabird")
+	b.CtcpReply(e, "VERSION belak/seabird [%s %s]",
+		runtime.GOOS, runtime.GOARCH)
 }
