@@ -12,7 +12,7 @@ func init() {
 	bot.RegisterPlugin("ctcp", NewCTCPPlugin)
 }
 
-type CTCPPlugin struct {}
+type CTCPPlugin struct{}
 
 func NewCTCPPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &CTCPPlugin{}
@@ -39,6 +39,6 @@ func (p *CTCPPlugin) Ping(b *bot.Bot, e *irc.Event) {
 }
 
 func (p *CTCPPlugin) Version(b *bot.Bot, e *irc.Event) {
-	b.CTCPReply(e, "VERSION belak/seabird [%s %s]",
-		runtime.GOOS, runtime.GOARCH)
+	b.CTCPReply(e, "VERSION belak/seabird [%s %s %s]",
+		runtime.GOOS, runtime.GOARCH, runtime.Version())
 }

@@ -1,52 +1,43 @@
-package  bot
+package bot
 
 import (
 	"strings"
-	"sync"
 
 	"bitbucket.org/belak/irc"
 )
 
 type CTCPMux struct {
-	handlers map[string][]BotFunc
-	lock     *sync.RWMutex
+	handlers *BasicMux
 }
 
 func NewCTCPMux() *CTCPMux {
-	mux := &CTCPMux{
-		make(map[string][]BotFunc),
-		&sync.RWMutex{},
+	return &CTCPMux{
+		NewBasicMux(),
 	}
-
-	return mux
 }
 
 func (m *CTCPMux) Event(c string, h BotFunc) {
-	m.lock.Lock()
-	defer m.lock.Unlock()
-
-	m.handlers[c] = append(m.handlers[c], h)
+	m.handlers.Event(c, h)
 }
 
 func (m *CTCPMux) HandleEvent(b *Bot, e *irc.Event) {
 	if e.Command != "CTCP" {
+		// TODO: Log this
 		return
 	}
 
-
-	c := strings.SplitN(e.Trailing(), " ", 1)[0]
+	// Copy it into a new event
 	newEvent := e.Copy()
 
-	m.lock.RLock()
-	defer m.lock.RUnlock()
-
-	handlers, ok := m.handlers[c]
-	if !ok {
-		// No handlers for this CTCP type
-		return
+	// Modify the new event
+	lastArg := e.Trailing()
+	msgParts := strings.SplitN(lastArg, " ", 1)
+	newEvent.Args[len(newEvent.Args)-1] = ""
+	if len(msgParts) > 1 {
+		newEvent.Args[len(newEvent.Args)-1] = msgParts[1]
 	}
 
-	for _, h := range handlers {
-		h(b, newEvent)
-	}
+	newEvent.Command = msgParts[0]
+
+	m.handlers.HandleEvent(b, newEvent)
 }
