@@ -35,7 +35,7 @@ func (p *CTCPPlugin) Time(b *bot.Bot, e *irc.Event) {
 }
 
 func (p *CTCPPlugin) Ping(b *bot.Bot, e *irc.Event) {
-	b.CTCPReply(e, e.Trailing())
+	b.CTCPReply(e, "PING %s", e.Trailing())
 }
 
 func (p *CTCPPlugin) Version(b *bot.Bot, e *irc.Event) {
