@@ -24,6 +24,7 @@ type Bot struct {
 	basic *BasicMux
 	cmds  *CommandMux
 	ment  *MentionMux
+	ctcp  *CTCPMux
 
 	// Simple store of all loaded plugins
 	plugins    map[string]Plugin
@@ -71,6 +72,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 		NewBasicMux(),
 		NewCommandMux(c.Prefix),
 		NewMentionMux(),
+		NewCTCPMux(),
 		make(map[string]Plugin),
 		nil,
 		server,
@@ -78,6 +80,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 
 	b.basic.Event("PRIVMSG", b.cmds.HandleEvent)
 	b.basic.Event("PRIVMSG", b.ment.HandleEvent)
+	b.basic.Event("CTCP", b.ctcp.HandleEvent)
 
 	b.C = irc.NewClient(irc.HandlerFunc(b.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
 
@@ -151,6 +154,10 @@ func (b *Bot) Event(name string, h BotFunc) {
 	b.basic.Event(name, h)
 }
 
+func (b *Bot) CTCP(name string, h BotFunc) {
+	b.ctcp.Event(name, h)
+}
+
 func (b *Bot) Mention(h BotFunc) {
 	b.ment.Event(h)
 }
@@ -173,6 +180,10 @@ func (b *Bot) Reply(e *irc.Event, format string, args ...interface{}) {
 
 func (b *Bot) MentionReply(e *irc.Event, format string, args ...interface{}) {
 	b.C.MentionReply(e, format, args...)
+}
+
+func (b *Bot) CTCPReply(e *irc.Event, format string, args ...interface{}) {
+	b.C.CTCPReply(e, format, args...)
 }
 
 func (b *Bot) LoadConfig(name string, config interface{}) error {
