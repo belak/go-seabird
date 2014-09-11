@@ -24,6 +24,7 @@ type Bot struct {
 	basic *BasicMux
 	cmds  *CommandMux
 	ment  *MentionMux
+	ctcp  *CtcpMux
 
 	// Simple store of all loaded plugins
 	plugins    map[string]Plugin
@@ -71,6 +72,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 		NewBasicMux(),
 		NewCommandMux(c.Prefix),
 		NewMentionMux(),
+		NewCtcpMux(),
 		make(map[string]Plugin),
 		nil,
 		server,
@@ -78,6 +80,7 @@ func NewBot(s *mgo.Session, server string) (*Bot, error) {
 
 	b.basic.Event("PRIVMSG", b.cmds.HandleEvent)
 	b.basic.Event("PRIVMSG", b.ment.HandleEvent)
+	b.basic.Event("CTCP", b.ctcp.HandleEvent)
 
 	b.C = irc.NewClient(irc.HandlerFunc(b.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
 
@@ -149,6 +152,10 @@ func (b *Bot) GetConfig() *ClientConfig {
 
 func (b *Bot) Event(name string, h BotFunc) {
 	b.basic.Event(name, h)
+}
+
+func (b *Bot) Ctcp(name string, h BotFunc) {
+	b.ctcp.Event(name, h)
 }
 
 func (b *Bot) Mention(h BotFunc) {
