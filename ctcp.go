@@ -9,36 +9,36 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("ctcp", NewCtcpPlugin)
+	bot.RegisterPlugin("ctcp", NewCTCPPlugin)
 }
 
-type CtcpPlugin struct {}
+type CTCPPlugin struct {}
 
-func NewCtcpPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &CtcpPlugin{}
+func NewCTCPPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &CTCPPlugin{}
 
-	b.Ctcp("TIME", p.Time)
-	b.Ctcp("PING", p.Ping)
-	b.Ctcp("VERSION", p.Version)
+	b.CTCP("TIME", p.Time)
+	b.CTCP("PING", p.Ping)
+	b.CTCP("VERSION", p.Version)
 
 	return p, nil
 }
 
-func (p *CtcpPlugin) Reload(b *bot.Bot) error {
+func (p *CTCPPlugin) Reload(b *bot.Bot) error {
 	//noop
 	return nil
 }
 
-func (p *CtcpPlugin) Time(b *bot.Bot, e *irc.Event) {
+func (p *CTCPPlugin) Time(b *bot.Bot, e *irc.Event) {
 	t := time.Now().Format("Mon 2 Jan 2006 15:04:05 EST")
-	b.CtcpReply(e, "TIME %s", t)
+	b.CTCPReply(e, "TIME %s", t)
 }
 
-func (p *CtcpPlugin) Ping(b *bot.Bot, e *irc.Event) {
-	b.CtcpReply(e, e.Trailing())
+func (p *CTCPPlugin) Ping(b *bot.Bot, e *irc.Event) {
+	b.CTCPReply(e, e.Trailing())
 }
 
-func (p *CtcpPlugin) Version(b *bot.Bot, e *irc.Event) {
-	b.CtcpReply(e, "VERSION belak/seabird [%s %s]",
+func (p *CTCPPlugin) Version(b *bot.Bot, e *irc.Event) {
+	b.CTCPReply(e, "VERSION belak/seabird [%s %s]",
 		runtime.GOOS, runtime.GOARCH)
 }

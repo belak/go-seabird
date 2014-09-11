@@ -7,13 +7,13 @@ import (
 	"bitbucket.org/belak/irc"
 )
 
-type CtcpMux struct {
+type CTCPMux struct {
 	handlers map[string][]BotFunc
 	lock     *sync.RWMutex
 }
 
-func NewCtcpMux() *CtcpMux {
-	mux := &CtcpMux{
+func NewCTCPMux() *CTCPMux {
+	mux := &CTCPMux{
 		make(map[string][]BotFunc),
 		&sync.RWMutex{},
 	}
@@ -21,14 +21,14 @@ func NewCtcpMux() *CtcpMux {
 	return mux
 }
 
-func (m *CtcpMux) Event(c string, h BotFunc) {
+func (m *CTCPMux) Event(c string, h BotFunc) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
 	m.handlers[c] = append(m.handlers[c], h)
 }
 
-func (m *CtcpMux) HandleEvent(b *Bot, e *irc.Event) {
+func (m *CTCPMux) HandleEvent(b *Bot, e *irc.Event) {
 	if e.Command != "CTCP" {
 		return
 	}
