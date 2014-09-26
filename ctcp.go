@@ -30,7 +30,7 @@ func (p *CTCPPlugin) Reload(b *bot.Bot) error {
 }
 
 func (p *CTCPPlugin) Time(b *bot.Bot, e *irc.Event) {
-	t := time.Now().Format("Mon 2 Jan 2006 15:04:05 EST")
+	t := time.Now().Format("Mon 2 Jan 2006 15:04:05 MST")
 	b.CTCPReply(e, "TIME %s", t)
 }
 
