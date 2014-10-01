@@ -3,7 +3,7 @@ package bot
 import (
 	"strings"
 
-	"bitbucket.org/belak/irc"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 type CTCPMux struct {

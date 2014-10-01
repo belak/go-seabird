@@ -11,8 +11,8 @@ import (
 
 	"code.google.com/p/go.net/html"
 
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {

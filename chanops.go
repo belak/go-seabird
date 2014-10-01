@@ -3,8 +3,8 @@ package seabird
 import (
 	"strings"
 
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {
@@ -19,11 +19,6 @@ func NewChanOpsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.Command("part", "", p.Part)
 	b.Command("say", "[dest] [message]", p.Say)
 	return p, nil
-}
-
-func (p *ChanOpsPlugin) Reload(b *bot.Bot) error {
-	// noop
-	return nil
 }
 
 func (p *ChanOpsPlugin) Join(b *bot.Bot, e *irc.Event) {

@@ -4,8 +4,8 @@ import (
 	"runtime"
 	"time"
 
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {
@@ -22,11 +22,6 @@ func NewCTCPPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.CTCP("VERSION", p.Version)
 
 	return p, nil
-}
-
-func (p *CTCPPlugin) Reload(b *bot.Bot) error {
-	//noop
-	return nil
 }
 
 func (p *CTCPPlugin) Time(b *bot.Bot, e *irc.Event) {

@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode"
 
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {
@@ -50,19 +50,10 @@ type MetarPlugin struct{}
 
 func NewMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &MetarPlugin{}
-	err := p.Reload(b)
-	if err != nil {
-		return nil, err
-	}
 
 	b.Command("metar", "[airport code]", p.Metar)
 
 	return p, nil
-}
-
-func (p *MetarPlugin) Reload(b *bot.Bot) error {
-	// Noop
-	return nil
 }
 
 func (p *MetarPlugin) Metar(b *bot.Bot, e *irc.Event) {

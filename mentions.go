@@ -1,8 +1,8 @@
 package seabird
 
 import (
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {
@@ -15,11 +15,6 @@ func NewMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &MentionsPlugin{}
 	b.Mention(p.Mentions)
 	return p, nil
-}
-
-func (p *MentionsPlugin) Reload(b *bot.Bot) error {
-	// noop
-	return nil
 }
 
 func (p *MentionsPlugin) Mentions(b *bot.Bot, e *irc.Event) {

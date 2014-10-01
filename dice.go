@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {
@@ -23,11 +23,6 @@ func NewDicePlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &DicePlugin{}
 	b.Mention(p.Dice)
 	return p, nil
-}
-
-func (p *DicePlugin) Reload(b *bot.Bot) error {
-	// noop
-	return nil
 }
 
 func (p *DicePlugin) Dice(b *bot.Bot, e *irc.Event) {

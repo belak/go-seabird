@@ -8,8 +8,8 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	"bitbucket.org/belak/irc"
 	"bitbucket.org/belak/seabird/bot"
+	"bitbucket.org/belak/seabird/irc"
 )
 
 func init() {
@@ -36,10 +36,6 @@ func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.Event("PRIVMSG", p.Msg)
 
 	return p, nil
-}
-
-func (p *KarmaPlugin) Reload(b *bot.Bot) error {
-	return nil
 }
 
 func (p *KarmaPlugin) GetKarmaFor(name string) *Karma {
