@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"strings"
 
-	"bitbucket.org/belak/seabird/bot"
-	"bitbucket.org/belak/seabird/irc"
+	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/irc"
 )
 
 func init() {

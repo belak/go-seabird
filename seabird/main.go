@@ -10,11 +10,11 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	"bitbucket.org/belak/seabird/bot"
+	"github.com/belak/seabird/bot"
 
 	// Load plugins
-	_ "bitbucket.org/belak/seabird"
-	_ "bitbucket.org/belak/seabird/auth"
+	_ "github.com/belak/seabird"
+	_ "github.com/belak/seabird/auth"
 )
 
 type Config struct {
