@@ -3,7 +3,7 @@ package bot
 import (
 	"strings"
 
-	"github.com/belak/seabird/irc"
+	"github.com/belak/irc"
 )
 
 // CommandMux is a simple IRC event multiplexer, based on the BasicMux.

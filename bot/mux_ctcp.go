@@ -3,7 +3,7 @@ package bot
 import (
 	"strings"
 
-	"github.com/belak/seabird/irc"
+	"github.com/belak/irc"
 )
 
 type CTCPMux struct {

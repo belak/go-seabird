@@ -10,7 +10,7 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	"github.com/belak/seabird/irc"
+	"github.com/belak/irc"
 )
 
 type BotFunc func(b *Bot, e *irc.Event)

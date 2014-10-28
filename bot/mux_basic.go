@@ -3,7 +3,7 @@ package bot
 import (
 	"sync"
 
-	"github.com/belak/seabird/irc"
+	"github.com/belak/irc"
 )
 
 // BasicMux is a simple IRC event multiplexer.

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/belak/seabird/irc"
+	"github.com/belak/irc"
 )
 
 // MentionMux is a simple IRC event multiplexer, based on a slice of Handlers
