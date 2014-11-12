@@ -4,11 +4,11 @@
 FROM golang
 
 RUN mkdir -p /go/src/github.com/belak/seabird
-WORKDIR /go/src/github.com/belak/seabird
 
 # this will ideally be built by the ONBUILD below ;)
-CMD ["go-wrapper", "run"]
+CMD ["/go/bin/seabird"]
 
 COPY . /go/src/github.com/belak/seabird
-RUN go-wrapper download
-RUN go-wrapper install
+RUN go get -d github.com/belak/seabird \
+	&& go install github.com/belak/seabird \
+	&& rm -rf /go/src /go/pkg
