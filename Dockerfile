@@ -11,4 +11,4 @@ CMD ["/go/bin/seabird"]
 COPY . /go/src/github.com/belak/seabird
 RUN go get -d github.com/belak/seabird \
 	&& go install github.com/belak/seabird \
-	&& rm -rf /go/src
+	&& rm -rf /go/src /go/pkg
