@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"log"
+	"net/url"
 	"os"
 
 	"labix.org/v2/mgo"
@@ -13,8 +14,8 @@ import (
 	"github.com/belak/seabird/bot"
 
 	// Load plugins
-	_ "github.com/belak/seabird"
 	_ "github.com/belak/seabird/auth"
+	_ "github.com/belak/seabird/plugins"
 )
 
 type Config struct {
@@ -31,7 +32,13 @@ func main() {
 	flag.Parse()
 
 	// Connect to mongo
-	sess, err := mgo.Dial("localhost")
+	mgo_url, err := url.Parse(os.Getenv("MONGO_HOST"))
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+	mgo_url.Scheme = ""
+	sess, err := mgo.Dial(mgo_url.String())
 	if err != nil {
 		fmt.Println(err)
 		return

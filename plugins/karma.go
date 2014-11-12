@@ -1,4 +1,4 @@
-package seabird
+package plugins
 
 import (
 	"regexp"
