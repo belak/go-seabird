@@ -26,7 +26,7 @@ func main() {
 	flag.Parse()
 
 	// Connect to mongo
-	mgo_url, err := url.Parse(os.Getenv("MONGO_HOST"))
+	mgo_url, err := url.Parse(os.Getenv("MONGO_PORT"))
 	if err != nil {
 		fmt.Println(err)
 		return
