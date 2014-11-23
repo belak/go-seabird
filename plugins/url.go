@@ -13,6 +13,7 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/mux"
 )
 
 func init() {
@@ -34,21 +35,16 @@ var client = &http.Client{
 
 type URLPlugin struct{}
 
-func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
+func NewURLPlugin(bm *irc.BasicMux, cm *mux.CommandMux) (bot.Plugin, error) {
 	p := &URLPlugin{}
 
-	b.Event("PRIVMSG", p.Msg)
-	b.Command("down", "[website]", p.IsItDown)
+	bm.Event("PRIVMSG", p.Msg)
+	cm.Event("down", p.IsItDown) // "[website]"
 
 	return p, nil
 }
 
-func (p *URLPlugin) Reload(b *bot.Bot) error {
-	// noop
-	return nil
-}
-
-func (p *URLPlugin) Msg(b *bot.Bot, e *irc.Event) {
+func (p *URLPlugin) Msg(c *irc.Client, e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Trailing(), -1) {
 		go func(url string) {
 			r, err := client.Get(url)
@@ -97,17 +93,17 @@ func (p *URLPlugin) Msg(b *bot.Bot, e *irc.Event) {
 			}
 
 			if str, ok := f(z); ok {
-				b.Reply(e, "Title: %s", str)
+				c.Reply(e, "Title: %s", str)
 			}
 		}(url)
 	}
 }
 
-func (p *URLPlugin) IsItDown(b *bot.Bot, e *irc.Event) {
+func (p *URLPlugin) IsItDown(c *irc.Client, e *irc.Event) {
 	go func() {
 		url, err := url.Parse(strings.TrimSpace(e.Trailing()))
 		if err != nil {
-			b.Reply(e, "URL doesn't appear to be valid")
+			c.Reply(e, "URL doesn't appear to be valid")
 			return
 		}
 
@@ -117,10 +113,10 @@ func (p *URLPlugin) IsItDown(b *bot.Bot, e *irc.Event) {
 
 		r, err := client.Head(url.String())
 		if err != nil || r.StatusCode != 200 {
-			b.Reply(e, "It's not just you! %s looks down from here.", url)
+			c.Reply(e, "It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		b.Reply(e, "It's just you! %s looks up from here!", url)
+		c.Reply(e, "It's just you! %s looks up from here!", url)
 	}()
 }

@@ -3,6 +3,7 @@ package plugins
 import (
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/mux"
 )
 
 func init() {
@@ -11,19 +12,19 @@ func init() {
 
 type MentionsPlugin struct{}
 
-func NewMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
+func NewMentionsPlugin(m *mux.MentionMux) (bot.Plugin, error) {
 	p := &MentionsPlugin{}
-	b.Mention(p.Mentions)
+	m.Event(p.Mentions)
 	return p, nil
 }
 
-func (p *MentionsPlugin) Mentions(b *bot.Bot, e *irc.Event) {
+func (p *MentionsPlugin) Mentions(c *irc.Client, e *irc.Event) {
 	switch e.Trailing() {
 	case "ping":
-		b.MentionReply(e, "pong")
+		c.MentionReply(e, "pong")
 	case "scoobysnack", "scooby snack":
-		b.Reply(e, "Scooby Dooby Doo!")
+		c.Reply(e, "Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
-		b.Reply(e, ":)")
+		c.Reply(e, ":)")
 	}
 }

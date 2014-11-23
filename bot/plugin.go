@@ -1,13 +1,14 @@
 package bot
 
-type Reloader interface {
-	Reload(b *Bot) error
-}
-
+// This is simply so we can store plugins with a name
 type Plugin interface{}
-type PluginFactory func(b *Bot) (Plugin, error)
 
-type AuthPlugin interface {
-	CheckPerm(nick string, perm string) bool
-}
-type AuthPluginFactory func(b *Bot) (AuthPlugin, error)
+// Requirements for PluginFactories are as follows:
+// 1. Be a function
+// 2. Return at least 2 values
+// 3. The first return value is the plugin
+// 4. The last return value is an error
+//
+// Anything between the first and last arguments will be treated as things this plugin provides.
+// Anything this package needs should be taken in as an argument to the constructor.
+type PluginFactory interface{}
