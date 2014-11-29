@@ -95,6 +95,7 @@ func NewBot() (*Bot, error) {
 		return nil, err
 	}
 
+	// Load each plugin in the order we just determined
 	for _, v := range loadOrder {
 		err = b.loadPlugin(v)
 		if err != nil {
@@ -103,6 +104,10 @@ func NewBot() (*Bot, error) {
 	}
 
 	return b, nil
+}
+
+func (b *Bot) Config(name string, c PluginConfig) error {
+	return viper.MarshalKey(name, c)
 }
 
 func (b *Bot) Run() error {

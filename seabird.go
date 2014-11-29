@@ -10,6 +10,10 @@ import (
 	// Load plugins
 	//_ "github.com/belak/seabird/auth"
 	_ "github.com/belak/seabird/plugins"
+
+	// Load DB drivers
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 )
 
 var configOverride *string = flag.String("config", "", "alternate config name")
@@ -23,6 +27,7 @@ func main() {
 	}
 
 	viper.SetConfigName("seabird")
+	viper.AddConfigPath("/etc")
 	viper.AddConfigPath("$HOME/.config/seabird")
 	err := viper.ReadInConfig()
 	if err != nil {

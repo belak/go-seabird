@@ -1,5 +1,3 @@
-// +build ignore
-
 package plugins
 
 import (
@@ -7,55 +5,75 @@ import (
 	"strings"
 	"unicode"
 
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
+	"github.com/jmoiron/sqlx"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/mux"
 )
 
 func init() {
 	bot.RegisterPlugin("karma", NewKarmaPlugin)
 }
 
-type Karma struct {
-	Name  string `bson:"name"`
-	Score int    `bson:"score"`
-}
-
 type KarmaPlugin struct {
-	c *mgo.Collection
+	db *sqlx.DB
 }
 
 var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
+func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) (bot.Plugin, error) {
 	p := &KarmaPlugin{
-		b.DB.C("karma"),
+		db,
 	}
 
-	b.Command("karma", "[object]", p.Karma)
+	c.Event("karma", p.Karma) // "[object]"
 	b.Event("PRIVMSG", p.Msg)
 
 	return p, nil
 }
 
-func (p *KarmaPlugin) GetKarmaFor(name string) *Karma {
-	name = strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
-	k := &Karma{}
-	err := p.c.Find(bson.M{"name": name}).One(k)
+func (p *KarmaPlugin) CleanedName(name string) string {
+	return strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
+}
+
+func (p *KarmaPlugin) GetKarmaFor(name string) int {
+	var score int
+	err := p.db.Get(&score, "SELECT score FROM karma WHERE name=$1", p.CleanedName(name))
 	if err != nil {
-		return &Karma{Name: name}
+		return 0
 	}
 
-	return k
+	return score
 }
 
-func (p *KarmaPlugin) Karma(b *bot.Bot, e *irc.Event) {
-	b.MentionReply(e, "%s's karma is %d", e.Trailing(), p.GetKarmaFor(e.Trailing()).Score)
+func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
+	// TODO: Log errors
+
+	// Grab a transaction, just in case
+	tx, err := p.db.Beginx()
+	defer tx.Commit()
+
+	_, err = tx.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
+	// If it was a nil error, we got the insert
+	if err == nil {
+		return diff
+	}
+
+	// If there was an error, we try an update.
+	_, err = tx.Exec("UPDATE karma SET score=score+$1 WHERE name=$2", diff, p.CleanedName(name))
+
+	var score int
+	err = tx.Get(&score, "SELECT score FROM karma WHERE name=$1", p.CleanedName(name))
+
+	return score
 }
 
-func (p *KarmaPlugin) Msg(b *bot.Bot, e *irc.Event) {
+func (p *KarmaPlugin) Karma(c *irc.Client, e *irc.Event) {
+	c.MentionReply(e, "%s's karma is %d", e.Trailing(), p.GetKarmaFor(e.Trailing()))
+}
+
+func (p *KarmaPlugin) Msg(c *irc.Client, e *irc.Event) {
 	if len(e.Args) < 2 || !e.FromChannel() {
 		return
 	}
@@ -80,8 +98,7 @@ func (p *KarmaPlugin) Msg(b *bot.Bot, e *irc.Event) {
 				diff = -1
 			}
 
-			p.c.Upsert(bson.M{"name": name}, bson.M{"$inc": bson.M{"score": diff}})
-			b.Reply(e, "%s's karma is now %d", v[1], p.GetKarmaFor(name).Score)
+			c.Reply(e, "%s's karma is now %d", v[1], p.UpdateKarma(name, diff))
 		}
 	}
 }

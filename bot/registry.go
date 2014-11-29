@@ -1,9 +1,6 @@
 package bot
 
-import (
-	"errors"
-	"fmt"
-)
+import "fmt"
 
 func init() {
 	plugins = make(map[string]PluginFactory)
@@ -11,15 +8,10 @@ func init() {
 
 var plugins map[string]PluginFactory
 
-func RegisterPlugin(name string, p PluginFactory) error {
+func RegisterPlugin(name string, p PluginFactory) {
 	if _, ok := plugins[name]; ok {
-		return errors.New(fmt.Sprintf("There is already a plugin named '%s' registered.", name))
+		panic(fmt.Sprintf("There is already a plugin named '%s' registered.", name))
 	}
 
-	// TODO: Log for real
-	fmt.Printf("Plugin '%s' registered.\n", name)
-
 	plugins[name] = p
-
-	return nil
 }

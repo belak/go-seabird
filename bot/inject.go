@@ -9,8 +9,6 @@ import (
 	"github.com/codegangsta/inject"
 )
 
-// TODO: Handle extra config struct
-
 func init() {
 	// Grab the type of the interfaces we need
 	var e error

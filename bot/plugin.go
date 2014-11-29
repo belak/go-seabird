@@ -12,3 +12,5 @@ type Plugin interface{}
 // Anything between the first and last arguments will be treated as things this plugin provides.
 // Anything this package needs should be taken in as an argument to the constructor.
 type PluginFactory interface{}
+
+type PluginConfig interface{}
