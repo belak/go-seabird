@@ -55,18 +55,29 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 	tx, err := p.db.Beginx()
 	defer tx.Commit()
 
+	if err != nil {
+		fmt.Println("TX:", err)
+	}
+
 	_, err = tx.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
 	// If it was a nil error, we got the insert
 	if err == nil {
-		fmt.Println("Karma for '%s' not found: %s", name, err)
 		return diff
 	}
 
+	fmt.Println("Karma for '%s' not found: %s", name, err)
+
 	// If there was an error, we try an update.
 	_, err = tx.Exec("UPDATE karma SET score=score+$1 WHERE name=$2", diff, p.CleanedName(name))
+	if err != nil {
+		fmt.Println("UPDATE:", err)
+	}
 
 	var score int
 	err = tx.Get(&score, "SELECT score FROM karma WHERE name=$1", p.CleanedName(name))
+	if err != nil {
+		fmt.Println("SELECT:", err)
+	}
 
 	return score
 }
