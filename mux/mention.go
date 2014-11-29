@@ -1,4 +1,4 @@
-package bot
+package mux
 
 import (
 	"strings"
@@ -14,11 +14,11 @@ import (
 // Client has been mentioned. The nick, punctuation and any leading or
 // trailing spaces are removed from the message.
 type MentionMux struct {
-	handlers []BotFunc
+	handlers []irc.HandlerFunc
 	lock     *sync.RWMutex
 }
 
-// This will create an initialized BasicMux with no handlers.
+// This will create an initialized MentionMux with no handlers.
 func NewMentionMux() *MentionMux {
 	return &MentionMux{
 		nil,
@@ -27,7 +27,7 @@ func NewMentionMux() *MentionMux {
 }
 
 // MentionMux.Event will register a Handler
-func (m *MentionMux) Event(h BotFunc) {
+func (m *MentionMux) Event(h irc.HandlerFunc) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -35,14 +35,14 @@ func (m *MentionMux) Event(h BotFunc) {
 }
 
 // HandleEvent strips off the nick punctuation and spaces and runs the handlers
-func (m *MentionMux) HandleEvent(b *Bot, e *irc.Event) {
+func (m *MentionMux) HandleEvent(c *irc.Client, e *irc.Event) {
 	if e.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
 	}
 
 	lastArg := e.Trailing()
-	nick := b.C.CurrentNick()
+	nick := c.CurrentNick()
 
 	// We only handle this event if it starts with the
 	// current bot's nick followed by punctuation
@@ -64,6 +64,6 @@ func (m *MentionMux) HandleEvent(b *Bot, e *irc.Event) {
 	defer m.lock.RUnlock()
 
 	for _, h := range m.handlers {
-		h(b, newEvent)
+		h(c, newEvent)
 	}
 }

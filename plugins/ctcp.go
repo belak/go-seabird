@@ -6,6 +6,7 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/mux"
 )
 
 func init() {
@@ -14,26 +15,26 @@ func init() {
 
 type CTCPPlugin struct{}
 
-func NewCTCPPlugin(b *bot.Bot) (bot.Plugin, error) {
+func NewCTCPPlugin(m *mux.CTCPMux) (bot.Plugin, error) {
 	p := &CTCPPlugin{}
 
-	b.CTCP("TIME", p.Time)
-	b.CTCP("PING", p.Ping)
-	b.CTCP("VERSION", p.Version)
+	m.Event("TIME", p.Time)
+	m.Event("PING", p.Ping)
+	m.Event("VERSION", p.Version)
 
 	return p, nil
 }
 
-func (p *CTCPPlugin) Time(b *bot.Bot, e *irc.Event) {
+func (p *CTCPPlugin) Time(c *irc.Client, e *irc.Event) {
 	t := time.Now().Format("Mon 2 Jan 2006 15:04:05 MST")
-	b.CTCPReply(e, "TIME %s", t)
+	c.CTCPReply(e, "TIME %s", t)
 }
 
-func (p *CTCPPlugin) Ping(b *bot.Bot, e *irc.Event) {
-	b.CTCPReply(e, "PING %s", e.Trailing())
+func (p *CTCPPlugin) Ping(c *irc.Client, e *irc.Event) {
+	c.CTCPReply(e, "PING %s", e.Trailing())
 }
 
-func (p *CTCPPlugin) Version(b *bot.Bot, e *irc.Event) {
-	b.CTCPReply(e, "VERSION belak/seabird [%s %s %s]",
+func (p *CTCPPlugin) Version(c *irc.Client, e *irc.Event) {
+	c.CTCPReply(e, "VERSION belak/seabird [%s %s %s]",
 		runtime.GOOS, runtime.GOARCH, runtime.Version())
 }

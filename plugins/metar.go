@@ -9,6 +9,7 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/mux"
 )
 
 func init() {
@@ -43,23 +44,24 @@ func metar(code string) string {
 			return strings.TrimSpace(line)
 		}
 	}
+
 	return "No results"
 }
 
 type MetarPlugin struct{}
 
-func NewMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
+func NewMetarPlugin(m *mux.CommandMux) (bot.Plugin, error) {
 	p := &MetarPlugin{}
 
-	b.Command("metar", "[airport code]", p.Metar)
+	m.Event("metar", p.Metar) // "[airport code]"
 
 	return p, nil
 }
 
-func (p *MetarPlugin) Metar(b *bot.Bot, e *irc.Event) {
+func (p *MetarPlugin) Metar(c *irc.Client, e *irc.Event) {
 	if !e.FromChannel() {
 		return
 	}
 
-	b.MentionReply(e, "%s", metar(e.Trailing()))
+	c.MentionReply(e, "%s", metar(e.Trailing()))
 }

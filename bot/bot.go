@@ -4,38 +4,16 @@ package bot
 
 import (
 	"crypto/tls"
-	"errors"
-	"fmt"
+	"reflect"
 
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
+	"github.com/codegangsta/inject"
+	"github.com/spf13/viper"
 
 	"github.com/belak/irc"
+	"github.com/belak/seabird/mux"
 )
 
-type BotFunc func(b *Bot, e *irc.Event)
-
-type Bot struct {
-	C *irc.Client
-
-	DB   *mgo.Database
-	sess *mgo.Session
-
-	basic *BasicMux
-	cmds  *CommandMux
-	ment  *MentionMux
-	ctcp  *CTCPMux
-
-	// Simple store of all loaded plugins
-	plugins    map[string]Plugin
-	authPlugin AuthPlugin
-
-	name string
-}
-
-type ClientConfig struct {
-	ConnectionName string
-
+type CoreConfig struct {
 	Nick string
 	User string
 	Name string
@@ -45,153 +23,100 @@ type ClientConfig struct {
 	TLS         bool
 	TLSNoVerify bool
 
-	Plugins    []string
-	AuthPlugin string
-
-	Cmds []string
-
+	Cmds   []string
 	Prefix string
+
+	Plugins []string
 }
 
-func NewBot(s *mgo.Session, server string) (*Bot, error) {
-	db := s.DB("seabird")
+type Bot struct {
+	// Dep injection
+	inj inject.Injector
 
-	// Normally we'd use b.GetConfig, but we don't have a Bot object yet
-	col := db.C("seabird")
-	c := &ClientConfig{}
-	err := col.Find(bson.M{"connectionname": server}).One(c)
+	// All the things that we need for plugins
+	client *irc.Client
+	basic  *irc.BasicMux
+	cmds   *mux.CommandMux
+	ment   *mux.MentionMux
+	ctcp   *mux.CTCPMux
+
+	// Config, stored for later use
+	config *CoreConfig
+
+	// Simple store of all loaded plugins
+	plugins map[string]Plugin
+	values  map[reflect.Type]reflect.Value
+}
+
+func NewBot() (*Bot, error) {
+	c := &CoreConfig{}
+	err := viper.MarshalKey("core", c)
 	if err != nil {
 		return nil, err
 	}
 
-	// NOTE: We load the client afterwords so we can put in the correct handler
+	// The IRC client is nil so we can fill in the blank in a bit
 	b := &Bot{
+		inject.New(),
 		nil,
-		db,
-		s,
-		NewBasicMux(),
-		NewCommandMux(c.Prefix),
-		NewMentionMux(),
-		NewCTCPMux(),
+		irc.NewBasicMux(),
+		mux.NewCommandMux(c.Prefix),
+		mux.NewMentionMux(),
+		mux.NewCTCPMux(),
+		c,
 		make(map[string]Plugin),
-		nil,
-		server,
+		make(map[reflect.Type]reflect.Value),
 	}
 
+	b.inj.Map(b)
+
+	// Hook up the other muxes
 	b.basic.Event("PRIVMSG", b.cmds.HandleEvent)
 	b.basic.Event("PRIVMSG", b.ment.HandleEvent)
 	b.basic.Event("CTCP", b.ctcp.HandleEvent)
+	b.inj.Map(b.basic)
+	b.inj.Map(b.cmds)
+	b.inj.Map(b.ment)
+	b.inj.Map(b.ctcp)
 
-	b.C = irc.NewClient(irc.HandlerFunc(b.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
-
-	b.Event("001", func(b *Bot, e *irc.Event) {
-		bc := b.GetConfig()
-		for _, v := range bc.Cmds {
-			b.C.Write(v)
+	// Run commands on startup
+	b.basic.Event("001", func(cl *irc.Client, e *irc.Event) {
+		for _, v := range c.Cmds {
+			cl.Write(v)
 		}
 	})
 
-	// Initialize Auth plugin first because other plugins may need it
-	pf, ok := authPlugins[c.AuthPlugin]
-	if !ok {
-		return nil, errors.New(fmt.Sprintf("There is not an auth plugin named '%s'", c.AuthPlugin))
-	}
+	// Create the actual IRC client
+	b.client = irc.NewClient(irc.HandlerFunc(b.basic.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
+	b.inj.Map(b.client)
 
-	p, err := pf(b)
+	loadOrder, err := b.determineLoadOrder()
 	if err != nil {
 		return nil, err
 	}
-	b.authPlugin = p
 
-	for _, v := range c.Plugins {
-		pf, ok := plugins[v]
-		if !ok {
-			return nil, errors.New(fmt.Sprintf("There is not a plugin named '%s'", v))
-		}
-
-		p, err := pf(b)
+	// Load each plugin in the order we just determined
+	for _, v := range loadOrder {
+		err = b.loadPlugin(v)
 		if err != nil {
 			return nil, err
 		}
-		b.plugins[v] = p
 	}
 
 	return b, nil
 }
 
-func (b *Bot) CheckPerm(nick string, perm string) bool {
-	return b.authPlugin.CheckPerm(nick, perm)
-}
-
-func (b *Bot) HandleEvent(c *irc.Client, e *irc.Event) {
-	b.basic.HandleEvent(b, e)
+func (b *Bot) Config(name string, c PluginConfig) error {
+	return viper.MarshalKey(name, c)
 }
 
 func (b *Bot) Run() error {
-	c := b.GetConfig()
-	if c.TLS {
+	if b.config.TLS {
 		conf := &tls.Config{
-			InsecureSkipVerify: c.TLSNoVerify,
+			InsecureSkipVerify: b.config.TLSNoVerify,
 		}
-		return b.C.DialTLS(c.Host, conf)
+		return b.client.DialTLS(b.config.Host, conf)
 	}
 
-	return b.C.Dial(c.Host)
-}
-
-func (b *Bot) GetConfig() *ClientConfig {
-	c := &ClientConfig{}
-	col := b.DB.C("seabird")
-	err := col.Find(bson.M{"connectionname": b.name}).One(c)
-	if err != nil {
-		return nil
-	}
-
-	return c
-}
-
-func (b *Bot) Event(name string, h BotFunc) {
-	b.basic.Event(name, h)
-}
-
-func (b *Bot) CTCP(name string, h BotFunc) {
-	b.ctcp.Event(name, h)
-}
-
-func (b *Bot) Mention(h BotFunc) {
-	b.ment.Event(h)
-}
-
-func (b *Bot) Command(name string, help string, h BotFunc) {
-	b.cmds.Event(name, h)
-}
-
-func (b *Bot) CommandPrivate(name string, help string, h BotFunc) {
-	b.cmds.Private(name, h)
-}
-
-func (b *Bot) CommandPublic(name string, help string, h BotFunc) {
-	b.cmds.Channel(name, h)
-}
-
-func (b *Bot) Reply(e *irc.Event, format string, args ...interface{}) {
-	b.C.Reply(e, format, args...)
-}
-
-func (b *Bot) MentionReply(e *irc.Event, format string, args ...interface{}) {
-	b.C.MentionReply(e, format, args...)
-}
-
-func (b *Bot) CTCPReply(e *irc.Event, format string, args ...interface{}) {
-	b.C.CTCPReply(e, format, args...)
-}
-
-func (b *Bot) LoadConfig(name string, config interface{}) error {
-	col := b.DB.C("config")
-	err := col.Find(bson.M{"pluginname": name}).One(config)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return b.client.Dial(b.config.Host)
 }

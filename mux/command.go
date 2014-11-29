@@ -1,4 +1,4 @@
-package bot
+package mux
 
 import (
 	"strings"
@@ -12,37 +12,37 @@ import (
 // events which start with it. The first word after the string is
 // moved into the Event.Command.
 type CommandMux struct {
-	private *BasicMux
-	public  *BasicMux
+	private *irc.BasicMux
+	public  *irc.BasicMux
 	prefix  string
 }
 
 // This will create an initialized BasicMux with no handlers.
 func NewCommandMux(prefix string) *CommandMux {
 	return &CommandMux{
-		NewBasicMux(),
-		NewBasicMux(),
+		irc.NewBasicMux(),
+		irc.NewBasicMux(),
 		prefix,
 	}
 }
 
 // CommandMux.Event will register a Handler
-func (m *CommandMux) Event(c string, h BotFunc) {
+func (m *CommandMux) Event(c string, h irc.HandlerFunc) {
 	m.private.Event(c, h)
 	m.public.Event(c, h)
 }
 
-func (m *CommandMux) Channel(c string, h BotFunc) {
+func (m *CommandMux) Channel(c string, h irc.HandlerFunc) {
 	m.public.Event(c, h)
 }
 
-func (m *CommandMux) Private(c string, h BotFunc) {
+func (m *CommandMux) Private(c string, h irc.HandlerFunc) {
 	m.private.Event(c, h)
 }
 
 // HandleEvent strips off the prefix, pulls the command out
 // and runs HandleEvent on the internal BasicMux
-func (m *CommandMux) HandleEvent(b *Bot, e *irc.Event) {
+func (m *CommandMux) HandleEvent(c *irc.Client, e *irc.Event) {
 	if e.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
@@ -66,8 +66,8 @@ func (m *CommandMux) HandleEvent(b *Bot, e *irc.Event) {
 	newEvent.Command = msgParts[0][len(m.prefix):]
 
 	if newEvent.FromChannel() {
-		m.public.HandleEvent(b, newEvent)
+		m.public.HandleEvent(c, newEvent)
 	} else {
-		m.private.HandleEvent(b, newEvent)
+		m.private.HandleEvent(c, newEvent)
 	}
 }

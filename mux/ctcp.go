@@ -1,4 +1,4 @@
-package bot
+package mux
 
 import (
 	"strings"
@@ -7,20 +7,20 @@ import (
 )
 
 type CTCPMux struct {
-	handlers *BasicMux
+	handlers *irc.BasicMux
 }
 
 func NewCTCPMux() *CTCPMux {
 	return &CTCPMux{
-		NewBasicMux(),
+		irc.NewBasicMux(),
 	}
 }
 
-func (m *CTCPMux) Event(c string, h BotFunc) {
+func (m *CTCPMux) Event(c string, h irc.HandlerFunc) {
 	m.handlers.Event(c, h)
 }
 
-func (m *CTCPMux) HandleEvent(b *Bot, e *irc.Event) {
+func (m *CTCPMux) HandleEvent(c *irc.Client, e *irc.Event) {
 	if e.Command != "CTCP" {
 		// TODO: Log this
 		return
@@ -39,5 +39,5 @@ func (m *CTCPMux) HandleEvent(b *Bot, e *irc.Event) {
 
 	newEvent.Command = msgParts[0]
 
-	m.handlers.HandleEvent(b, newEvent)
+	m.handlers.HandleEvent(c, newEvent)
 }
