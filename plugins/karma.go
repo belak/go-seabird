@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
@@ -57,6 +58,7 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 	_, err = tx.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
 	// If it was a nil error, we got the insert
 	if err == nil {
+		fmt.Println("Karma for '%s' not found: %s", name, err)
 		return diff
 	}
 
