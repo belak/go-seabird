@@ -49,7 +49,11 @@ func (p *KarmaPlugin) GetKarmaFor(name string) int {
 }
 
 func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
-	// TODO: Log errors
+	_, err := p.db.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
+	// If it was a nil error, we got the insert
+	if err == nil {
+		return diff
+	}
 
 	// Grab a transaction, just in case
 	tx, err := p.db.Beginx()
@@ -58,14 +62,6 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 	if err != nil {
 		fmt.Println("TX:", err)
 	}
-
-	_, err = tx.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
-	// If it was a nil error, we got the insert
-	if err == nil {
-		return diff
-	}
-
-	fmt.Println("Karma for '%s' not found: %s", name, err)
 
 	// If there was an error, we try an update.
 	_, err = tx.Exec("UPDATE karma SET score=score+$1 WHERE name=$2", diff, p.CleanedName(name))
