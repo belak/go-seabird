@@ -143,8 +143,6 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 				}
 			}
 		}
-
-		fmt.Println("Added plugin", n)
 	}
 
 	// At this point all the plugins that could be loaded have been loaded.
