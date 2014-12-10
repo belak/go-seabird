@@ -20,13 +20,13 @@ var coinNames = []string{
 
 type ChancePlugin struct {
 	RouletteGunSize   int
-	rouletteShotsLeft int
+	rouletteShotsLeft map[string]int
 }
 
 func NewChancePlugin(b *bot.Bot, m *mux.CommandMux) (bot.Plugin, error) {
 	p := &ChancePlugin{
 		6,
-		0,
+		make(map[string]int),
 	}
 
 	m.Event("roulette", p.Roulette) // "Click... click... BANG!"
@@ -40,19 +40,28 @@ func (p *ChancePlugin) Roulette(c *irc.Client, e *irc.Event) {
 		return
 	}
 
+	if len(e.Args) < 1 || len(e.Args[0]) < 1 {
+		// Invalid message
+		return
+	}
+
+	shotsLeft := p.rouletteShotsLeft[e.Args[0]]
+
 	var msg string
-	if p.rouletteShotsLeft < 1 {
-		p.rouletteShotsLeft = rand.Intn(p.RouletteGunSize) + 1
+	if shotsLeft < 1 {
+		shotsLeft = rand.Intn(p.RouletteGunSize) + 1
 		msg = "Reloading the gun... "
 	}
 
-	p.rouletteShotsLeft -= 1
-	if p.rouletteShotsLeft < 1 {
+	shotsLeft -= 1
+	if shotsLeft < 1 {
 		c.MentionReply(e, "%sBANG!", msg)
 		c.Writef("KICK %s %s", e.Args[0], e.Identity.Nick)
 	} else {
 		c.MentionReply(e, "%sClick.", msg)
 	}
+
+	p.rouletteShotsLeft[e.Args[0]] = shotsLeft
 }
 
 func (p *ChancePlugin) Coin(c *irc.Client, e *irc.Event) {
