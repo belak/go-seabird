@@ -33,18 +33,14 @@ var client = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
-type URLPlugin struct{}
+func NewURLPlugin(bm *irc.BasicMux, cm *mux.CommandMux) error {
+	bm.Event("PRIVMSG", URLTitle)
+	cm.Event("down", IsItDown) // "[website]"
 
-func NewURLPlugin(bm *irc.BasicMux, cm *mux.CommandMux) (bot.Plugin, error) {
-	p := &URLPlugin{}
-
-	bm.Event("PRIVMSG", p.Msg)
-	cm.Event("down", p.IsItDown) // "[website]"
-
-	return p, nil
+	return nil
 }
 
-func (p *URLPlugin) Msg(c *irc.Client, e *irc.Event) {
+func URLTitle(c *irc.Client, e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Trailing(), -1) {
 		go func(url string) {
 			r, err := client.Get(url)
@@ -99,7 +95,7 @@ func (p *URLPlugin) Msg(c *irc.Client, e *irc.Event) {
 	}
 }
 
-func (p *URLPlugin) IsItDown(c *irc.Client, e *irc.Event) {
+func IsItDown(c *irc.Client, e *irc.Event) {
 	go func() {
 		url, err := url.Parse(strings.TrimSpace(e.Trailing()))
 		if err != nil {

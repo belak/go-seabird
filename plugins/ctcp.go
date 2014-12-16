@@ -15,14 +15,14 @@ func init() {
 
 type CTCPPlugin struct{}
 
-func NewCTCPPlugin(m *mux.CTCPMux) (bot.Plugin, error) {
+func NewCTCPPlugin(m *mux.CTCPMux) error {
 	p := &CTCPPlugin{}
 
 	m.Event("TIME", p.Time)
 	m.Event("PING", p.Ping)
 	m.Event("VERSION", p.Version)
 
-	return p, nil
+	return nil
 }
 
 func (p *CTCPPlugin) Time(c *irc.Client, e *irc.Event) {

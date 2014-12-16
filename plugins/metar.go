@@ -50,15 +50,13 @@ func metar(code string) string {
 
 type MetarPlugin struct{}
 
-func NewMetarPlugin(m *mux.CommandMux) (bot.Plugin, error) {
-	p := &MetarPlugin{}
+func NewMetarPlugin(m *mux.CommandMux) error {
+	m.Event("metar", Metar) // "[airport code]"
 
-	m.Event("metar", p.Metar) // "[airport code]"
-
-	return p, nil
+	return nil
 }
 
-func (p *MetarPlugin) Metar(c *irc.Client, e *irc.Event) {
+func Metar(c *irc.Client, e *irc.Event) {
 	if !e.FromChannel() {
 		return
 	}

@@ -99,7 +99,7 @@ type ForecastPlugin struct {
 	// CacheDuration string
 }
 
-func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) (bot.Plugin, error) {
+func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
 	p := &ForecastPlugin{}
 
 	b.Config("forecast", p)
@@ -107,7 +107,7 @@ func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) (bot.Plugin, error) {
 	m.Event("weather", p.Weather)
 	m.Event("forecast", p.Forecast)
 
-	return p, nil
+	return nil
 }
 
 func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, error) {

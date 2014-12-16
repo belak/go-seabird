@@ -48,8 +48,7 @@ type Bot struct {
 	Log    *logrus.Logger
 
 	// Simple store of all loaded plugins
-	plugins map[string]Plugin
-	values  map[reflect.Type]reflect.Value
+	values map[reflect.Type]reflect.Value
 }
 
 func NewBot() (*Bot, error) {
@@ -69,27 +68,25 @@ func NewBot() (*Bot, error) {
 		mux.NewCTCPMux(),
 		c,
 		logrus.New(),
-		make(map[string]Plugin),
 		make(map[reflect.Type]reflect.Value),
 	}
 
-	{
-		// Default is warn. This table just translates config values to the logrus Level
-		logLevels := map[string]logrus.Level{
-			"":      logrus.WarnLevel,
-			"debug": logrus.DebugLevel,
-			"info":  logrus.InfoLevel,
-			"warn":  logrus.WarnLevel,
-			"error": logrus.ErrorLevel,
-			"fatal": logrus.FatalLevel,
-			"panic": logrus.PanicLevel,
-		}
+	// Default is warn. This table just translates config values to the logrus Level
+	logLevels := map[string]logrus.Level{
+		"":      logrus.WarnLevel,
+		"debug": logrus.DebugLevel,
+		"info":  logrus.InfoLevel,
+		"warn":  logrus.WarnLevel,
+		"error": logrus.ErrorLevel,
+		"fatal": logrus.FatalLevel,
+		"panic": logrus.PanicLevel,
+	}
 
-		if level, ok := logLevels[c.LogLevel]; ok {
-			b.Log.Level = level
-		} else {
-			b.Log.WithField("loglevel", c.LogLevel).Error("Log level unknown")
-		}
+	// Set the log level if it's valid
+	if level, ok := logLevels[c.LogLevel]; ok {
+		b.Log.Level = level
+	} else {
+		b.Log.WithField("loglevel", c.LogLevel).Error("Log level unknown")
 	}
 
 	// Add the bot and logger to the injection mapper
@@ -115,7 +112,11 @@ func NewBot() (*Bot, error) {
 
 	// Create the actual IRC client
 	b.client = irc.NewClient(irc.HandlerFunc(b.basic.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
+
+	// Pass in our logrous logger as the IRC logger
 	b.client.Logger = b.Log
+
+	// Add the client to the dep injection mappings
 	b.inj.Map(b.client)
 
 	loadOrder, err := b.determineLoadOrder()
@@ -138,7 +139,7 @@ func NewBot() (*Bot, error) {
 	return b, nil
 }
 
-func (b *Bot) Config(name string, c PluginConfig) error {
+func (b *Bot) Config(name string, c interface{}) error {
 	return viper.MarshalKey(name, c)
 }
 

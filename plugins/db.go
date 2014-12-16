@@ -16,15 +16,15 @@ type DBPlugin struct {
 	DataSource string
 }
 
-func NewDBPlugin(b *bot.Bot) (bot.Plugin, *sqlx.DB, error) {
+func NewDBPlugin(b *bot.Bot) (*sqlx.DB, error) {
 	p := &DBPlugin{}
 
 	err := b.Config("db", p)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
 
 	db, err := sqlx.Connect(p.Driver, p.DataSource)
 
-	return p, db, err
+	return db, err
 }

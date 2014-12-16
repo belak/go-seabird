@@ -12,13 +12,12 @@ func init() {
 
 type MentionsPlugin struct{}
 
-func NewMentionsPlugin(m *mux.MentionMux) (bot.Plugin, error) {
-	p := &MentionsPlugin{}
-	m.Event(p.Mentions)
-	return p, nil
+func NewMentionsPlugin(m *mux.MentionMux) error {
+	m.Event(Mentions)
+	return nil
 }
 
-func (p *MentionsPlugin) Mentions(c *irc.Client, e *irc.Event) {
+func Mentions(c *irc.Client, e *irc.Event) {
 	switch e.Trailing() {
 	case "ping":
 		c.MentionReply(e, "pong")

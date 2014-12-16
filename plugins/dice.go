@@ -18,15 +18,12 @@ func init() {
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-type DicePlugin struct{}
-
-func NewDicePlugin(m *mux.MentionMux) (bot.Plugin, error) {
-	p := &DicePlugin{}
-	m.Event(p.Dice)
-	return p, nil
+func NewDicePlugin(m *mux.MentionMux) error {
+	m.Event(Dice)
+	return nil
 }
 
-func (p *DicePlugin) Dice(c *irc.Client, e *irc.Event) {
+func Dice(c *irc.Client, e *irc.Event) {
 	var rolls []string
 	totalCount := 0
 

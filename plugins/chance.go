@@ -23,7 +23,7 @@ type ChancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func NewChancePlugin(b *bot.Bot, m *mux.CommandMux) (bot.Plugin, error) {
+func NewChancePlugin(b *bot.Bot, m *mux.CommandMux) error {
 	p := &ChancePlugin{
 		6,
 		make(map[string]int),
@@ -32,7 +32,7 @@ func NewChancePlugin(b *bot.Bot, m *mux.CommandMux) (bot.Plugin, error) {
 	m.Event("roulette", p.Roulette) // "Click... click... BANG!"
 	m.Event("coin", p.Coin)         // "[heads|tails]"
 
-	return p, nil
+	return nil
 }
 
 func (p *ChancePlugin) Roulette(c *irc.Client, e *irc.Event) {

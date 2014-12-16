@@ -23,7 +23,7 @@ type KarmaPlugin struct {
 
 var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) (bot.Plugin, error) {
+func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
 	p := &KarmaPlugin{
 		db,
 	}
@@ -31,7 +31,7 @@ func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) (bot.Plugin
 	c.Event("karma", p.Karma) // "[object]"
 	b.Event("PRIVMSG", p.Msg)
 
-	return p, nil
+	return nil
 }
 
 func (p *KarmaPlugin) CleanedName(name string) string {

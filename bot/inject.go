@@ -12,10 +12,8 @@ import (
 func init() {
 	// Grab the type of the interfaces we need
 	var e error
-	var p Plugin
 
 	errorInterfaceType = inject.InterfaceOf(&e)
-	pluginInterfaceType = inject.InterfaceOf(&p)
 }
 
 var errorInterfaceType reflect.Type
@@ -63,30 +61,30 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 	// Check each plugin
 	for _, v := range b.config.Plugins {
 		if _, ok := pluginStatus[v]; ok {
-			return nil, fmt.Errorf("Plugin '%s' cannot be loaded more than once.", v)
+			return nil, fmt.Errorf("Plugin %q cannot be loaded more than once.", v)
 		}
 
 		if _, ok := plugins[v]; !ok {
-			return nil, fmt.Errorf("Plugin '%s' cannot be found.", v)
+			return nil, fmt.Errorf("Plugin %q cannot be found.", v)
 		}
 
 		// Get the plugin constructor and do some validation
 		con := plugins[v]
 		t := reflect.TypeOf(con)
 		if t.Kind() != reflect.Func {
-			return nil, fmt.Errorf("Plugin '%s' has a constructor which is not a function", v)
+			return nil, fmt.Errorf("Plugin %q has a constructor which is not a function", v)
 		}
 
 		if t.NumOut() < 2 {
-			return nil, fmt.Errorf("Plugin '%s' has a constructor which doesn't return enough values", v)
+			return nil, fmt.Errorf("Plugin %q has a constructor which doesn't return enough values", v)
 		}
 
 		if t.Out(0) != pluginInterfaceType {
-			return nil, fmt.Errorf("Plugin '%s' has a constructor which doesn't contain an Plugin as the first return")
+			return nil, fmt.Errorf("Plugin %q has a constructor which doesn't contain an Plugin as the first return", v)
 		}
 
 		if t.Out(t.NumOut()-1) != errorInterfaceType {
-			return nil, fmt.Errorf("Plugin '%s' has a constructor which doesn't contain an error as the last return")
+			return nil, fmt.Errorf("Plugin %q has a constructor which doesn't contain an error as the last return", v)
 		}
 
 		s := newPluginLoadStatus()
@@ -109,7 +107,7 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 		for i := 1; i < t.NumOut()-1; i++ {
 			s.provides = append(s.provides, t.Out(i))
 			if _, ok := providedBy[t.Out(i)]; ok {
-				return nil, fmt.Errorf("Type '%s' is provided by multiple plugins.", t.Out(i))
+				return nil, fmt.Errorf("Type %q is provided by multiple plugins.", t.Out(i))
 			}
 			providedBy[t.Out(i)] = v
 		}
@@ -172,7 +170,7 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 func (b *Bot) loadPlugin(name string) error {
 	p, ok := plugins[name]
 	if !ok {
-		return fmt.Errorf("Plugin '%s' does not exist.", name)
+		return fmt.Errorf("Plugin %q does not exist.", name)
 	}
 
 	vals, err := b.inj.Invoke(p)
@@ -181,18 +179,14 @@ func (b *Bot) loadPlugin(name string) error {
 	}
 
 	if len(vals) < 2 {
-		return fmt.Errorf("Plugin '%s' did not return enough values.", name)
+		return fmt.Errorf("Plugin %q did not return enough values.", name)
 	}
 
 	// Grab the plugin, the error, and cut them out of vals
-	plugin := vals[0]
-	reflectedErr := vals[len(vals)-1]
-	vals = vals[1 : len(vals)-1]
-
-	b.plugins[name] = plugin.Interface()
+	reflectedErr, vals := vals[len(vals)-1], vals[:len(vals)-1]
 
 	if err, ok = reflectedErr.Interface().(error); err != nil && !ok {
-		return fmt.Errorf("Plugin '%s' did not return an error as the last value.", name)
+		return fmt.Errorf("Plugin %q did not return an error as the last value.", name)
 	}
 
 	if err != nil {
