@@ -131,7 +131,7 @@ func NewBot() (*Bot, error) {
 		b.Log.WithField("plugin", v).Info("Loading plugin")
 		err = b.loadPlugin(v)
 		if err != nil {
-			b.Log.Errorf("Failure loading plugin '%s': %s", v, err)
+			b.Log.Errorf("Failure loading plugin %q: %s", v, err)
 			return nil, err
 		}
 	}

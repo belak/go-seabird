@@ -17,7 +17,6 @@ func init() {
 }
 
 var errorInterfaceType reflect.Type
-var pluginInterfaceType reflect.Type
 
 type pluginLoadStatus struct {
 	loaded loadStatus
@@ -75,12 +74,8 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 			return nil, fmt.Errorf("Plugin %q has a constructor which is not a function", v)
 		}
 
-		if t.NumOut() < 2 {
+		if t.NumOut() < 1 {
 			return nil, fmt.Errorf("Plugin %q has a constructor which doesn't return enough values", v)
-		}
-
-		if t.Out(0) != pluginInterfaceType {
-			return nil, fmt.Errorf("Plugin %q has a constructor which doesn't contain an Plugin as the first return", v)
 		}
 
 		if t.Out(t.NumOut()-1) != errorInterfaceType {
@@ -103,8 +98,8 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 		}
 
 		// Loop through all output and add it to provided
-		// NOTE: We skip the first and last values, as those are supposed to be the plugin itself and the error
-		for i := 1; i < t.NumOut()-1; i++ {
+		// NOTE: We skip the last value, as those that is just supposed to be an error
+		for i := 0; i < t.NumOut()-1; i++ {
 			s.provides = append(s.provides, t.Out(i))
 			if _, ok := providedBy[t.Out(i)]; ok {
 				return nil, fmt.Errorf("Type %q is provided by multiple plugins.", t.Out(i))
@@ -178,7 +173,7 @@ func (b *Bot) loadPlugin(name string) error {
 		return err
 	}
 
-	if len(vals) < 2 {
+	if len(vals) < 1 {
 		return fmt.Errorf("Plugin %q did not return enough values.", name)
 	}
 
