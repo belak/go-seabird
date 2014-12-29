@@ -7,27 +7,36 @@ import __yyfmt__ "fmt"
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"math"
+	"reflect"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
 
 // Math functions we want to be able to use
-var funcMap = map[string]func(float64) float64{
-	"abs": math.Abs,
-	"sin": math.Sin,
-	"cos": math.Cos,
-	"tan": math.Tan,
+// I hate having to use interface, but that's the
+// price we pay for making this interpreted
+//
+// Note that we only really accept taking multiple
+// float64 values and returning a single float64
+var funcMap = map[string]interface{}{
+	"abs":   math.Abs,
+	"sin":   math.Sin,
+	"cos":   math.Cos,
+	"tan":   math.Tan,
+	"sqrt":  math.Sqrt,
+	"floor": math.Floor,
+	"ceil":  math.Ceil,
 }
 
-//line expr.y:27
+//line expr.y:35
 type yySymType struct {
-	yys int
-	num float64
-	str string
+	yys  int
+	num  float64
+	str  string
+	vals []float64
 }
 
 const NUM = 57346
@@ -49,7 +58,7 @@ const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 200
 
-//line expr.y:103
+//line expr.y:115
 
 // The parser expects the lexer to return 0 on EOF.  Give it a name
 // for clarity.
@@ -62,6 +71,36 @@ type yyLex struct {
 	peek rune
 	val  float64
 	err  error
+}
+
+func callFunc(name string, args []float64) float64 {
+	f, ok := funcMap[name]
+	if !ok {
+		// TODO: Set error
+		return 0
+	}
+
+	v := reflect.ValueOf(f)
+	t := v.Type()
+	if t.Kind() != reflect.Func || t.NumOut() != 1 || t.Out(0).Kind() != reflect.Float64 || t.NumIn() != len(args) {
+		// TODO: Set error
+		return 0
+	}
+
+	for i := 0; i < t.NumIn(); i++ {
+		if t.In(i).Kind() != reflect.Float64 {
+			// TODO: Set error
+			return 0
+		}
+	}
+
+	var vals []reflect.Value
+	for _, arg := range args {
+		vals = append(vals, reflect.ValueOf(arg))
+	}
+
+	ret := v.Call(vals)
+	return ret[0].Float()
 }
 
 // The parser calls this method to get each new token.  This
@@ -195,7 +234,7 @@ var yyExca = []int{
 	-2, 0,
 }
 
-const yyNprod = 14
+const yyNprod = 16
 const yyPrivate = 57344
 
 var yyTokenNames []string
@@ -205,43 +244,43 @@ const yyLast = 48
 
 var yyAct = []int{
 
-	3, 10, 11, 12, 13, 13, 14, 15, 16, 17,
-	18, 19, 20, 21, 22, 2, 23, 8, 9, 10,
-	11, 12, 13, 1, 25, 8, 9, 10, 11, 12,
-	13, 0, 24, 8, 9, 10, 11, 12, 13, 4,
-	6, 0, 5, 0, 0, 0, 0, 7,
+	3, 26, 27, 15, 13, 2, 14, 1, 16, 17,
+	18, 19, 20, 21, 22, 23, 24, 8, 9, 10,
+	11, 12, 13, 0, 25, 0, 0, 0, 28, 8,
+	9, 10, 11, 12, 13, 4, 6, 0, 5, 0,
+	0, 0, 0, 7, 10, 11, 12, 13,
 }
 var yyPact = []int{
 
-	35, -1000, -1000, 27, -1000, 35, -5, 35, 35, 35,
-	35, 35, 35, 35, -7, 35, 19, -7, -7, -6,
-	-6, -6, -1000, 11, -1000, -1000,
+	31, -1000, -1000, 23, -1000, 31, -9, 31, 31, 31,
+	31, 31, 31, 31, 36, 31, 11, 36, 36, -7,
+	-7, -7, -1000, -12, 23, -1000, -1000, 31, 23,
 }
 var yyPgo = []int{
 
-	0, 0, 23, 15,
+	0, 0, 15, 7, 5,
 }
 var yyR1 = []int{
 
-	0, 2, 2, 3, 1, 1, 1, 1, 1, 1,
-	1, 1, 1, 1,
+	0, 3, 3, 4, 1, 1, 1, 1, 1, 1,
+	1, 1, 1, 1, 2, 2,
 }
 var yyR2 = []int{
 
 	0, 1, 0, 1, 1, 2, 3, 3, 3, 3,
-	3, 3, 4, 3,
+	3, 3, 4, 3, 1, 3,
 }
 var yyChk = []int{
 
-	-1000, -2, -3, -1, 4, 7, 5, 12, 6, 7,
+	-1000, -3, -4, -1, 4, 7, 5, 12, 6, 7,
 	8, 9, 10, 11, -1, 12, -1, -1, -1, -1,
-	-1, -1, -1, -1, 13, 13,
+	-1, -1, -1, -2, -1, 13, 13, 14, -1,
 }
 var yyDef = []int{
 
 	2, -2, 1, 3, 4, 0, 0, 0, 0, 0,
 	0, 0, 0, 0, 5, 0, 0, 6, 7, 8,
-	9, 10, 11, 0, 13, 12,
+	9, 10, 11, 0, 14, 13, 12, 0, 15,
 }
 var yyTok1 = []int{
 
@@ -249,7 +288,7 @@ var yyTok1 = []int{
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 10, 3, 3,
-	12, 13, 8, 6, 3, 7, 3, 9, 3, 3,
+	12, 13, 8, 6, 14, 7, 3, 9, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
 	3, 3, 3, 3, 3, 3, 3, 3, 3, 3,
@@ -490,65 +529,67 @@ yydefault:
 	switch yynt {
 
 	case 3:
-		//line expr.y:51
+		//line expr.y:61
 		{
-			lex, ok := yylex.(*yyLex)
-			if !ok {
-				fmt.Println("Wrong lexer format")
-			} else {
-				lex.val = yyS[yypt-0].num
-			}
+			lex := yylex.(*yyLex)
+			lex.val = yyS[yypt-0].num
 		}
 	case 4:
 		yyVAL.num = yyS[yypt-0].num
 	case 5:
-		//line expr.y:63
+		//line expr.y:69
 		{
 			yyVAL.num = -yyS[yypt-0].num
 		}
 	case 6:
-		//line expr.y:67
+		//line expr.y:73
 		{
 			yyVAL.num = yyS[yypt-2].num + yyS[yypt-0].num
 		}
 	case 7:
-		//line expr.y:71
+		//line expr.y:77
 		{
 			yyVAL.num = yyS[yypt-2].num - yyS[yypt-0].num
 		}
 	case 8:
-		//line expr.y:75
+		//line expr.y:81
 		{
 			yyVAL.num = yyS[yypt-2].num * yyS[yypt-0].num
 		}
 	case 9:
-		//line expr.y:79
+		//line expr.y:85
 		{
 			yyVAL.num = yyS[yypt-2].num / yyS[yypt-0].num
 		}
 	case 10:
-		//line expr.y:83
+		//line expr.y:89
 		{
 			yyVAL.num = math.Mod(yyS[yypt-2].num, yyS[yypt-0].num)
 		}
 	case 11:
-		//line expr.y:87
+		//line expr.y:93
 		{
 			yyVAL.num = math.Pow(yyS[yypt-2].num, yyS[yypt-0].num)
 		}
 	case 12:
-		//line expr.y:91
+		//line expr.y:97
 		{
-			f, ok := funcMap[yyS[yypt-3].str]
-			if !ok {
-
-			}
-			yyVAL.num = f(yyS[yypt-1].num)
+			yyVAL.num = callFunc(yyS[yypt-3].str, yyS[yypt-1].vals)
 		}
 	case 13:
-		//line expr.y:99
+		//line expr.y:101
 		{
 			yyVAL.num = yyS[yypt-1].num
+		}
+	case 14:
+		//line expr.y:107
+		{
+			yyVAL.vals = append(yyVAL.vals, yyS[yypt-0].num)
+		}
+	case 15:
+		//line expr.y:111
+		{
+			yyVAL.vals = append(yyS[yypt-2].vals, yyS[yypt-0].num)
 		}
 	}
 	goto yystack /* stack new state and value */

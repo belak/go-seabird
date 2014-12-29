@@ -6,20 +6,28 @@ package plugins
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"log"
 	"math"
+	"reflect"
 	"strconv"
 	"unicode"
 	"unicode/utf8"
 )
 
 // Math functions we want to be able to use
-var funcMap = map[string]func(float64) float64 {
-	"abs": math.Abs,
-	"sin": math.Sin,
-	"cos": math.Cos,
-	"tan": math.Tan,
+// I hate having to use interface, but that's the
+// price we pay for making this interpreted
+//
+// Note that we only really accept taking multiple
+// float64 values and returning a single float64
+var funcMap = map[string]interface{} {
+	"abs":   math.Abs,
+	"sin":   math.Sin,
+	"cos":   math.Cos,
+	"tan":   math.Tan,
+	"sqrt":  math.Sqrt,
+	"floor": math.Floor,
+	"ceil":  math.Ceil,
 }
 
 %}
@@ -27,10 +35,12 @@ var funcMap = map[string]func(float64) float64 {
 %union {
 	num float64
 	str string
+	vals []float64
 }
 
 // Set what expr returns
-%type  <num> expr
+%type <num> expr
+%type <vals> exprlist
 
 // Set the types of possible lexed values
 %token <num> NUM
@@ -49,12 +59,8 @@ prog:
 stmt:
 	expr
 	{
-		lex, ok := yylex.(*yyLex)
-		if !ok {
-			fmt.Println("Wrong lexer format")
-		} else {
-			lex.val = $1
-		}
+		lex := yylex.(*yyLex)
+		lex.val = $1
 	}
 	;
 expr:
@@ -87,17 +93,23 @@ expr:
 	{
 		$$ = math.Pow($1, $3)
 	}
-	| FUNC '(' expr ')'
+	| FUNC '(' exprlist ')'
 	{
-		f, ok := funcMap[$1]
-		if !ok {
-
-		}
-		$$ = f($3)
+		$$ = callFunc($1, $3)
 	}
 	| '(' expr ')'
 	{
 		$$ = $2
+	}
+	;
+exprlist:
+	expr
+	{
+		$$ = append($$, $1)
+	}
+	| exprlist ',' expr
+	{
+		$$ = append($1, $3)
 	}
 	;
 %%
@@ -113,6 +125,36 @@ type yyLex struct {
 	peek rune
 	val float64
 	err error
+}
+
+func callFunc(name string, args []float64) float64 {
+	f, ok := funcMap[name]
+	if !ok {
+		// TODO: Set error
+		return 0
+	}
+
+	v := reflect.ValueOf(f)
+	t := v.Type()
+	if t.Kind() != reflect.Func || t.NumOut() != 1 || t.Out(0).Kind() != reflect.Float64 || t.NumIn() != len(args) {
+		// TODO: Set error
+		return 0
+	}
+
+	for i := 0; i < t.NumIn(); i++ {
+		if t.In(i).Kind() != reflect.Float64 {
+			// TODO: Set error
+			return 0
+		}
+	}
+
+	var vals []reflect.Value
+	for _, arg := range args {
+		vals = append(vals, reflect.ValueOf(arg))
+	}
+
+	ret := v.Call(vals)
+	return ret[0].Float()
 }
 
 // The parser calls this method to get each new token.  This
