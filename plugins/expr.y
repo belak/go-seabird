@@ -37,7 +37,7 @@ var funcMap = map[string]func(float64) float64 {
 %token <str> FUNC
 
 %left '+' '-'
-%left '*' '/'
+%left '*' '/' '%'
 %left '^'
 
 %%
@@ -78,6 +78,10 @@ expr:
 	| expr '/' expr
 	{
 		$$ = $1 / $3
+	}
+	| expr '%' expr
+	{
+		$$ = math.Mod($1, $3)
 	}
 	| expr '^' expr
 	{
