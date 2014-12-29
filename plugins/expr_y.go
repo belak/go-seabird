@@ -75,7 +75,7 @@ func (x *yyLex) Lex(yylval *yySymType) int {
 			return eof
 
 		// Any punctuation needed for expressions
-		case '+', '-', '*', '/', '^', '(', ')':
+		case '+', '-', '*', '/', '%', '^', '(', ')':
 			return int(c)
 
 		// Recognize Unicode multiplication and division
