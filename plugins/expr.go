@@ -24,5 +24,5 @@ func mathExpr(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	c.Reply(e, "%s=%f", e.Trailing(), val)
+	c.Reply(e, "%s=%g", e.Trailing(), val)
 }
