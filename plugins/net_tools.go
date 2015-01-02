@@ -26,11 +26,11 @@ func NewNetToolsPlugin(b *bot.Bot, m *mux.CommandMux) error {
 
 	b.Config("net_tools", p)
 
-	m.Event("dig", p.Dig)
-	m.Event("ping", p.Ping)
-	m.Event("traceroute", p.Traceroute)
-	m.Event("whois", p.Whois)
-	m.Event("dnscheck", p.DnsCheck)
+	m.Event("dig", "domain", p.Dig)
+	m.Event("ping", "address", p.Ping)
+	m.Event("traceroute", "address", p.Traceroute)
+	m.Event("whois", "domain", p.Whois)
+	m.Event("dnscheck", "domain", p.DnsCheck)
 
 	return nil
 }
