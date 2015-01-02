@@ -33,7 +33,9 @@ func Shorten(c *irc.Client, e *irc.Event) {
 
 	url := "https://www.googleapis.com/urlshortener/v1/url"
 
-	var jsonStr = []byte(`{"longUrl":"` + e.Trailing() + `"}`)
+	data := map[string]string{"longUrl": e.Trailing()}
+	out, err := json.Marshal(data)
+	var jsonStr = []byte(out)
 	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
 	req.Header.Set("Content-Type", "application/json")
 
