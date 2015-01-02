@@ -123,11 +123,11 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 		for _, r := range pluginStatus[n].provides {
 			// Loop through all leftover nodes
 			for k, n := range pluginStatus {
+				// If it's in the requirements, we can remove it
+				delete(n.requires, r)
+
 				// If it hasn't been added to the list yet
 				if n.loaded == unloaded {
-					// If it's in the requirements, we can remove it
-					delete(n.requires, r)
-
 					// If there are no more requirements, throw it into the list
 					if len(n.requires) == 0 {
 						input = append(input, k)

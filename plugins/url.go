@@ -35,7 +35,7 @@ var client = &http.Client{
 
 func NewURLPlugin(bm *irc.BasicMux, cm *mux.CommandMux) error {
 	bm.Event("PRIVMSG", URLTitle)
-	cm.Event("down", IsItDown) // "[website]"
+	cm.Event("down", "[website]", IsItDown)
 
 	return nil
 }
