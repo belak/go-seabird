@@ -44,10 +44,22 @@ func (p *PastebinPlugin) Dig(c *irc.Client, e *irc.Event) {
 
 		addrs, err := net.LookupHost(e.Trailing())
 		if err != nil {
-			c.MentionReply(e, err.Error())
+			c.MentionReply(e, "%s", err)
+			return
+		}
+
+		if len(addrs) == 0 {
+			c.MentionReply(e, "No results found")
+			return
 		}
 
 		c.MentionReply(e, addrs[0])
+
+		if len(addrs) > 1 {
+			for _, addr := range addrs[1:] {
+				c.Writef("NOTICE %s :%s", e.Identity.Nick, addr)
+			}
+		}
 	}()
 }
 
@@ -60,7 +72,7 @@ func (p *PastebinPlugin) Ping(c *irc.Client, e *irc.Event) {
 
 		out, err := exec.Command("ping", "-c1", e.Trailing()).Output()
 		if err != nil {
-			c.MentionReply(e, err.Error())
+			c.MentionReply(e, "%s", err)
 			return
 		}
 
@@ -78,7 +90,7 @@ func (p *PastebinPlugin) Traceroute(c *irc.Client, e *irc.Event) {
 
 		out, err := exec.Command("traceroute", e.Trailing()).Output()
 		if err != nil {
-			c.MentionReply(e, err.Error())
+			c.MentionReply(e, "%s", err)
 			return
 		}
 
@@ -117,7 +129,7 @@ func (p *PastebinPlugin) Whois(c *irc.Client, e *irc.Event) {
 
 		out, err := exec.Command("whois", e.Trailing()).Output()
 		if err != nil {
-			c.MentionReply(e, err.Error())
+			c.MentionReply(e, "%s", err)
 			return
 		}
 
