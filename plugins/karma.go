@@ -28,7 +28,7 @@ type KarmaPlugin struct {
 
 var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
+func NewKarmaPlugin(b *bot.Bot, c *mux.CommandMux, bm *irc.BasicMux, db *sqlx.DB) error {
 	p := &KarmaPlugin{
 		db,
 	}
