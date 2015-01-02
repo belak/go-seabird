@@ -104,8 +104,8 @@ func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
 
 	b.Config("forecast", p)
 
-	m.Event("weather", p.Weather)
-	m.Event("forecast", p.Forecast)
+	m.Event("weather", "[location]", p.Weather)
+	m.Event("forecast", "[location]", p.Forecast)
 
 	return nil
 }
