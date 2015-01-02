@@ -26,7 +26,7 @@ type WikiResponse struct {
 }
 
 func NewWikiPlugin(c *mux.CommandMux) error {
-	c.Event("wiki", Wiki)
+	c.Event("wiki", "topic", Wiki)
 
 	return nil
 }
