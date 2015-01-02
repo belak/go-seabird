@@ -1,17 +1,17 @@
 package plugins
 
 import (
-	"net/http"
 	"bytes"
 	"encoding/json"
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
+	"net/http"
 )
 
 type ShortenResult struct {
-	Kind string `json:"kind"`
-	Id string `json:"id"`
+	Kind    string `json:"kind"`
+	Id      string `json:"id"`
 	LongUrl string `json:"longUrl"`
 }
 
@@ -44,6 +44,7 @@ func Shorten(c *irc.Client, e *irc.Event) {
 		resp, err := client.Do(req)
 		if err != nil {
 			c.MentionReply(e, "Error connecting to goo.gl")
+			return
 		}
 		defer resp.Body.Close()
 
@@ -51,6 +52,7 @@ func Shorten(c *irc.Client, e *irc.Event) {
 		err = json.NewDecoder(resp.Body).Decode(sr)
 		if err != nil {
 			c.MentionReply(e, "Error reading server response")
+			return
 		}
 
 		c.MentionReply(e, sr.Id)
