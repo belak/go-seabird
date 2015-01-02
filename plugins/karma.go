@@ -33,9 +33,9 @@ func NewKarmaPlugin(b *bot.Bot, c *mux.CommandMux, bm *irc.BasicMux, db *sqlx.DB
 		db,
 	}
 
-	c.Event("karma", p.Karma) // "[object]"
-	c.Event("topkarma", p.TopKarma)
-	c.Event("bottomkarma", p.BottomKarma)
+	c.Event("karma", "nick", p.Karma) // "[object]"
+	c.Event("topkarma", "", p.TopKarma)
+	c.Event("bottomkarma", "", p.BottomKarma)
 	b.Event("PRIVMSG", p.Msg)
 
 	return nil
