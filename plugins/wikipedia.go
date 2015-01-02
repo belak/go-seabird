@@ -44,12 +44,12 @@ func Wiki(c *irc.Client, e *irc.Event) {
 			return
 		}
 
-		client := &http.Client{}
-		resp, err := client.Get("http://en.wikipedia.org/w/api.php?format=json&action=parse&page=" + transformQuery(e.Trailing()))
+		resp, err := http.Get("http://en.wikipedia.org/w/api.php?format=json&action=parse&page=" + transformQuery(e.Trailing()))
 		if err != nil {
 			c.MentionReply(e, "%s", err)
 			return
 		}
+		defer resp.Body.Close()
 
 		wr := &WikiResponse{}
 		err = json.NewDecoder(resp.Body).Decode(wr)
