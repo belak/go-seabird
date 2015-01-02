@@ -3,10 +3,11 @@ package plugins
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
-	"net/http"
 )
 
 type ShortenResult struct {
@@ -48,7 +49,7 @@ func Shorten(c *irc.Client, e *irc.Event) {
 		}
 		defer resp.Body.Close()
 
-		sr := new(ShortenResult)
+		sr := &ShortenResult{}
 		err = json.NewDecoder(resp.Body).Decode(sr)
 		if err != nil {
 			c.MentionReply(e, "Error reading server response")
