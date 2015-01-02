@@ -36,14 +36,14 @@ func Shorten(c *irc.Client, e *irc.Event) {
 
 		data := map[string]string{"longUrl": e.Trailing()}
 		out, err := json.Marshal(data)
-		var jsonStr = []byte(out)
-		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-		req.Header.Set("Content-Type", "application/json")
-
-		client := &http.Client{}
-		resp, err := client.Do(req)
 		if err != nil {
-			c.MentionReply(e, "Error connecting to goo.gl")
+			c.MentionReply(e, "%s", err)
+			return
+		}
+
+		resp, err := http.Post(url, "application/json", bytes.NewBuffer(out))
+		if err != nil {
+			c.MentionReply(e, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -52,7 +52,6 @@ func Shorten(c *irc.Client, e *irc.Event) {
 		err = json.NewDecoder(resp.Body).Decode(sr)
 		if err != nil {
 			c.MentionReply(e, "Error reading server response")
-			return
 		}
 
 		c.MentionReply(e, sr.Id)
