@@ -13,6 +13,11 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
+type KarmaUser struct {
+	Name  string
+	Score int
+}
+
 func init() {
 	bot.RegisterPlugin("karma", NewKarmaPlugin)
 }
@@ -29,6 +34,8 @@ func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
 	}
 
 	c.Event("karma", p.Karma) // "[object]"
+	c.Event("topkarma", p.TopKarma)
+	c.Event("bottomkarma", p.BottomKarma)
 	b.Event("PRIVMSG", p.Msg)
 
 	return nil
@@ -80,6 +87,28 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 
 func (p *KarmaPlugin) Karma(c *irc.Client, e *irc.Event) {
 	c.MentionReply(e, "%s's karma is %d", e.Trailing(), p.GetKarmaFor(e.Trailing()))
+}
+
+func (p *KarmaPlugin) TopKarma(c *irc.Client, e *irc.Event) {
+	user := &KarmaUser{}
+	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score DESC LIMIT 1")
+	if err != nil {
+		c.MentionReply(e, "Error fetching scores")
+		return
+	}
+
+	c.MentionReply(e, "%s has the top karma with %d", user.Name, user.Score)
+}
+
+func (p *KarmaPlugin) BottomKarma(c *irc.Client, e *irc.Event) {
+	user := &KarmaUser{}
+	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score ASC LIMIT 1")
+	if err != nil {
+		c.MentionReply(e, "Error fetching scores")
+		return
+	}
+
+	c.MentionReply(e, "%s has the bottom karma with %d", user.Name, user.Score)
 }
 
 func (p *KarmaPlugin) Msg(c *irc.Client, e *irc.Event) {
