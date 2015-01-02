@@ -17,8 +17,8 @@ func init() {
 
 type GoogleResponse struct {
 	ResponseData struct {
-		Results  []struct {
-			Url string `json:"unescapedUrl"`
+		Results []struct {
+			Url   string `json:"unescapedUrl"`
 			Title string `json:"titleNoFormatting"`
 		} `json:"results"`
 	} `json:"responseData"`
@@ -32,11 +32,11 @@ func NewGooglePlugin(c *mux.CommandMux) error {
 	return nil
 }
 
-func Web(c * irc.Client, e *irc.Event) {
+func Web(c *irc.Client, e *irc.Event) {
 	googleSearch(c, e, "web", e.Trailing())
 }
 
-func Image(c * irc.Client, e *irc.Event) {
+func Image(c *irc.Client, e *irc.Event) {
 	googleSearch(c, e, "images", e.Trailing())
 }
 
