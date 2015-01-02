@@ -13,7 +13,7 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-type PastebinPlugin struct {
+type NetToolsPlugin struct {
 	Key string
 }
 
@@ -22,9 +22,9 @@ func init() {
 }
 
 func NewNetToolsPlugin(b *bot.Bot, m *mux.CommandMux) error {
-	p := &PastebinPlugin{}
+	p := &NetToolsPlugin{}
 
-	b.Config("pastebin", p)
+	b.Config("net_tools", p)
 
 	m.Event("dig", p.Dig)
 	m.Event("ping", p.Ping)
@@ -35,7 +35,7 @@ func NewNetToolsPlugin(b *bot.Bot, m *mux.CommandMux) error {
 	return nil
 }
 
-func (p *PastebinPlugin) Dig(c *irc.Client, e *irc.Event) {
+func (p *NetToolsPlugin) Dig(c *irc.Client, e *irc.Event) {
 	go func() {
 		if e.Trailing() == "" {
 			c.MentionReply(e, "Domain required")
@@ -63,7 +63,7 @@ func (p *PastebinPlugin) Dig(c *irc.Client, e *irc.Event) {
 	}()
 }
 
-func (p *PastebinPlugin) Ping(c *irc.Client, e *irc.Event) {
+func (p *NetToolsPlugin) Ping(c *irc.Client, e *irc.Event) {
 	go func() {
 		if e.Trailing() == "" {
 			c.MentionReply(e, "Host required")
@@ -86,7 +86,7 @@ func (p *PastebinPlugin) Ping(c *irc.Client, e *irc.Event) {
 	}()
 }
 
-func (p *PastebinPlugin) Traceroute(c *irc.Client, e *irc.Event) {
+func (p *NetToolsPlugin) Traceroute(c *irc.Client, e *irc.Event) {
 	go func() {
 		if e.Trailing() == "" {
 			c.MentionReply(e, "Host required")
@@ -103,7 +103,11 @@ func (p *PastebinPlugin) Traceroute(c *irc.Client, e *irc.Event) {
 		form.Add("api_dev_key", p.Key)
 		form.Add("api_option", "paste")
 		form.Add("api_paste_code", string(out))
-		resp, err := http.Post("http://pastebin.com/api/api_post.php", "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+		resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
+			"api_dev_key": {p.Key},
+			"api_option": {"paste"},
+			"api_paste_code": {string(out)},
+		})
 		if err != nil {
 			c.MentionReply(e, "%s", err)
 			return
@@ -120,7 +124,7 @@ func (p *PastebinPlugin) Traceroute(c *irc.Client, e *irc.Event) {
 	}()
 }
 
-func (p *PastebinPlugin) Whois(c *irc.Client, e *irc.Event) {
+func (p *NetToolsPlugin) Whois(c *irc.Client, e *irc.Event) {
 	go func() {
 		if e.Trailing() == "" {
 			c.MentionReply(e, "Domain required")
@@ -137,7 +141,11 @@ func (p *PastebinPlugin) Whois(c *irc.Client, e *irc.Event) {
 		form.Add("api_dev_key", p.Key)
 		form.Add("api_option", "paste")
 		form.Add("api_paste_code", string(out))
-		resp, err := http.Post("http://pastebin.com/api/api_post.php", "application/x-www-form-urlencoded", strings.NewReader(form.Encode()))
+		resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
+			"api_dev_key": {p.Key},
+			"api_option": {"paste"},
+			"api_paste_code": {string(out)},
+		})
 		if err != nil {
 			c.MentionReply(e, "%s", err)
 			return
@@ -154,7 +162,8 @@ func (p *PastebinPlugin) Whois(c *irc.Client, e *irc.Event) {
 	}()
 }
 
-func (p *PastebinPlugin) DnsCheck(c *irc.Client, e *irc.Event) {
+func (p *NetToolsPlugin) DnsCheck(c *irc.Client, e *irc.Event) {
+	// Just for Kaleb
 	go func() {
 		if e.Trailing() == "" {
 			c.MentionReply(e, "Domain required")
