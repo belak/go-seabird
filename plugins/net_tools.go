@@ -171,6 +171,6 @@ func (p *PastebinPlugin) DnsCheck(c *irc.Client, e *irc.Event) {
 			return
 		}
 
-		c.MentionReply(e, "https://www.whatsmydns.net/#A/" + e.Trailing())
+		c.MentionReply(e, "https://www.whatsmydns.net/#A/"+e.Trailing())
 	}()
 }
