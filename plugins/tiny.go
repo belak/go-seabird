@@ -29,7 +29,7 @@ func Shorten(c *irc.Client, e *irc.Event) {
 	client := &http.Client{}
 	resp, err := client.Do(req)
 	if err != nil {
-		panic(err)
+		c.MentionReply(e, "Error connecting to goo.gl")
 	}
 	defer resp.Body.Close()
 
