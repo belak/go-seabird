@@ -3,11 +3,17 @@ package plugins
 import (
 	"net/http"
 	"bytes"
-	json "github.com/bitly/go-simplejson"
+	"encoding/json"
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
 )
+
+type ShortenResult struct {
+	Kind string `json:"kind"`
+	Id string `json:"id"`
+	LongUrl string `json:"longUrl"`
+}
 
 func init() {
 	bot.RegisterPlugin("tiny", NewTinyPlugin)
@@ -20,6 +26,11 @@ func NewTinyPlugin(m *mux.CommandMux) error {
 }
 
 func Shorten(c *irc.Client, e *irc.Event) {
+	if e.Trailing() == "" {
+		c.MentionReply(e, "URL required")
+		return
+	}
+
 	url := "https://www.googleapis.com/urlshortener/v1/url"
 
 	var jsonStr = []byte(`{"longUrl":"` + e.Trailing() + `"}`)
@@ -33,17 +44,11 @@ func Shorten(c *irc.Client, e *irc.Event) {
 	}
 	defer resp.Body.Close()
 
-	body, err := json.NewFromReader(resp.Body)
+	sr := new(ShortenResult)
+	err = json.NewDecoder(resp.Body).Decode(sr)
 	if err != nil {
-		c.MentionReply(e, "Error reading response from server")
-		return
+		c.MentionReply(e, "Error reading server response")
 	}
 
-	id, err := body.Get("id").String()
-	if err != nil {
-		c.MentionReply(e, "Error reading JSON data")
-		return
-	}
-
-	c.MentionReply(e, id)
+	c.MentionReply(e, sr.Id)
 }
