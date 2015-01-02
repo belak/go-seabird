@@ -26,31 +26,33 @@ func NewTinyPlugin(m *mux.CommandMux) error {
 }
 
 func Shorten(c *irc.Client, e *irc.Event) {
-	if e.Trailing() == "" {
-		c.MentionReply(e, "URL required")
-		return
-	}
+	go func() {
+		if e.Trailing() == "" {
+			c.MentionReply(e, "URL required")
+			return
+		}
 
-	url := "https://www.googleapis.com/urlshortener/v1/url"
+		url := "https://www.googleapis.com/urlshortener/v1/url"
 
-	data := map[string]string{"longUrl": e.Trailing()}
-	out, err := json.Marshal(data)
-	var jsonStr = []byte(out)
-	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
-	req.Header.Set("Content-Type", "application/json")
+		data := map[string]string{"longUrl": e.Trailing()}
+		out, err := json.Marshal(data)
+		var jsonStr = []byte(out)
+		req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+		req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		c.MentionReply(e, "Error connecting to goo.gl")
-	}
-	defer resp.Body.Close()
+		client := &http.Client{}
+		resp, err := client.Do(req)
+		if err != nil {
+			c.MentionReply(e, "Error connecting to goo.gl")
+		}
+		defer resp.Body.Close()
 
-	sr := new(ShortenResult)
-	err = json.NewDecoder(resp.Body).Decode(sr)
-	if err != nil {
-		c.MentionReply(e, "Error reading server response")
-	}
+		sr := new(ShortenResult)
+		err = json.NewDecoder(resp.Body).Decode(sr)
+		if err != nil {
+			c.MentionReply(e, "Error reading server response")
+		}
 
-	c.MentionReply(e, sr.Id)
+		c.MentionReply(e, sr.Id)
+	}()
 }
