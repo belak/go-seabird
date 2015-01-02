@@ -99,13 +99,9 @@ func (p *NetToolsPlugin) Traceroute(c *irc.Client, e *irc.Event) {
 			return
 		}
 
-		form := url.Values{}
-		form.Add("api_dev_key", p.Key)
-		form.Add("api_option", "paste")
-		form.Add("api_paste_code", string(out))
 		resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
-			"api_dev_key": {p.Key},
-			"api_option": {"paste"},
+			"api_dev_key":    {p.Key},
+			"api_option":     {"paste"},
 			"api_paste_code": {string(out)},
 		})
 		if err != nil {
@@ -137,13 +133,9 @@ func (p *NetToolsPlugin) Whois(c *irc.Client, e *irc.Event) {
 			return
 		}
 
-		form := url.Values{}
-		form.Add("api_dev_key", p.Key)
-		form.Add("api_option", "paste")
-		form.Add("api_paste_code", string(out))
 		resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
-			"api_dev_key": {p.Key},
-			"api_option": {"paste"},
+			"api_dev_key":    {p.Key},
+			"api_option":     {"paste"},
 			"api_paste_code": {string(out)},
 		})
 		if err != nil {
