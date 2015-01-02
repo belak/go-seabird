@@ -76,8 +76,13 @@ func (p *PastebinPlugin) Ping(c *irc.Client, e *irc.Event) {
 			return
 		}
 
-		result := strings.Split(string(out), "\n")[1]
-		c.MentionReply(e, result)
+		arr := strings.Split(string(out), "\n")
+		if len(arr) < 2 {
+			c.MentionReply(e, "Error retrieving ping results")
+			return
+		}
+
+		c.MentionReply(e, arr[1])
 	}()
 }
 
