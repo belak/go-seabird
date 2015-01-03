@@ -25,7 +25,10 @@ func NewLastSeenPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
 		db,
 	}
 
-	c.Event("active", "nick", p.Active)
+	c.Event("active", p.Active, &mux.HelpInfo{
+		"<nick>",
+		"Reports the last time user was seen",
+	})
 	b.Event("PRIVMSG", p.Msg)
 
 	return nil
