@@ -29,8 +29,13 @@ func NewChancePlugin(b *bot.Bot, m *mux.CommandMux) error {
 		make(map[string]int),
 	}
 
-	m.Event("roulette", "Click... click... BANG!", p.Roulette)
-	m.Event("coin", "[heads|tails]", p.Coin)
+	m.Event("roulette", p.Roulette, &mux.HelpInfo{
+		Description: "Click... click... BANG!",
+	})
+	m.Event("coin", p.Coin, &mux.HelpInfo{
+		"[heads|tails]",
+		"Guess the coin flip. If you guess wrong, you're out!",
+	})
 
 	return nil
 }

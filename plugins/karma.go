@@ -33,9 +33,16 @@ func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
 		db,
 	}
 
-	c.Event("karma", "nick", p.Karma)
-	c.Event("topkarma", "", p.TopKarma)
-	c.Event("bottomkarma", "", p.BottomKarma)
+	c.Event("karma", p.Karma, &mux.HelpInfo{
+		"<nick>",
+		"Gives karma for given user",
+	})
+	c.Event("topkarma", p.TopKarma, &mux.HelpInfo{
+		Description: "Reports the user with the most karma",
+	})
+	c.Event("bottomkarma", p.BottomKarma, &mux.HelpInfo{
+		Description: "Reports the user with the least karma",
+	})
 	b.Event("PRIVMSG", p.Msg)
 
 	return nil

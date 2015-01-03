@@ -54,8 +54,14 @@ func NewTVDBPlugin(b *bot.Bot, m *mux.CommandMux) error {
 
 	b.Config("tvdb", p)
 
-	m.Event("tvdb", "series", p.Search)
-	m.Event("series", "series_id", p.Series)
+	m.Event("tvdb", p.Search, &mux.HelpInfo{
+		"<series>",
+		"Gives info on TVDB series, including TVDB ID",
+	})
+	m.Event("series", p.Series, &mux.HelpInfo{
+		"<series_id>",
+		"Gives expanded info on TVDB series using TVDB ID",
+	})
 
 	return nil
 }

@@ -26,8 +26,14 @@ type GoogleResponse struct {
 }
 
 func NewGooglePlugin(c *mux.CommandMux) error {
-	c.Event("g", "query", Web)
-	c.Event("gi", "query", Image)
+	c.Event("g", Web, &mux.HelpInfo{
+		"<query>",
+		"Retrieves top Google web search result for given query",
+	})
+	c.Event("gi", Image, &mux.HelpInfo{
+		"<query>",
+		"Retrieves top Google images search result for given query",
+	})
 
 	return nil
 }

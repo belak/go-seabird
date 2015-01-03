@@ -13,7 +13,10 @@ func init() {
 }
 
 func NewMathPlugin(m *mux.CommandMux) error {
-	m.Event("math", "expr", mathExpr)
+	m.Event("math", mathExpr, &mux.HelpInfo{
+		"<expr>",
+		"Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
+	})
 	return nil
 }
 

@@ -21,7 +21,10 @@ func init() {
 }
 
 func NewTinyPlugin(m *mux.CommandMux) error {
-	m.Event("tiny", "url", Shorten)
+	m.Event("tiny", Shorten, &mux.HelpInfo{
+		"<url>",
+		"Shortens given URL",
+	})
 
 	return nil
 }
