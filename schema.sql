@@ -1,5 +1,12 @@
-CREATE TABLE karma (
+CREATE TABLE IF NOT EXISTS karma (
 	id SERIAL PRIMARY KEY,
 	name VARCHAR(512) UNIQUE,
 	score INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS lastseen (
+	name VARCHAR(512),
+	channel VARCHAR(100),
+	lastseen INTEGER,
+	UNIQUE(name, channel)
 );
