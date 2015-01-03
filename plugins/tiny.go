@@ -56,6 +56,7 @@ func Shorten(c *irc.Client, e *irc.Event) {
 		err = json.NewDecoder(resp.Body).Decode(sr)
 		if err != nil {
 			c.MentionReply(e, "Error reading server response")
+			return
 		}
 
 		c.MentionReply(e, sr.Id)
