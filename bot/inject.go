@@ -95,6 +95,7 @@ func (b *Bot) determineLoadOrder() ([]string, error) {
 		// If there weren't any requirements, it's safe to load
 		if len(s.requires) == 0 {
 			input = append(input, v)
+			s.loaded = loading
 		}
 
 		// Loop through all output and add it to provided
