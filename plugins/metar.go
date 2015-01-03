@@ -51,7 +51,10 @@ func metar(code string) string {
 type MetarPlugin struct{}
 
 func NewMetarPlugin(m *mux.CommandMux) error {
-	m.Event("metar", "[station]", Metar)
+	m.Event("metar", Metar, &mux.HelpInfo{
+		"<station>",
+		"Gives METAR report for given airport code",
+	})
 
 	return nil
 }

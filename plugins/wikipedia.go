@@ -26,7 +26,10 @@ type WikiResponse struct {
 }
 
 func NewWikiPlugin(c *mux.CommandMux) error {
-	c.Event("wiki", "topic", Wiki)
+	c.Event("wiki", Wiki, &mux.HelpInfo{
+		"<topic>",
+		"Retrieves first section from most relevant Wikipedia article to given topic",
+	})
 
 	return nil
 }

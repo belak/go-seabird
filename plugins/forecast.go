@@ -104,8 +104,14 @@ func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
 
 	b.Config("forecast", p)
 
-	m.Event("weather", "[location]", p.Weather)
-	m.Event("forecast", "[location]", p.Forecast)
+	m.Event("weather", p.Weather, &mux.HelpInfo{
+		"<location>",
+		"Retrieves current weather for given location",
+	})
+	m.Event("forecast", p.Forecast, &mux.HelpInfo{
+		"<location>",
+		"Retrieves three-day forecast for given location",
+	})
 
 	return nil
 }
