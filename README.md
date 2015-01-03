@@ -14,9 +14,9 @@ This will build the seabird binary and place it in your `$GOPATH/src`.
 
 ## Configuring
 
-A sample config file is provided [here](./config.yml)
+A sample config file is provided [here](./config.toml)
 
-By default seabird will look for a config file in `/etc/seabird/` and `$HOME/.config/seabird/` with a base name of `seabird` and an extension of `yml`, `json`, or `toml`.
+Config is pulled from the environment variable SEABIRD_CONFIG
 
 ## Options
 
