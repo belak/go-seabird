@@ -4,11 +4,12 @@ package bot
 
 import (
 	"crypto/tls"
+	"fmt"
 	"reflect"
 
+	"github.com/BurntSushi/toml"
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/inject"
-	"github.com/spf13/viper"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/mux"
@@ -49,27 +50,43 @@ type Bot struct {
 
 	// Simple store of all loaded plugins
 	values map[reflect.Type]reflect.Value
+
+	// Config stuff
+	confValues map[string]toml.Primitive
+	md         toml.MetaData
 }
 
-func NewBot() (*Bot, error) {
-	c := &CoreConfig{}
-	err := viper.MarshalKey("core", c)
-	if err != nil {
-		return nil, err
-	}
-
+func NewBot(conf string) (*Bot, error) {
 	// The IRC client is nil so we can fill in the blank in a bit
+	// The command mux is also loaded later
 	b := &Bot{
 		inject.New(),
 		nil,
 		irc.NewBasicMux(),
-		mux.NewCommandMux(c.Prefix),
+		nil,
 		mux.NewMentionMux(),
 		mux.NewCTCPMux(),
-		c,
+		&CoreConfig{},
 		logrus.New(),
 		make(map[reflect.Type]reflect.Value),
+		make(map[string]toml.Primitive),
+		toml.MetaData{},
 	}
+
+	var err error
+	b.md, err = toml.DecodeFile(conf, b.confValues)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load up the core config
+	err = b.Config("core", b.config)
+	if err != nil {
+		return nil, err
+	}
+
+	// Load up the command mux
+	b.cmds = mux.NewCommandMux(b.config.Prefix)
 
 	// Default is warn. This table just translates config values to the logrus Level
 	logLevels := map[string]logrus.Level{
@@ -83,10 +100,10 @@ func NewBot() (*Bot, error) {
 	}
 
 	// Set the log level if it's valid
-	if level, ok := logLevels[c.LogLevel]; ok {
+	if level, ok := logLevels[b.config.LogLevel]; ok {
 		b.Log.Level = level
 	} else {
-		b.Log.WithField("loglevel", c.LogLevel).Error("Log level unknown")
+		b.Log.WithField("loglevel", b.config.LogLevel).Error("Log level unknown")
 	}
 
 	// Add the bot and logger to the injection mapper
@@ -105,19 +122,32 @@ func NewBot() (*Bot, error) {
 	// Run commands on startup
 	b.basic.Event("001", func(cl *irc.Client, e *irc.Event) {
 		b.Log.Info("Connected")
-		for _, v := range c.Cmds {
+		for _, v := range b.config.Cmds {
 			cl.Write(v)
 		}
 	})
 
 	// Create the actual IRC client
-	b.client = irc.NewClient(irc.HandlerFunc(b.basic.HandleEvent), c.Nick, c.User, c.Name, c.Pass)
+	b.client = irc.NewClient(
+		irc.HandlerFunc(b.basic.HandleEvent),
+		b.config.Nick,
+		b.config.User,
+		b.config.Name,
+		b.config.Pass,
+	)
 
 	// Pass in our logrous logger as the IRC logger
 	b.client.Logger = b.Log
 
 	// Add the client to the dep injection mappings
 	b.inj.Map(b.client)
+
+	// If plugins is nil, just add all of them
+	if len(b.config.Plugins) == 0 {
+		for k := range plugins {
+			b.config.Plugins = append(b.config.Plugins, k)
+		}
+	}
 
 	loadOrder, err := b.determineLoadOrder()
 	if err != nil {
@@ -140,7 +170,10 @@ func NewBot() (*Bot, error) {
 }
 
 func (b *Bot) Config(name string, c interface{}) error {
-	return viper.MarshalKey(name, c)
+	if v, ok := b.confValues[name]; ok {
+		return b.md.PrimitiveDecode(v, c)
+	}
+	return fmt.Errorf("Config section for %q missing", name)
 }
 
 func (b *Bot) Run() error {
