@@ -25,7 +25,7 @@ func init() {
 func NewIssuesPlugin(b *bot.Bot, m *mux.CommandMux) error {
 	p := &IssuesPlugin{}
 
-	b.Config("issues", p)
+	b.Config("github", p)
 
 	m.Event("issue", p.CreateIssue, &mux.HelpInfo{
 		"<issue title>",

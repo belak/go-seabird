@@ -38,6 +38,7 @@ var client = &http.Client{
 func NewURLPlugin(b *bot.Bot, bm *irc.BasicMux, cm *mux.CommandMux) error {
 	p := &URLPlugin{}
 	p.Providers = []links.LinkProvider{
+		links.NewGithubProvider(b),
 		links.NewTwitterProvider(b),
 
 		// Must be last. DefaultProvider.Handles always returns true.

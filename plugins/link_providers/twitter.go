@@ -22,8 +22,9 @@ type TwitterProvider struct {
 	api *anaconda.TwitterApi
 }
 
-var statusRegex = regexp.MustCompile(`^https://twitter.com/.*?/status/(.+)$`)
-var userRegex = regexp.MustCompile(`^https://twitter.com/([^/]+)$`)
+var twitterStatusRegex = regexp.MustCompile(`^https://twitter.com/.*?/status/(.+)$`)
+var twitterUserRegex = regexp.MustCompile(`^https://twitter.com/([^/]+)$`)
+var twitterPrefix = "[Twitter]"
 
 func NewTwitterProvider(b *bot.Bot) *TwitterProvider {
 	t := &TwitterProvider{}
@@ -46,27 +47,27 @@ func (t *TwitterProvider) Handles(url string) bool {
 }
 
 func (t *TwitterProvider) Handle(url string, c *irc.Client, e *irc.Event) {
-	if userRegex.MatchString(url) {
+	if twitterUserRegex.MatchString(url) {
 		t.getUser(url, c, e)
-	} else if statusRegex.MatchString(url) {
+	} else if twitterStatusRegex.MatchString(url) {
 		t.getTweet(url, c, e)
 	}
 }
 
 func (t *TwitterProvider) getUser(url string, c *irc.Client, e *irc.Event) {
-	matches := userRegex.FindStringSubmatch(url)
+	matches := twitterUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return
 	}
 
 	user, err := t.api.GetUsersShow(matches[1], nil)
 	if err == nil {
-		c.Reply(e, "[Twitter] %s (@%s) - %s", user.Name, user.ScreenName, user.Description)
+		c.Reply(e, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
 	}
 }
 
 func (t *TwitterProvider) getTweet(url string, c *irc.Client, e *irc.Event) {
-	matches := statusRegex.FindStringSubmatch(url)
+	matches := twitterStatusRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return
 	}
@@ -78,6 +79,6 @@ func (t *TwitterProvider) getTweet(url string, c *irc.Client, e *irc.Event) {
 
 	tweet, err := t.api.GetTweet(id, nil)
 	if err == nil {
-		c.Reply(e, "[Twitter] %s (@%s)", tweet.Text, tweet.User.ScreenName)
+		c.Reply(e, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
 	}
 }
