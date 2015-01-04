@@ -1,16 +1,13 @@
-package link_providers
+package linkproviders
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
+	"net/url"
 	"regexp"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/plugins"
 )
-
-type RedditProvider struct{}
 
 type RedditUser struct {
 	Data struct {
@@ -44,45 +41,40 @@ type RedditComment struct {
 	} `json:"data"`
 }
 
-var redditUserRegex = regexp.MustCompile(`^https?://www.reddit.com/(u|user)/([^/]+)$`)
-var redditCommentRegex = regexp.MustCompile(`^https?://www.reddit.com/r/[^/]+/comments/([^/]+)/.*$`)
-var redditSubRegex = regexp.MustCompile(`^https?://www.reddit.com/r/([^/]+)/?.*$`)
+var redditUserRegex = regexp.MustCompile(`^/(u|user)/([^/]+)$`)
+var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
+var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
-func NewRedditProvider(_ *bot.Bot) *RedditProvider {
-	t := &RedditProvider{}
-
-	return t
+func init() {
+	bot.RegisterPlugin("linkprovider:reddit", NewRedditProvider)
 }
 
-func (t *RedditProvider) Handle(url string, c *irc.Client, e *irc.Event) bool {
-	if redditUserRegex.MatchString(url) {
-		return t.getUser(url, c, e)
-	} else if redditCommentRegex.MatchString(url) {
-		return t.getComment(url, c, e)
-	} else if redditSubRegex.MatchString(url) {
-		return t.getSub(url, c, e)
+func NewRedditProvider(p *plugins.URLPlugin) error {
+	p.Register("www.reddit.com", HandleReddit)
+	return nil
+}
+
+func HandleReddit(c *irc.Client, e *irc.Event, u *url.URL) bool {
+	if redditUserRegex.MatchString(u.Path) {
+		return redditGetUser(c, e, u.Path)
+	} else if redditCommentRegex.MatchString(u.Path) {
+		return redditGetComment(c, e, u.Path)
+	} else if redditSubRegex.MatchString(u.Path) {
+		return redditGetSub(c, e, u.Path)
 	}
 
 	return false
 }
 
-func (t *RedditProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
+func redditGetUser(c *irc.Client, e *irc.Event, url string) bool {
 	matches := redditUserRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
 	}
 
-	user := matches[2]
-	uri := fmt.Sprintf("https://www.reddit.com/user/%s/about.json", user)
-	resp, err := http.Get(uri)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
 	ru := &RedditUser{}
-	err = json.NewDecoder(resp.Body).Decode(ru)
+	err := JsonRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
 	if err != nil {
 		return false
 	}
@@ -98,22 +90,14 @@ func (t *RedditProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
 	return true
 }
 
-func (t *RedditProvider) getComment(url string, c *irc.Client, e *irc.Event) bool {
+func redditGetComment(c *irc.Client, e *irc.Event, url string) bool {
 	matches := redditCommentRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
 	}
 
-	id := matches[1]
-	uri := fmt.Sprintf("https://www.reddit.com/comments/%s.json", id)
-	resp, err := http.Get(uri)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
 	rc := []RedditComment{}
-	err = json.NewDecoder(resp.Body).Decode(&rc)
+	err := JsonRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
 	if err != nil || len(rc) < 1 {
 		return false
 	}
@@ -126,22 +110,14 @@ func (t *RedditProvider) getComment(url string, c *irc.Client, e *irc.Event) boo
 	return true
 }
 
-func (t *RedditProvider) getSub(url string, c *irc.Client, e *irc.Event) bool {
+func redditGetSub(c *irc.Client, e *irc.Event, url string) bool {
 	matches := redditSubRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
 	}
 
-	sub := matches[1]
-	uri := fmt.Sprintf("https://www.reddit.com/r/%s/about.json", sub)
-	resp, err := http.Get(uri)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
-
 	rs := &RedditSub{}
-	err = json.NewDecoder(resp.Body).Decode(rs)
+	err := JsonRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
 	if err != nil {
 		return false
 	}

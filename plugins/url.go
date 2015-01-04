@@ -2,6 +2,7 @@ package plugins
 
 import (
 	"crypto/tls"
+	"io"
 	"net/http"
 	"net/url"
 	"regexp"
@@ -11,15 +12,11 @@ import (
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
-	links "github.com/belak/seabird/plugins/link_providers"
+	"golang.org/x/net/html"
 )
 
 func init() {
 	bot.RegisterPlugin("url", NewURLPlugin)
-}
-
-type URLPlugin struct {
-	Providers []links.LinkProvider
 }
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
@@ -35,16 +32,15 @@ var client = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
-func NewURLPlugin(b *bot.Bot, bm *irc.BasicMux, cm *mux.CommandMux) error {
-	p := &URLPlugin{}
-	p.Providers = []links.LinkProvider{
-		links.NewBitbucketProvider(b),
-		links.NewGithubProvider(b),
-		links.NewRedditProvider(b),
-		links.NewTwitterProvider(b),
+type URLPlugin struct {
+	providers map[string][]LinkProvider
+}
 
-		// Must be last. DefaultProvider.Handles always returns true.
-		links.NewDefaultProvider(b),
+type LinkProvider func(c *irc.Client, e *irc.Event, url *url.URL) bool
+
+func NewURLPlugin(b *bot.Bot, bm *irc.BasicMux, cm *mux.CommandMux) (*URLPlugin, error) {
+	p := &URLPlugin{
+		providers: make(map[string][]LinkProvider),
 	}
 
 	bm.Event("PRIVMSG", p.URLTitle)
@@ -54,18 +50,94 @@ func NewURLPlugin(b *bot.Bot, bm *irc.BasicMux, cm *mux.CommandMux) error {
 		"Checks if given website is down",
 	})
 
+	return p, nil
+}
+
+func (p *URLPlugin) Register(domain string, f LinkProvider) error {
+	p.providers[domain] = append(p.providers[domain], f)
+
 	return nil
 }
 
 func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
-	for _, url := range urlRegex.FindAllString(e.Trailing(), -1) {
-		go func(url string) {
-			for _, provider := range p.Providers {
-				if provider.Handle(url, c, e) {
+	for _, rawurl := range urlRegex.FindAllString(e.Trailing(), -1) {
+		go func(raw string) {
+			u, err := url.ParseRequestURI(rawurl)
+			if err != nil {
+				return
+			}
+			for _, provider := range p.providers[u.Host] {
+				if provider(c, e, u) {
 					return
 				}
 			}
-		}(url)
+
+			defaultLinkProvider(rawurl, c, e)
+		}(rawurl)
+	}
+}
+
+func defaultLinkProvider(url string, c *irc.Client, e *irc.Event) bool {
+	var client = &http.Client{
+		Transport: &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		},
+		Timeout: 5 * time.Second,
+	}
+
+	r, err := client.Get(url)
+	if err != nil {
+		return false
+	}
+	defer r.Body.Close()
+
+	if r.StatusCode != 200 {
+		return false
+	}
+
+	// We search the first 1K and if a title isn't in there, we deal with it
+	z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
+	if err != nil {
+		return false
+	}
+
+	var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
+
+	// DFS that searches the tree for any node named title then
+	// returns the data of that node's first child
+	var f func(*html.Node) (string, bool)
+	f = func(n *html.Node) (string, bool) {
+		// If it's an element and it's a title node, look for a child
+		if n.Type == html.ElementNode && n.Data == "title" {
+			if n.FirstChild != nil {
+				t := n.FirstChild.Data
+				t = titleRegex.ReplaceAllString(t, " ")
+				t = strings.TrimSpace(t)
+
+				if t != "" {
+					return t, true
+				} else {
+					return "", false
+				}
+			}
+		}
+
+		// Loop through all nodes and try recursing
+		for c := n.FirstChild; c != nil; c = c.NextSibling {
+			if str, ok := f(c); ok {
+				return str, true
+			}
+		}
+
+		return "", false
+	}
+
+	if str, ok := f(z); ok {
+		// Title: title title
+		c.Reply(e, "Title: %s", str)
+		return true
+	} else {
+		return false
 	}
 }
 

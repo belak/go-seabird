@@ -1,18 +1,16 @@
-package link_providers
+package linkproviders
 
 import (
-	"encoding/json"
 	"fmt"
-	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/seabird/plugins"
 )
-
-type BitbucketProvider struct{}
 
 type BitbucketUser struct {
 	Username    string `json:"username"`
@@ -47,46 +45,45 @@ type BitbucketPullRequest struct {
 	CreatedOn    string        `json:"created_on"`
 }
 
-var bitbucketUserRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)$`)
-var bitbucketRepoRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)/([^/]+)$`)
-var bitbucketIssueRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)/([^/]+)/issue/([^/]+)/[^/]+$`)
-var bitbucketPullRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
+var bitbucketUserRegex = regexp.MustCompile(`^/([^/]+)$`)
+var bitbucketRepoRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
+var bitbucketIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issue/([^/]+)/[^/]+$`)
+var bitbucketPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
 var bitbucketPrefix = "[Bitbucket]"
 
-func NewBitbucketProvider(_ *bot.Bot) *BitbucketProvider {
-	t := &BitbucketProvider{}
-
-	return t
+func init() {
+	bot.RegisterPlugin("linkprovider:bitbucket", NewBitbucketProvider)
 }
 
-func (t *BitbucketProvider) Handle(url string, c *irc.Client, e *irc.Event) bool {
-	if bitbucketUserRegex.MatchString(url) {
-		return t.getUser(url, c, e)
-	} else if bitbucketRepoRegex.MatchString(url) {
-		return t.getRepo(url, c, e)
-	} else if bitbucketIssueRegex.MatchString(url) {
-		return t.getIssue(url, c, e)
-	} else if bitbucketPullRegex.MatchString(url) {
-		return t.getPull(url, c, e)
+func NewBitbucketProvider(p *plugins.URLPlugin) error {
+	p.Register("bitbucket.org", HandleBitbucket)
+	return nil
+}
+
+func HandleBitbucket(c *irc.Client, e *irc.Event, url *url.URL) bool {
+	if bitbucketUserRegex.MatchString(url.Path) {
+		return bitbucketGetUser(c, e, url)
+	} else if bitbucketRepoRegex.MatchString(url.Path) {
+		return bitbucketGetRepo(c, e, url)
+	} else if bitbucketIssueRegex.MatchString(url.Path) {
+		return bitbucketGetIssue(c, e, url)
+	} else if bitbucketPullRegex.MatchString(url.Path) {
+		return bitbucketGetPull(c, e, url)
 	}
 
 	return false
 }
 
-func (t *BitbucketProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
-	matches := bitbucketUserRegex.FindStringSubmatch(url)
+func bitbucketGetUser(c *irc.Client, e *irc.Event, url *url.URL) bool {
+	matches := bitbucketUserRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 2 {
 		return false
 	}
 
-	resp, err := http.Get("https://bitbucket.org/api/2.0/users/" + matches[1])
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
+	user := matches[1]
 
 	bu := &BitbucketUser{}
-	err = json.NewDecoder(resp.Body).Decode(bu)
+	err := JsonRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
 	if err != nil {
 		return false
 	}
@@ -97,22 +94,17 @@ func (t *BitbucketProvider) getUser(url string, c *irc.Client, e *irc.Event) boo
 	return true
 }
 
-func (t *BitbucketProvider) getRepo(url string, c *irc.Client, e *irc.Event) bool {
-	matches := bitbucketRepoRegex.FindStringSubmatch(url)
+func bitbucketGetRepo(c *irc.Client, e *irc.Event, url *url.URL) bool {
+	matches := bitbucketRepoRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 3 {
 		return false
 	}
 
 	user := matches[1]
 	repo := matches[2]
-	resp, err := http.Get("https://bitbucket.org/api/2.0/repositories/" + user + "/" + repo)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
 
 	br := &BitbucketRepo{}
-	err = json.NewDecoder(resp.Body).Decode(br)
+	err := JsonRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
 	if err != nil {
 		return false
 	}
@@ -132,8 +124,8 @@ func (t *BitbucketProvider) getRepo(url string, c *irc.Client, e *irc.Event) boo
 	return true
 }
 
-func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) bool {
-	matches := bitbucketIssueRegex.FindStringSubmatch(url)
+func bitbucketGetIssue(c *irc.Client, e *irc.Event, url *url.URL) bool {
+	matches := bitbucketIssueRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
 	}
@@ -141,15 +133,9 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) bo
 	user := matches[1]
 	repo := matches[2]
 	issueNum := matches[3]
-	uri := fmt.Sprintf("https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
-	resp, err := http.Get(uri)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
 
 	bi := &BitbucketIssue{}
-	err = json.NewDecoder(resp.Body).Decode(bi)
+	err := JsonRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
 	if err != nil {
 		return false
 	}
@@ -173,8 +159,8 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) bo
 	return true
 }
 
-func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) bool {
-	matches := bitbucketPullRegex.FindStringSubmatch(url)
+func bitbucketGetPull(c *irc.Client, e *irc.Event, url *url.URL) bool {
+	matches := bitbucketPullRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
 	}
@@ -182,15 +168,9 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) boo
 	user := matches[1]
 	repo := matches[2]
 	pullNum := matches[3]
-	uri := fmt.Sprintf("https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
-	resp, err := http.Get(uri)
-	if err != nil {
-		return false
-	}
-	defer resp.Body.Close()
 
 	bpr := &BitbucketPullRequest{}
-	err = json.NewDecoder(resp.Body).Decode(bpr)
+	err := JsonRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
 	if err != nil {
 		return false
 	}

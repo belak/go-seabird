@@ -1,8 +1,8 @@
 package plugins
 
 import (
-	"github.com/belak/seabird/bot"
 	"github.com/ChimeraCoder/anaconda"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -24,6 +24,7 @@ func NewTwitterPlugin(b *bot.Bot) (*anaconda.TwitterApi, error) {
 		return nil, err
 	}
 
+	// TODO: Check connection
 	anaconda.SetConsumerKey(p.ConsumerKey)
 	anaconda.SetConsumerSecret(p.ConsumerSecret)
 	api := anaconda.NewTwitterApi(p.AccessToken, p.AccessTokenSecret)
