@@ -199,7 +199,7 @@ func (t *GithubProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	// Pull request #59 on belak/seabird - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
-	out := fmt.Sprintf("Pull request #%d on %s/%s", *pull.Number, user, repo)
+	out := fmt.Sprintf("Pull request #%d on %s/%s [%s]", *pull.Number, user, repo, *pull.State)
 	if pull.User != nil {
 		out += " created by " + *pull.User.Login
 	}

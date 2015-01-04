@@ -34,6 +34,9 @@ type BitbucketIssue struct {
 	ReportedBy   BitbucketUser `json:"reported_by"`
 	CommentCount int           `json:"comment_count"`
 	CreatedOn    string        `json:"created_on"`
+	Metadata     struct {
+		Kind string `json:"kind"`
+	} `json:"metadata"`
 }
 
 type BitbucketPullRequest struct {
@@ -151,8 +154,8 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 
 	// Issue #51 on belak/seabird - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
 	out := fmt.Sprintf("Issue #%s on %s/%s [%s]", issueNum, user, repo, bi.Status)
-	if bi.Priority != "" {
-		out += " [" + bi.Priority + "]"
+	if bi.Priority != "" && bi.Metadata.Kind != "" {
+		out += " [" + bi.Priority + " - " + bi.Metadata.Kind + "]"
 	}
 	out += " by " + bi.ReportedBy.Username
 	if bi.Title != "" {
@@ -191,7 +194,7 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	// Pull request #59 on belak/seabird created by jsvana - Add stuff to links [created 4 Jan 2015]
-	out := fmt.Sprintf("Pull request #%s on %s/%s created by %s", pullNum, user, repo, bpr.Author.Username)
+	out := fmt.Sprintf("Pull request #%s on %s/%s created by %s [%s]", pullNum, user, repo, bpr.Author.Username, strings.ToLower(bpr.State))
 	if bpr.Title != "" {
 		out += " - " + bpr.Title
 	}
