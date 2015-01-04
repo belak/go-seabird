@@ -1,6 +1,8 @@
 package plugins
 
 import (
+	"bytes"
+	"os/exec"
 	"runtime"
 	"time"
 
@@ -13,10 +15,15 @@ func init() {
 	bot.RegisterPlugin("ctcp", NewCTCPPlugin)
 }
 
-type CTCPPlugin struct{}
+type CTCPPlugin struct {
+	EnableGit bool
+}
 
-func NewCTCPPlugin(m *mux.CTCPMux) error {
+func NewCTCPPlugin(b *bot.Bot, m *mux.CTCPMux) error {
 	p := &CTCPPlugin{}
+
+	// NOTE: We ignore the error because ctcp config is optional
+	b.Config("ctcp", p)
 
 	m.Event("TIME", p.Time)
 	m.Event("PING", p.Ping)
@@ -35,6 +42,17 @@ func (p *CTCPPlugin) Ping(c *irc.Client, e *irc.Event) {
 }
 
 func (p *CTCPPlugin) Version(c *irc.Client, e *irc.Event) {
-	c.CTCPReply(e, "VERSION belak/seabird [%s %s %s]",
-		runtime.GOOS, runtime.GOARCH, runtime.Version())
+	if p.EnableGit {
+		out, err := exec.Command("git", "rev-parse", "--short", "HEAD").Output()
+		if err != nil {
+			c.CTCPReply(e, "VERSION Error running git: %s", err)
+			return
+		}
+
+		c.CTCPReply(e, "VERSION belak/seabird [%s %s %s] %s",
+			runtime.GOOS, runtime.GOARCH, runtime.Version(), string(bytes.TrimSpace(out)))
+	} else {
+		c.CTCPReply(e, "VERSION belak/seabird [%s %s %s]",
+			runtime.GOOS, runtime.GOARCH, runtime.Version())
+	}
 }
