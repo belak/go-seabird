@@ -22,11 +22,7 @@ func NewDefaultProvider(_ *bot.Bot) *DefaultProvider {
 	return t
 }
 
-func (t *DefaultProvider) Handles(url string) bool {
-	return true
-}
-
-func (t *DefaultProvider) Handle(url string, c *irc.Client, e *irc.Event) {
+func (t *DefaultProvider) Handle(url string, c *irc.Client, e *irc.Event) bool {
 	var client = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -36,18 +32,18 @@ func (t *DefaultProvider) Handle(url string, c *irc.Client, e *irc.Event) {
 
 	r, err := client.Get(url)
 	if err != nil {
-		return
+		return false
 	}
 	defer r.Body.Close()
 
 	if r.StatusCode != 200 {
-		return
+		return false
 	}
 
 	// We search the first 1K and if a title isn't in there, we deal with it
 	z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
 	if err != nil {
-		return
+		return false
 	}
 
 	var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
@@ -83,5 +79,8 @@ func (t *DefaultProvider) Handle(url string, c *irc.Client, e *irc.Event) {
 
 	if str, ok := f(z); ok {
 		c.Reply(e, "Title: %s", str)
+		return true
+	} else {
+		return false
 	}
 }

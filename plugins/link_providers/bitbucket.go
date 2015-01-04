@@ -59,61 +59,61 @@ func NewBitbucketProvider(_ *bot.Bot) *BitbucketProvider {
 	return t
 }
 
-func (t *BitbucketProvider) Handles(url string) bool {
-	return strings.HasPrefix(url, "https://bitbucket.org/")
-}
-
-func (t *BitbucketProvider) Handle(url string, c *irc.Client, e *irc.Event) {
+func (t *BitbucketProvider) Handle(url string, c *irc.Client, e *irc.Event) bool {
 	if bitbucketUserRegex.MatchString(url) {
-		t.getUser(url, c, e)
+		return t.getUser(url, c, e)
 	} else if bitbucketRepoRegex.MatchString(url) {
-		t.getRepo(url, c, e)
+		return t.getRepo(url, c, e)
 	} else if bitbucketIssueRegex.MatchString(url) {
-		t.getIssue(url, c, e)
+		return t.getIssue(url, c, e)
 	} else if bitbucketPullRegex.MatchString(url) {
-		t.getPull(url, c, e)
+		return t.getPull(url, c, e)
 	}
+
+	return false
 }
 
-func (t *BitbucketProvider) getUser(url string, c *irc.Client, e *irc.Event) {
+func (t *BitbucketProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
 	matches := bitbucketUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
-		return
+		return false
 	}
 
 	resp, err := http.Get("https://bitbucket.org/api/2.0/users/" + matches[1])
 	if err != nil {
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	bu := &BitbucketUser{}
 	err = json.NewDecoder(resp.Body).Decode(bu)
 	if err != nil {
-		return
+		return false
 	}
 
 	c.Reply(e, "%s %s (@%s)", bitbucketPrefix, bu.DisplayName, bu.Username)
+
+	return true
 }
 
-func (t *BitbucketProvider) getRepo(url string, c *irc.Client, e *irc.Event) {
+func (t *BitbucketProvider) getRepo(url string, c *irc.Client, e *irc.Event) bool {
 	matches := bitbucketRepoRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
-		return
+		return false
 	}
 
 	user := matches[1]
 	repo := matches[2]
 	resp, err := http.Get("https://bitbucket.org/api/2.0/repositories/" + user + "/" + repo)
 	if err != nil {
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	br := &BitbucketRepo{}
 	err = json.NewDecoder(resp.Body).Decode(br)
 	if err != nil {
-		return
+		return false
 	}
 
 	// chriskempson/base16-iterm2 [Shell] Last pushed to 15 Nov 2014 - Base16 for iTerm2
@@ -123,16 +123,18 @@ func (t *BitbucketProvider) getRepo(url string, c *irc.Client, e *irc.Event) {
 	}
 	tm, err := time.Parse(time.RFC3339, br.UpdatedOn)
 	if err != nil {
-		return
+		return false
 	}
 	out += " Last pushed to " + tm.Format("2 Jan 2006")
 	c.Reply(e, "%s %s", bitbucketPrefix, out)
+
+	return true
 }
 
-func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
+func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) bool {
 	matches := bitbucketIssueRegex.FindStringSubmatch(url)
 	if len(matches) != 4 {
-		return
+		return false
 	}
 
 	user := matches[1]
@@ -141,14 +143,14 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 	uri := fmt.Sprintf("https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
 	resp, err := http.Get(uri)
 	if err != nil {
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	bi := &BitbucketIssue{}
 	err = json.NewDecoder(resp.Body).Decode(bi)
 	if err != nil {
-		return
+		return false
 	}
 
 	// Issue #51 on belak/seabird - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
@@ -162,16 +164,18 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 	}
 	tm, err := time.Parse("2006-01-02T15:04:05.000", bi.CreatedOn)
 	if err != nil {
-		return
+		return false
 	}
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
 	c.Reply(e, "%s %s", bitbucketPrefix, out)
+
+	return true
 }
 
-func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
+func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) bool {
 	matches := bitbucketPullRegex.FindStringSubmatch(url)
 	if len(matches) != 4 {
-		return
+		return false
 	}
 
 	user := matches[1]
@@ -180,14 +184,14 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	uri := fmt.Sprintf("https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
 	resp, err := http.Get(uri)
 	if err != nil {
-		return
+		return false
 	}
 	defer resp.Body.Close()
 
 	bpr := &BitbucketPullRequest{}
 	err = json.NewDecoder(resp.Body).Decode(bpr)
 	if err != nil {
-		return
+		return false
 	}
 
 	// Pull request #59 on belak/seabird created by jsvana - Add stuff to links [created 4 Jan 2015]
@@ -197,8 +201,10 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	}
 	tm, err := time.Parse("2006-01-02T15:04:05.000000-07:00", bpr.CreatedOn)
 	if err != nil {
-		return
+		return false
 	}
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
 	c.Reply(e, "%s %s", bitbucketPrefix, out)
+
+	return true
 }

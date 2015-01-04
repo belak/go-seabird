@@ -61,8 +61,7 @@ func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 	for _, url := range urlRegex.FindAllString(e.Trailing(), -1) {
 		go func(url string) {
 			for _, provider := range p.Providers {
-				if provider.Handles(url) {
-					provider.Handle(url, c, e)
+				if provider.Handle(url, c, e) {
 					return
 				}
 			}

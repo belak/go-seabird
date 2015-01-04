@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
@@ -46,33 +45,31 @@ func NewGithubProvider(b *bot.Bot) *GithubProvider {
 	return t
 }
 
-func (t *GithubProvider) Handles(url string) bool {
-	return strings.HasPrefix(url, "https://github.com/") || strings.HasPrefix(url, "https://gist.github.com/")
-}
-
-func (t *GithubProvider) Handle(url string, c *irc.Client, e *irc.Event) {
+func (t *GithubProvider) Handle(url string, c *irc.Client, e *irc.Event) bool {
 	if githubUserRegex.MatchString(url) {
-		t.getUser(url, c, e)
+		return t.getUser(url, c, e)
 	} else if githubRepoRegex.MatchString(url) {
-		t.getRepo(url, c, e)
+		return t.getRepo(url, c, e)
 	} else if githubIssueRegex.MatchString(url) {
-		t.getIssue(url, c, e)
+		return t.getIssue(url, c, e)
 	} else if githubPullRegex.MatchString(url) {
-		t.getPull(url, c, e)
+		return t.getPull(url, c, e)
 	} else if githubGistRegex.MatchString(url) {
-		t.getGist(url, c, e)
+		return t.getGist(url, c, e)
 	}
+
+	return false
 }
 
-func (t *GithubProvider) getUser(url string, c *irc.Client, e *irc.Event) {
+func (t *GithubProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
 	matches := githubUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
-		return
+		return false
 	}
 
 	user, _, err := t.api.Users.Get(matches[1])
 	if err != nil {
-		return
+		return false
 	}
 
 	out := ""
@@ -86,7 +83,7 @@ func (t *GithubProvider) getUser(url string, c *irc.Client, e *irc.Event) {
 			out += "@" + *user.Login
 		} else {
 			// If there's no name or login, fuggetaboutit
-			return
+			return false
 		}
 	}
 
@@ -98,12 +95,14 @@ func (t *GithubProvider) getUser(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	c.Reply(e, "%s %s", githubPrefix, out)
+
+	return true
 }
 
-func (t *GithubProvider) getRepo(url string, c *irc.Client, e *irc.Event) {
+func (t *GithubProvider) getRepo(url string, c *irc.Client, e *irc.Event) bool {
 	matches := githubRepoRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
-		return
+		return false
 	}
 
 	user := matches[1]
@@ -111,7 +110,7 @@ func (t *GithubProvider) getRepo(url string, c *irc.Client, e *irc.Event) {
 	repo, _, err := t.api.Repositories.Get(user, repoName)
 	// If the repo doesn't have a name, we get outta there
 	if repo.FullName == nil || *repo.FullName == "" || err != nil {
-		return
+		return false
 	}
 
 	out := *repo.FullName
@@ -138,32 +137,26 @@ func (t *GithubProvider) getRepo(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	c.Reply(e, "%s %s", githubPrefix, out)
+
+	return true
 }
 
-func lazyPluralize(count int, word string) string {
-	if count != 1 {
-		return fmt.Sprintf("%d %s", count, word+"s")
-	}
-
-	return fmt.Sprintf("%d %s", count, word)
-}
-
-func (t *GithubProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
+func (t *GithubProvider) getIssue(url string, c *irc.Client, e *irc.Event) bool {
 	matches := githubIssueRegex.FindStringSubmatch(url)
 	if len(matches) != 4 {
-		return
+		return false
 	}
 
 	user := matches[1]
 	repo := matches[2]
 	issueNum, err := strconv.ParseInt(matches[3], 10, 32)
 	if err != nil {
-		return
+		return false
 	}
 
 	issue, _, err := t.api.Issues.Get(user, repo, int(issueNum))
 	if err != nil {
-		return
+		return false
 	}
 
 	out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
@@ -178,24 +171,26 @@ func (t *GithubProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	c.Reply(e, "%s %s", githubPrefix, out)
+
+	return true
 }
 
-func (t *GithubProvider) getPull(url string, c *irc.Client, e *irc.Event) {
+func (t *GithubProvider) getPull(url string, c *irc.Client, e *irc.Event) bool {
 	matches := githubPullRegex.FindStringSubmatch(url)
 	if len(matches) != 4 {
-		return
+		return false
 	}
 
 	user := matches[1]
 	repo := matches[2]
 	pullNum, err := strconv.ParseInt(matches[3], 10, 32)
 	if err != nil {
-		return
+		return false
 	}
 
 	pull, _, err := t.api.PullRequests.Get(user, repo, int(pullNum))
 	if err != nil {
-		return
+		return false
 	}
 
 	// Pull request #59 on belak/seabird - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
@@ -220,18 +215,20 @@ func (t *GithubProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	c.Reply(e, "%s %s", githubPrefix, out)
+
+	return true
 }
 
-func (t *GithubProvider) getGist(url string, c *irc.Client, e *irc.Event) {
+func (t *GithubProvider) getGist(url string, c *irc.Client, e *irc.Event) bool {
 	matches := githubGistRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
-		return
+		return false
 	}
 
 	id := matches[2]
 	gist, _, err := t.api.Gists.Get(id)
 	if err != nil {
-		return
+		return false
 	}
 
 	// Created 3 Jan 2015 by belak - Description description, 1 file, 3 comments
@@ -248,4 +245,14 @@ func (t *GithubProvider) getGist(url string, c *irc.Client, e *irc.Event) {
 	}
 
 	c.Reply(e, "%s %s", githubPrefix, out)
+
+	return true
+}
+
+func lazyPluralize(count int, word string) string {
+	if count != 1 {
+		return fmt.Sprintf("%d %s", count, word+"s")
+	}
+
+	return fmt.Sprintf("%d %s", count, word)
 }
