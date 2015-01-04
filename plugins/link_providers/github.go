@@ -166,7 +166,7 @@ func (t *GithubProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	out := fmt.Sprintf("Issue #%d on %s/%s", *issue.Number, user, repo)
+	out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
 	if issue.Assignee != nil {
 		out += " (assigned to " + *issue.Assignee.Login + ")"
 	}
