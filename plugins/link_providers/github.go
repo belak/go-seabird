@@ -21,11 +21,11 @@ type GithubProvider struct {
 	api *github.Client
 }
 
-var githubUserRegex = regexp.MustCompile(`^https://github.com/([^/]+)$`)
-var githubRepoRegex = regexp.MustCompile(`^https://github.com/([^/]+)/([^/]+)$`)
-var githubIssueRegex = regexp.MustCompile(`^https://github.com/([^/]+)/([^/]+)/issues/([^/]+)$`)
-var githubPullRegex = regexp.MustCompile(`^https://github.com/([^/]+)/([^/]+)/pull/([^/]+)$`)
-var githubGistRegex = regexp.MustCompile(`^https://gist.github.com/([^/]+)/([^/]+)$`)
+var githubUserRegex = regexp.MustCompile(`^https?://github.com/([^/]+)$`)
+var githubRepoRegex = regexp.MustCompile(`^https?://github.com/([^/]+)/([^/]+)$`)
+var githubIssueRegex = regexp.MustCompile(`^https?://github.com/([^/]+)/([^/]+)/issues/([^/]+)$`)
+var githubPullRegex = regexp.MustCompile(`^https?://github.com/([^/]+)/([^/]+)/pull/([^/]+)$`)
+var githubGistRegex = regexp.MustCompile(`^https?://gist.github.com/([^/]+)/([^/]+)$`)
 var githubPrefix = "[Github]"
 
 func NewGithubProvider(b *bot.Bot) *GithubProvider {
@@ -72,6 +72,7 @@ func (t *GithubProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
 		return false
 	}
 
+	// Jay Vana (@jsvana) at Facebook - Bio bio bio
 	out := ""
 	if user.Name != nil && *user.Name != "" {
 		out += *user.Name
@@ -113,6 +114,7 @@ func (t *GithubProvider) getRepo(url string, c *irc.Client, e *irc.Event) bool {
 		return false
 	}
 
+	// jsvana/alfred [PHP] (forked from belak/alfred) Last pushed to 2 Jan 2015 - Description, 1 fork, 2 open issues, 4 stars
 	out := *repo.FullName
 	if repo.Language != nil && *repo.Language != "" {
 		out += " [" + *repo.Language + "]"
@@ -159,6 +161,7 @@ func (t *GithubProvider) getIssue(url string, c *irc.Client, e *irc.Event) bool 
 		return false
 	}
 
+	// Issue #42 on belak/seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
 	out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
 	if issue.Assignee != nil {
 		out += " (assigned to " + *issue.Assignee.Login + ")"
@@ -193,7 +196,7 @@ func (t *GithubProvider) getPull(url string, c *irc.Client, e *irc.Event) bool {
 		return false
 	}
 
-	// Pull request #59 on belak/seabird - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
+	// Pull request #59 on belak/seabird [open] - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
 	out := fmt.Sprintf("Pull request #%d on %s/%s [%s]", *pull.Number, user, repo, *pull.State)
 	if pull.User != nil {
 		out += " created by " + *pull.User.Login

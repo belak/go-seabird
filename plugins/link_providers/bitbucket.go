@@ -47,10 +47,10 @@ type BitbucketPullRequest struct {
 	CreatedOn    string        `json:"created_on"`
 }
 
-var bitbucketUserRegex = regexp.MustCompile(`^https://bitbucket.org/([^/]+)$`)
-var bitbucketRepoRegex = regexp.MustCompile(`^https://bitbucket.org/([^/]+)/([^/]+)$`)
-var bitbucketIssueRegex = regexp.MustCompile(`^https://bitbucket.org/([^/]+)/([^/]+)/issue/([^/]+)/[^/]+$`)
-var bitbucketPullRegex = regexp.MustCompile(`^https://bitbucket.org/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
+var bitbucketUserRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)$`)
+var bitbucketRepoRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)/([^/]+)$`)
+var bitbucketIssueRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)/([^/]+)/issue/([^/]+)/[^/]+$`)
+var bitbucketPullRegex = regexp.MustCompile(`^https?://bitbucket.org/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
 var bitbucketPrefix = "[Bitbucket]"
 
 func NewBitbucketProvider(_ *bot.Bot) *BitbucketProvider {
@@ -91,6 +91,7 @@ func (t *BitbucketProvider) getUser(url string, c *irc.Client, e *irc.Event) boo
 		return false
 	}
 
+	// Jay Vana @jsvana
 	c.Reply(e, "%s %s (@%s)", bitbucketPrefix, bu.DisplayName, bu.Username)
 
 	return true
@@ -153,7 +154,7 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) bo
 		return false
 	}
 
-	// Issue #51 on belak/seabird - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
+	// Issue #51 on belak/seabird [open] - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
 	out := fmt.Sprintf("Issue #%s on %s/%s [%s]", issueNum, user, repo, bi.Status)
 	if bi.Priority != "" && bi.Metadata.Kind != "" {
 		out += " [" + bi.Priority + " - " + bi.Metadata.Kind + "]"
@@ -194,7 +195,7 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) boo
 		return false
 	}
 
-	// Pull request #59 on belak/seabird created by jsvana - Add stuff to links [created 4 Jan 2015]
+	// Pull request #59 on belak/seabird created by jsvana [open] - Add stuff to links [created 4 Jan 2015]
 	out := fmt.Sprintf("Pull request #%s on %s/%s created by %s [%s]", pullNum, user, repo, bpr.Author.Username, strings.ToLower(bpr.State))
 	if bpr.Title != "" {
 		out += " - " + bpr.Title

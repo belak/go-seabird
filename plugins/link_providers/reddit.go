@@ -87,6 +87,7 @@ func (t *RedditProvider) getUser(url string, c *irc.Client, e *irc.Event) bool {
 		return false
 	}
 
+	// jsvana [gold] has 1 link karma and 1337 comment karma
 	gold := ""
 	if ru.Data.IsGold {
 		gold = " [gold]"
@@ -119,6 +120,7 @@ func (t *RedditProvider) getComment(url string, c *irc.Client, e *irc.Event) boo
 
 	cm := rc[0].Data.Children[0].Data
 
+	// Title title - jsvana (/r/vim, score: 5)
 	c.Reply(e, "%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
 
 	return true
@@ -144,6 +146,7 @@ func (t *RedditProvider) getSub(url string, c *irc.Client, e *irc.Event) bool {
 		return false
 	}
 
+	// /r/vim - Description description (1 subscriber, 2 actives)
 	c.Reply(e, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.Url, rs.Data.Description, lazyPluralize(rs.Data.Subscribers, "subscriber"), lazyPluralize(rs.Data.Actives, "active"))
 
 	return true

@@ -78,6 +78,7 @@ func (t *DefaultProvider) Handle(url string, c *irc.Client, e *irc.Event) bool {
 	}
 
 	if str, ok := f(z); ok {
+		// Title: title title
 		c.Reply(e, "Title: %s", str)
 		return true
 	} else {

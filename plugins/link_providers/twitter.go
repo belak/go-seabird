@@ -62,6 +62,7 @@ func (t *TwitterProvider) getUser(url string, c *irc.Client, e *irc.Event) bool 
 		return false
 	}
 
+	// Jay Vana (@jsvana) - Description description
 	c.Reply(e, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
 
 	return true
@@ -83,6 +84,7 @@ func (t *TwitterProvider) getTweet(url string, c *irc.Client, e *irc.Event) bool
 		return false
 	}
 
+	// Tweet text (@jsvana)
 	c.Reply(e, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
 
 	return true
