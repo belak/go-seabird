@@ -25,6 +25,8 @@ type GithubProvider struct {
 var githubUserRegex = regexp.MustCompile(`^https://github.com/([^/]+)$`)
 var githubRepoRegex = regexp.MustCompile(`^https://github.com/([^/]+)/([^/]+)$`)
 var githubIssueRegex = regexp.MustCompile(`^https://github.com/([^/]+)/([^/]+)/issues/([^/]+)$`)
+var githubPullRegex = regexp.MustCompile(`^https://github.com/([^/]+)/([^/]+)/pull/([^/]+)$`)
+var githubGistRegex = regexp.MustCompile(`^https://gist.github.com/([^/]+)/([^/]+)$`)
 var githubPrefix = "[Github]"
 
 func NewGithubProvider(b *bot.Bot) *GithubProvider {
@@ -45,7 +47,7 @@ func NewGithubProvider(b *bot.Bot) *GithubProvider {
 }
 
 func (t *GithubProvider) Handles(url string) bool {
-	return strings.HasPrefix(url, "https://github.com/")
+	return strings.HasPrefix(url, "https://github.com/") || strings.HasPrefix(url, "https://gist.github.com/")
 }
 
 func (t *GithubProvider) Handle(url string, c *irc.Client, e *irc.Event) {
@@ -55,6 +57,10 @@ func (t *GithubProvider) Handle(url string, c *irc.Client, e *irc.Event) {
 		t.getRepo(url, c, e)
 	} else if githubIssueRegex.MatchString(url) {
 		t.getIssue(url, c, e)
+	} else if githubPullRegex.MatchString(url) {
+		t.getPull(url, c, e)
+	} else if githubGistRegex.MatchString(url) {
+		t.getGist(url, c, e)
 	}
 }
 
@@ -169,6 +175,76 @@ func (t *GithubProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 	}
 	if issue.CreatedAt != nil {
 		out += " [created " + (*issue.CreatedAt).Format("2 Jan 2006") + "]"
+	}
+
+	c.Reply(e, "%s %s", githubPrefix, out)
+}
+
+func (t *GithubProvider) getPull(url string, c *irc.Client, e *irc.Event) {
+	matches := githubPullRegex.FindStringSubmatch(url)
+	if len(matches) != 4 {
+		return
+	}
+
+	user := matches[1]
+	repo := matches[2]
+	pullNum, err := strconv.ParseInt(matches[3], 10, 32)
+	if err != nil {
+		return
+	}
+
+	pull, _, err := t.api.PullRequests.Get(user, repo, int(pullNum))
+	if err != nil {
+		return
+	}
+
+	// Pull request #59 on belak/seabird - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
+	out := fmt.Sprintf("Pull request #%d on %s/%s", *pull.Number, user, repo)
+	if pull.User != nil {
+		out += " created by " + *pull.User.Login
+	}
+	if pull.Title != nil && *pull.Title != "" {
+		out += " - " + *pull.Title
+	}
+	if pull.CreatedAt != nil {
+		out += " [created " + (*pull.CreatedAt).Format("2 Jan 2006") + "]"
+	}
+	if pull.Commits != nil {
+		out += fmt.Sprintf(", %s", lazyPluralize(*pull.Commits, "commit"))
+	}
+	if pull.Comments != nil {
+		out += fmt.Sprintf(", %s", lazyPluralize(*pull.Comments, "comment"))
+	}
+	if pull.ChangedFiles != nil {
+		out += fmt.Sprintf(", %s", lazyPluralize(*pull.ChangedFiles, "changed file"))
+	}
+
+	c.Reply(e, "%s %s", githubPrefix, out)
+}
+
+func (t *GithubProvider) getGist(url string, c *irc.Client, e *irc.Event) {
+	matches := githubGistRegex.FindStringSubmatch(url)
+	if len(matches) != 3 {
+		return
+	}
+
+	id := matches[2]
+	gist, _, err := t.api.Gists.Get(id)
+	if err != nil {
+		return
+	}
+
+	// Created 3 Jan 2015 by belak - Description description, 1 file, 3 comments
+	out := "Created " + (*gist.CreatedAt).Format("2 Jan 2006")
+	if gist.Owner != nil {
+		out += " by " + *gist.Owner.Login
+	}
+	if gist.Description != nil && *gist.Description != "" {
+		out += " - " + *gist.Description
+	}
+	out += fmt.Sprintf(", %s", lazyPluralize(len(gist.Files), "file"))
+	if gist.Comments != nil {
+		out += fmt.Sprintf(", %s", lazyPluralize(*gist.Comments, "comment"))
 	}
 
 	c.Reply(e, "%s %s", githubPrefix, out)
