@@ -40,6 +40,7 @@ func NewURLPlugin(b *bot.Bot, bm *irc.BasicMux, cm *mux.CommandMux) error {
 	p.Providers = []links.LinkProvider{
 		links.NewBitbucketProvider(b),
 		links.NewGithubProvider(b),
+		links.NewRedditProvider(b),
 		links.NewTwitterProvider(b),
 
 		// Must be last. DefaultProvider.Handles always returns true.

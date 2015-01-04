@@ -141,7 +141,6 @@ func (t *BitbucketProvider) getIssue(url string, c *irc.Client, e *irc.Event) {
 	uri := fmt.Sprintf("https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
 	resp, err := http.Get(uri)
 	if err != nil {
-		c.Reply(e, "%s", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -181,7 +180,6 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	uri := fmt.Sprintf("https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
 	resp, err := http.Get(uri)
 	if err != nil {
-		c.Reply(e, "%s", err)
 		return
 	}
 	defer resp.Body.Close()
@@ -189,7 +187,6 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	bpr := &BitbucketPullRequest{}
 	err = json.NewDecoder(resp.Body).Decode(bpr)
 	if err != nil {
-		c.Reply(e, "%s", err)
 		return
 	}
 
@@ -200,7 +197,6 @@ func (t *BitbucketProvider) getPull(url string, c *irc.Client, e *irc.Event) {
 	}
 	tm, err := time.Parse("2006-01-02T15:04:05.000000-07:00", bpr.CreatedOn)
 	if err != nil {
-		c.Reply(e, "%s", err)
 		return
 	}
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
