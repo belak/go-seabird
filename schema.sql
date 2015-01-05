@@ -10,3 +10,10 @@ CREATE TABLE IF NOT EXISTS lastseen (
 	lastseen INTEGER,
 	UNIQUE(name, channel)
 );
+
+CREATE TABLE IF NOT EXISTS nicks (
+	nick VARCHAR(512),
+	channel VARCHAR(100),
+	flags VARCHAR(50),
+	UNIQUE(nick, channel)
+);
