@@ -66,9 +66,23 @@ func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 			if err != nil {
 				return
 			}
+
 			for _, provider := range p.providers[u.Host] {
 				if provider(c, e, u) {
 					return
+				}
+			}
+
+			// If there was a www, we fall back to no www
+			// This is not perfect, but it will fix a number of issues
+			// Alternatively, we could require the linkifiers to
+			// register multiple times
+			if strings.HasPrefix(u.Host, "www.") {
+				host := u.Host[4:]
+				for _, provider := range p.providers[host] {
+					if provider(c, e, u) {
+						return
+					}
 				}
 			}
 
