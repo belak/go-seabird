@@ -1,108 +1,25 @@
 package plugins
 
 import (
-	"encoding/json"
-	"fmt"
-	"net/http"
 	"strings"
 	"time"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
+	"github.com/belak/seabird/plugins/infoproviders"
 )
 
 func init() {
 	bot.RegisterPlugin("forecast", NewForecastPlugin)
 }
 
-type LastAddress struct {
-	Nick     string
-	Location Location
-}
-
-// Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
-// TODO: cleanup
-type DataPoint struct {
-	Time                   int64
-	Summary                string
-	Icon                   string
-	SunriseTime            float64
-	SunsetTime             float64
-	PrecipIntensity        float64
-	PrecipIntensityMax     float64
-	PrecipIntensityMaxTime float64
-	PrecipProbability      float64
-	PrecipType             string
-	PrecipAccumulation     float64
-	Temperature            float64
-	TemperatureMin         float64
-	TemperatureMinTime     float64
-	TemperatureMax         float64
-	TemperatureMaxTime     float64
-	DewPoint               float64
-	WindSpeed              float64
-	WindBearing            float64
-	CloudCover             float64
-	Humidity               float64
-	Pressure               float64
-	Visibility             float64
-	Ozone                  float64
-}
-
-type DataBlock struct {
-	Summary string
-	Icon    string
-	Data    []DataPoint
-}
-
-type alert struct {
-	Title   string
-	Expires float64
-	URI     string
-}
-
-type Flags struct {
-	DarkSkyUnavailable string
-	DarkSkyStations    []string
-	DataPointStations  []string
-	ISDStations        []string
-	LAMPStations       []string
-	METARStations      []string
-	METNOLicense       string
-	Sources            []string
-	Units              string
-}
-
-type ForecastResponse struct {
-	Latitude  float64
-	Longitude float64
-	Timezone  string
-	Offset    float64
-	Currently DataPoint
-	Minutely  DataBlock
-	Hourly    DataBlock
-	Daily     DataBlock
-	Alerts    []alert
-	Flags     Flags
-	APICalls  int
-}
-
-type ForecastCacheEntry struct {
-	Coordinates Coordinates
-	Created     time.Time
-	Response    ForecastResponse
-}
-
 type ForecastPlugin struct {
-	Key string
-	// CacheDuration string
+	w *infoproviders.WeatherProvider
 }
 
-func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
-	p := &ForecastPlugin{}
-
-	b.Config("forecast", p)
+func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux, weather *infoproviders.WeatherProvider) error {
+	p := &ForecastPlugin{weather}
 
 	m.Event("weather", p.Weather, &mux.HelpInfo{
 		"<location>",
@@ -116,48 +33,14 @@ func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
 	return nil
 }
 
-func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, error) {
-	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
-		p.Key,
-		loc.Lat,
-		loc.Lon)
-
-	r, err := http.Get(link)
-	if err != nil {
-		return nil, err
-	}
-
-	f := ForecastResponse{}
-	dec := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	err = dec.Decode(&f)
-	if err != nil {
-		return nil, err
-	}
-
-	return &f, nil
-}
-
-func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
-	l := strings.TrimSpace(e.Trailing())
-
-	loc, err := FetchLocation(l)
-	if err != nil {
-		return nil, err
-	}
-
-	return loc, nil
-}
-
 func (p *ForecastPlugin) Forecast(c *irc.Client, e *irc.Event) {
-	loc, err := p.getLocation(e)
+	loc, err := p.w.GetLocation(strings.TrimSpace(e.Trailing()))
 	if err != nil {
 		c.MentionReply(e, "%s", err.Error())
 		return
 	}
 
-	fc, err := p.forecastQuery(loc.Coords)
+	fc, err := p.w.ForecastQuery(loc.Coords)
 	if err != nil {
 		c.MentionReply(e, "%s", err.Error())
 		return
@@ -178,13 +61,13 @@ func (p *ForecastPlugin) Forecast(c *irc.Client, e *irc.Event) {
 }
 
 func (p *ForecastPlugin) Weather(c *irc.Client, e *irc.Event) {
-	loc, err := p.getLocation(e)
+	loc, err := p.w.GetLocation(strings.TrimSpace(e.Trailing()))
 	if err != nil {
 		c.MentionReply(e, "%s", err.Error())
 		return
 	}
 
-	fc, err := p.forecastQuery(loc.Coords)
+	fc, err := p.w.ForecastQuery(loc.Coords)
 	if err != nil {
 		c.MentionReply(e, "%s", err.Error())
 		return
