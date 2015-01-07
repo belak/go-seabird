@@ -147,7 +147,6 @@ func (p *NickTrackerPlugin) Mode(c *irc.Client, e *irc.Event) {
 			} else if ch == '-' {
 				state = ModeMinus
 			} else {
-				// TODO: Add mode
 				if !strings.ContainsRune(modes, ch) {
 					modes += string(ch)
 				}
