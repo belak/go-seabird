@@ -1,4 +1,4 @@
-package plugins
+package infoproviders
 
 import (
 	"encoding/json"

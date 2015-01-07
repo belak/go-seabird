@@ -9,6 +9,7 @@ import (
 	// Load plugins
 	//_ "github.com/belak/seabird/auth"
 	_ "github.com/belak/seabird/plugins"
+	_ "github.com/belak/seabird/plugins/infoproviders"
 	_ "github.com/belak/seabird/plugins/linkproviders"
 
 	// Load DB drivers

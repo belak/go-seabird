@@ -17,3 +17,8 @@ CREATE TABLE IF NOT EXISTS nicks (
 	flags VARCHAR(50),
 	UNIQUE(nick, channel)
 );
+
+CREATE TABLE IF NOT EXISTS morning_messages (
+	nick VARCHAR(512),
+	message TEXT
+);
