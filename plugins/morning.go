@@ -10,12 +10,15 @@ import (
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
-	"github.com/belak/seabird/plugins/infoproviders"
 )
 
 type MorningPlugin struct {
-	db        *sqlx.DB
-	providers map[string]*infoproviders.InfoProvider
+	db *sqlx.DB
+	providers map[string]infoproviders.InfoProvider
+}
+
+type InfoProvider interface {
+	Get() interface{}
 }
 
 func init() {
@@ -25,7 +28,7 @@ func init() {
 func NewMorningPlugin(b *irc.BasicMux, m *mux.CommandMux, db *sqlx.DB) (*MorningPlugin, error) {
 	p := &MorningPlugin{
 		db,
-		make(map[string]*infoproviders.InfoProvider),
+		make(map[string]infoproviders.InfoProvider),
 	}
 
 	m.Event("addmsg", p.AddMessage, &mux.HelpInfo{
@@ -40,19 +43,19 @@ func NewMorningPlugin(b *irc.BasicMux, m *mux.CommandMux, db *sqlx.DB) (*Morning
 	return p, nil
 }
 
-func (p *MorningPlugin) Register(provider string, i *infoproviders.InfoProvider) error {
+func (p *MorningPlugin) Register(provider string, i infoproviders.InfoProvider) error {
 	p.providers[provider] = i
 
 	return nil
 }
 
-func (p *MorningPlugin) Plugin(plug string) *infoproviders.InfoProvider {
+func (p *MorningPlugin) Plugin(plug string) interface{} {
 	prov, ok := p.providers[plug]
 	if !ok {
 		return nil
 	}
 
-	return *prov.Get()
+	return prov.Get()
 }
 
 var morningRegex = regexp.MustCompile(`(?i)^(good\s)?morning`)

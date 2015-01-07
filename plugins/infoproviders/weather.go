@@ -93,13 +93,15 @@ type WeatherProvider struct {
 	// CacheDuration string
 }
 
-func NewWeatherProvider(b *bot.Bot, m *mux.CommandMux) (*WeatherProvider, error) {
+func NewWeatherProvider(b *bot.Bot, m *mux.CommandMux, mp *MorningPlugin) (*WeatherProvider, error) {
 	p := &WeatherProvider{}
 
 	err := b.Config("forecast", p)
 	if err != nil {
 		return nil, err
 	}
+
+	mp.Register("weather", p)
 
 	return p, nil
 }
