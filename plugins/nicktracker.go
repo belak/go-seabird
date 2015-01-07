@@ -28,7 +28,7 @@ func init() {
 	bot.RegisterPlugin("nicktracker", NewNickTrackerPlugin)
 }
 
-func NewNickTrackerPlugin(b *bot.Bot, bm *irc.BasicMux, m *mux.CommandMux, db *sqlx.DB) error {
+func NewNickTrackerPlugin(b *bot.Bot, bm *irc.BasicMux, m *mux.CommandMux, db *sqlx.DB) (*NickTrackerPlugin, error) {
 	p := &NickTrackerPlugin{
 		db,
 		make(map[string]string),
@@ -42,7 +42,7 @@ func NewNickTrackerPlugin(b *bot.Bot, bm *irc.BasicMux, m *mux.CommandMux, db *s
 	bm.Event("MODE", p.Mode)
 	bm.Event("NICK", p.Nick)
 
-	return nil
+	return p, nil
 }
 
 func (p *NickTrackerPlugin) Welcome(c *irc.Client, e *irc.Event) {
