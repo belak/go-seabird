@@ -16,6 +16,14 @@ type NickTrackerPlugin struct {
 	modes map[string]string
 }
 
+type ModeState int
+
+const (
+	ModeNone ModeState = iota
+	ModePlus
+	ModeMinus
+)
+
 func init() {
 	bot.RegisterPlugin("nicktracker", NewNickTrackerPlugin)
 }
@@ -86,23 +94,12 @@ func (p *NickTrackerPlugin) Join(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	// Format: :nick!user@host PART #channel :message
-	nickRegex := regexp.MustCompile(`(?i)^([a-z_\-\[\]\\^{}|` + "`" + `][a-z0-9_\-\[\]\\^{}|` + "`" + `]*)!`)
-	matches := nickRegex.FindStringSubmatch(e.Prefix)
-	if len(matches) != 2 {
-		// No nick
-		return
-	}
-
-	channel := e.Args[0]
-	nick := matches[1]
-
 	// Check if it's a JOIN for the bot
-	if nick == c.CurrentNick() {
+	if e.Identity.Nick == c.CurrentNick() {
 		// Fire off a WHO
-		c.Writef("WHO %s", channel)
+		c.Writef("WHO %s", e.Args[0])
 	} else {
-		p.addNick(channel, nick, "")
+		p.addNick(e.Args[0], e.Identity.Nick, "")
 	}
 }
 
@@ -113,18 +110,7 @@ func (p *NickTrackerPlugin) Part(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	// Format: :nick!user@host PART #channel :message
-	nickRegex := regexp.MustCompile(`(?i)^([a-z_\-\[\]\\^{}|` + "`" + `][a-z0-9_\-\[\]\\^{}|` + "`" + `]*)!`)
-	matches := nickRegex.FindStringSubmatch(e.Prefix)
-	if len(matches) != 2 {
-		// No nick
-		return
-	}
-
-	nick := matches[1]
-	channel := e.Args[0]
-
-	p.db.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", nick, channel)
+	p.db.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", e.Identity.Nick, e.Args[0])
 }
 
 func (p *NickTrackerPlugin) Mode(c *irc.Client, e *irc.Event) {
@@ -135,7 +121,7 @@ func (p *NickTrackerPlugin) Mode(c *irc.Client, e *irc.Event) {
 
 	channel := e.Args[0]
 	nick := e.Args[2]
-	changedModes := e.Args[1][1:]
+	changedModes := e.Args[1]
 
 	var modes string
 	err := p.db.Get(&modes, "SELECT flags FROM nicks WHERE channel=$1 AND nick=$2", channel, nick)
@@ -143,15 +129,38 @@ func (p *NickTrackerPlugin) Mode(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	if e.Args[1][0] == '+' {
-		modes += changedModes
-	} else {
-		modes = strings.Map(func(r rune) rune {
-			if strings.IndexRune(changedModes, r) < 0 {
-				return r
+	// Parse new modes
+	state := ModeNone
+	for _, ch := range changedModes {
+		if state == ModeNone {
+			if ch == '+' {
+				state = ModePlus
+			} else if ch == '-' {
+				state = ModeMinus
+			} else {
+				// String needs to start with + or -
+				return
 			}
-			return -1
-		}, modes)
+		} else if state == ModePlus {
+			if ch == '+' {
+				continue
+			} else if ch == '-' {
+				state = ModeMinus
+			} else {
+				// TODO: Add mode
+				if !strings.ContainsRune(modes, ch) {
+					modes += string(ch)
+				}
+			}
+		} else if state == ModeMinus {
+			if ch == '+' {
+				state = ModePlus
+			} else if ch == '-' {
+				continue
+			} else {
+				modes = strings.Replace(modes, string(ch), "", -1)
+			}
+		}
 	}
 
 	p.db.Exec("UPDATE nicks SET flags=$1 WHERE channel=$2 AND nick=$3", modes, channel, nick)
