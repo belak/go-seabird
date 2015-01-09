@@ -35,14 +35,13 @@ func NewLastSeenPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
 }
 
 func (p *LastSeenPlugin) Active(c *irc.Client, e *irc.Event) {
-	if e.Trailing() == "" {
+	nick := e.Trailing()
+	if nick == "" {
 		c.MentionReply(e, "Nick required")
 		return
 	}
 
-	nick := e.Trailing()
 	channel := e.Args[0]
-
 	msg := p.getLastSeen(nick, channel)
 
 	c.MentionReply(e, "%s", msg)
@@ -50,7 +49,7 @@ func (p *LastSeenPlugin) Active(c *irc.Client, e *irc.Event) {
 
 func (p *LastSeenPlugin) getLastSeen(nick, channel string) string {
 	var lastseen int64
-	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", p.CleanedName(nick), channel)
+	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
 	if err != nil {
 		return "Unknown user"
 	}
@@ -81,7 +80,7 @@ func formatDate(t time.Time) string {
 
 func (p *LastSeenPlugin) isActive(nick, channel string) bool {
 	var lastseen int64
-	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", p.CleanedName(nick), channel)
+	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
 	if err != nil {
 		return false
 	}
@@ -100,13 +99,9 @@ func (p *LastSeenPlugin) Msg(c *irc.Client, e *irc.Event) {
 	p.updateLastSeen(nick, channel)
 }
 
-func (p *LastSeenPlugin) CleanedName(name string) string {
-	return strings.TrimSpace(strings.ToLower(name))
-}
-
 // Thanks to @belak for the comments
 func (p *LastSeenPlugin) updateLastSeen(nick, channel string) {
-	name := p.CleanedName(nick)
+	name := strings.ToLower(nick)
 	now := time.Now().Unix()
 
 	_, err := p.db.Exec("INSERT INTO lastseen VALUES ($1, $2, $3)", name, channel, now)

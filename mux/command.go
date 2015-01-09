@@ -43,7 +43,7 @@ func NewCommandMux(prefix string) *CommandMux {
 }
 
 func (m *CommandMux) help(c *irc.Client, e *irc.Event) {
-	cmd := strings.TrimSpace(e.Trailing())
+	cmd := e.Trailing()
 	if cmd == "" {
 		// Get all keys
 		keys := make([]string, 0, len(m.cmdHelp))
@@ -134,7 +134,7 @@ func (m *CommandMux) HandleEvent(c *irc.Client, e *irc.Event) {
 	msgParts := strings.SplitN(lastArg, " ", 2)
 	newEvent.Args[len(newEvent.Args)-1] = ""
 	if len(msgParts) > 1 {
-		newEvent.Args[len(newEvent.Args)-1] = msgParts[1]
+		newEvent.Args[len(newEvent.Args)-1] = strings.TrimSpace(msgParts[1])
 	}
 
 	newEvent.Command = msgParts[0][len(m.prefix):]

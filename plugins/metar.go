@@ -27,8 +27,8 @@ func metar(code string) string {
 	if err != nil {
 		return "NOAA appears to be down"
 	}
-
 	defer resp.Body.Close()
+
 	if resp.StatusCode != 200 {
 		return "Station does not exist"
 	}
@@ -47,8 +47,6 @@ func metar(code string) string {
 
 	return "No results"
 }
-
-type MetarPlugin struct{}
 
 func NewMetarPlugin(m *mux.CommandMux) error {
 	m.Event("metar", Metar, &mux.HelpInfo{

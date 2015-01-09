@@ -157,7 +157,7 @@ func defaultLinkProvider(url string, c *irc.Client, e *irc.Event) bool {
 
 func IsItDown(c *irc.Client, e *irc.Event) {
 	go func() {
-		url, err := url.Parse(strings.TrimSpace(e.Trailing()))
+		url, err := url.Parse(e.Trailing())
 		if err != nil {
 			c.Reply(e, "URL doesn't appear to be valid")
 			return

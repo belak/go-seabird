@@ -75,7 +75,7 @@ func (p *ChancePlugin) Coin(c *irc.Client, e *irc.Event) {
 	}
 
 	guess := -1
-	guessStr := strings.TrimSpace(e.Trailing())
+	guessStr := e.Trailing()
 	for k, v := range coinNames {
 		if guessStr == v {
 			guess = k

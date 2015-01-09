@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
-	"strings"
 	"time"
 
 	"github.com/belak/irc"
@@ -140,7 +139,7 @@ func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, erro
 }
 
 func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
-	l := strings.TrimSpace(e.Trailing())
+	l := e.Trailing()
 
 	loc, err := FetchLocation(l)
 	if err != nil {
