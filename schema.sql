@@ -17,3 +17,10 @@ CREATE TABLE IF NOT EXISTS nicks (
 	flags VARCHAR(50),
 	UNIQUE(nick, channel)
 );
+
+CREATE TABLE IF NOT EXISTS keystore (
+	channel VARCHAR(100),
+	key VARCHAR(50),
+	value VARCHAR(50),
+	UNIQUE(channel, key)
+);
