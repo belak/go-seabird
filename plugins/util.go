@@ -23,14 +23,10 @@ type LocationResponse struct {
 	Status string `json:"status"`
 }
 
-type Coordinates struct {
-	Lat float64
-	Lon float64
-}
-
 type Location struct {
 	Address string
-	Coords  Coordinates
+	Lat     float64
+	Lon     float64
 }
 
 func FetchLocation(where string) (*Location, error) {
@@ -62,13 +58,10 @@ func FetchLocation(where string) (*Location, error) {
 		return nil, errors.New("More than 1 result")
 	}
 
-	coords := Coordinates{
-		Lat: loc.Results[0].Geometry.Location.Lat,
-		Lon: loc.Results[0].Geometry.Location.Lon}
-
 	ret := Location{
 		Address: loc.Results[0].Address,
-		Coords:  coords}
+		Lat:     loc.Results[0].Geometry.Location.Lat,
+		Lon:     loc.Results[0].Geometry.Location.Lon}
 
 	return &ret, nil
 }

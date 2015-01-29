@@ -17,3 +17,11 @@ CREATE TABLE IF NOT EXISTS nicks (
 	flags VARCHAR(50),
 	UNIQUE(nick, channel)
 );
+
+CREATE TABLE IF NOT EXISTS forecast_location (
+	nick VARCHAR(512),
+	address VARCHAR(200),
+	lat FLOAT,
+	lon FLOAT,
+	UNIQUE(nick)
+);
