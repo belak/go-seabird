@@ -147,7 +147,7 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
 	if l == "" {
 		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", e.Identity.Nick)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("Could not find a location for %q", e.Identity.Nick)
 		}
 	} else {
 		loc, err = FetchLocation(l)
