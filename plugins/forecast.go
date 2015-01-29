@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/mux"
@@ -87,21 +89,18 @@ type ForecastResponse struct {
 	APICalls  int
 }
 
-type ForecastCacheEntry struct {
-	Coordinates Coordinates
-	Created     time.Time
-	Response    ForecastResponse
-}
-
 type ForecastPlugin struct {
 	Key string
+	db  *sqlx.DB
 	// CacheDuration string
 }
 
-func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
+func NewForecastPlugin(b *bot.Bot, db *sqlx.DB, m *mux.CommandMux) error {
 	p := &ForecastPlugin{}
 
 	b.Config("forecast", p)
+
+	p.db = db
 
 	m.Event("weather", p.Weather, &mux.HelpInfo{
 		"<location>",
@@ -115,7 +114,7 @@ func NewForecastPlugin(b *bot.Bot, m *mux.CommandMux) error {
 	return nil
 }
 
-func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, error) {
+func (p *ForecastPlugin) forecastQuery(loc *Location) (*ForecastResponse, error) {
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
 		p.Key,
 		loc.Lat,
@@ -139,11 +138,36 @@ func (p *ForecastPlugin) forecastQuery(loc Coordinates) (*ForecastResponse, erro
 }
 
 func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
-	l := e.Trailing()
+	var err error
 
-	loc, err := FetchLocation(l)
-	if err != nil {
-		return nil, err
+	l := e.Trailing()
+	loc := &Location{}
+
+	// If it's an empty string, check the cache
+	if l == "" {
+		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", e.Identity.Nick)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		loc, err = FetchLocation(l)
+		if err != nil {
+			return nil, err
+		}
+
+		_, err = p.db.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
+			e.Identity.Nick, loc.Address, loc.Lat, loc.Lon,
+		)
+		if err == nil {
+			return loc, nil
+		}
+
+		_, err = p.db.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
+			loc.Address, loc.Lat, loc.Lon, e.Identity.Nick,
+		)
+		if err != nil {
+			return nil, err
+		}
 	}
 
 	return loc, nil
@@ -156,7 +180,7 @@ func (p *ForecastPlugin) Forecast(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	fc, err := p.forecastQuery(loc.Coords)
+	fc, err := p.forecastQuery(loc)
 	if err != nil {
 		c.MentionReply(e, "%s", err.Error())
 		return
@@ -183,7 +207,7 @@ func (p *ForecastPlugin) Weather(c *irc.Client, e *irc.Event) {
 		return
 	}
 
-	fc, err := p.forecastQuery(loc.Coords)
+	fc, err := p.forecastQuery(loc)
 	if err != nil {
 		c.MentionReply(e, "%s", err.Error())
 		return
