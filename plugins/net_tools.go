@@ -26,6 +26,10 @@ func NewNetToolsPlugin(b *bot.Bot, m *mux.CommandMux) error {
 
 	b.Config("net_tools", p)
 
+	m.Event("rdns", p.RDNS, &mux.HelpInfo{
+		"<ip>",
+		"Does a reverse DNS lookup on the given IP",
+	})
 	m.Event("dig", p.Dig, &mux.HelpInfo{
 		"<domain>",
 		"Retrieves IP records for given domain",
@@ -48,6 +52,33 @@ func NewNetToolsPlugin(b *bot.Bot, m *mux.CommandMux) error {
 	})
 
 	return nil
+}
+
+func (p *NetToolsPlugin) RDNS(c *irc.Client, e *irc.Event) {
+	go func() {
+		if e.Trailing() == "" {
+			c.MentionReply(e, "Argument required")
+			return
+		}
+		names, err := net.LookupAddr(e.Trailing())
+		if err != nil {
+			c.MentionReply(e, err.Error())
+			return
+		}
+
+		if len(names) == 0 {
+			c.MentionReply(e, "No results found")
+			return
+		}
+
+		c.MentionReply(e, names[0])
+
+		if len(names) > 1 {
+			for _, name := range names[1:] {
+				c.Writef("NOTICE %s :%s", e.Identity.Nick, name)
+			}
+		}
+	}()
 }
 
 func (p *NetToolsPlugin) Dig(c *irc.Client, e *irc.Event) {
