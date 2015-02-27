@@ -18,16 +18,14 @@ type IssuesPlugin struct {
 	Token string
 }
 
-func init() {
-	bot.RegisterPlugin("issues", NewIssuesPlugin)
+func NewIssuesPlugin() bot.Plugin {
+	return &IssuesPlugin{}
 }
 
-func NewIssuesPlugin(b *bot.Bot, m *mux.CommandMux) error {
-	p := &IssuesPlugin{}
-
+func (p *IssuesPlugin) Register(b *bot.Bot) error {
 	b.Config("github", p)
 
-	m.Event("issue", p.CreateIssue, &mux.HelpInfo{
+	b.CommandMux.Event("issue", p.CreateIssue, &mux.HelpInfo{
 		"<issue title>",
 		"Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
 	})

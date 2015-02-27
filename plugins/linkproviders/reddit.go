@@ -5,7 +5,6 @@ import (
 	"regexp"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/plugins"
 )
 
@@ -46,12 +45,8 @@ var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
 var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
-func init() {
-	bot.RegisterPlugin("linkprovider:reddit", NewRedditProvider)
-}
-
 func NewRedditProvider(p *plugins.URLPlugin) error {
-	p.Register("www.reddit.com", HandleReddit)
+	p.RegisterProvider("reddit.com", HandleReddit)
 	return nil
 }
 

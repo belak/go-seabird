@@ -7,8 +7,7 @@ import (
 	"net/url"
 )
 
-type LocationResult struct {
-}
+type LocationResult struct{}
 
 type LocationResponse struct {
 	Results []struct {

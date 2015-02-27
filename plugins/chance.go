@@ -9,10 +9,6 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("chance", NewChancePlugin)
-}
-
 var coinNames = []string{
 	"heads",
 	"tails",
@@ -23,16 +19,18 @@ type ChancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func NewChancePlugin(b *bot.Bot, m *mux.CommandMux) error {
-	p := &ChancePlugin{
+func NewChancePlugin() bot.Plugin {
+	return &ChancePlugin{
 		6,
 		make(map[string]int),
 	}
+}
 
-	m.Event("roulette", p.Roulette, &mux.HelpInfo{
+func (p *ChancePlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("roulette", p.Roulette, &mux.HelpInfo{
 		Description: "Click... click... BANG!",
 	})
-	m.Event("coin", p.Coin, &mux.HelpInfo{
+	b.CommandMux.Event("coin", p.Coin, &mux.HelpInfo{
 		"[heads|tails]",
 		"Guess the coin flip. If you guess wrong, you're out!",
 	})

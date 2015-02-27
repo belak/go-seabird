@@ -15,10 +15,6 @@ import (
 	"golang.org/x/net/html"
 )
 
-func init() {
-	bot.RegisterPlugin("url", NewURLPlugin)
-}
-
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
 // and I don't know if it's worth the time to make it better.
 var urlRegex = regexp.MustCompile(`https?://[^ ]+`)
@@ -38,22 +34,24 @@ type URLPlugin struct {
 
 type LinkProvider func(c *irc.Client, e *irc.Event, url *url.URL) bool
 
-func NewURLPlugin(b *bot.Bot, bm *irc.BasicMux, cm *mux.CommandMux) (*URLPlugin, error) {
-	p := &URLPlugin{
+func NewURLPlugin() bot.Plugin {
+	return &URLPlugin{
 		providers: make(map[string][]LinkProvider),
 	}
+}
 
-	bm.Event("PRIVMSG", p.URLTitle)
+func (p *URLPlugin) Register(b *bot.Bot) error {
+	b.BasicMux.Event("PRIVMSG", p.URLTitle)
 
-	cm.Event("down", IsItDown, &mux.HelpInfo{
+	b.CommandMux.Event("down", IsItDown, &mux.HelpInfo{
 		"<website>",
 		"Checks if given website is down",
 	})
 
-	return p, nil
+	return nil
 }
 
-func (p *URLPlugin) Register(domain string, f LinkProvider) error {
+func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
 	p.providers[domain] = append(p.providers[domain], f)
 
 	return nil

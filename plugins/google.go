@@ -11,9 +11,7 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("google", NewGooglePlugin)
-}
+type GooglePlugin struct{}
 
 type GoogleResponse struct {
 	ResponseData struct {
@@ -25,12 +23,16 @@ type GoogleResponse struct {
 	ResponseStatus int `json:"responseStatus"`
 }
 
-func NewGooglePlugin(c *mux.CommandMux) error {
-	c.Event("g", Web, &mux.HelpInfo{
+func NewGooglePlugin() bot.Plugin {
+	return &GooglePlugin{}
+}
+
+func (p *GooglePlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("g", Web, &mux.HelpInfo{
 		"<query>",
 		"Retrieves top Google web search result for given query",
 	})
-	c.Event("gi", Image, &mux.HelpInfo{
+	b.CommandMux.Event("gi", Image, &mux.HelpInfo{
 		"<query>",
 		"Retrieves top Google images search result for given query",
 	})

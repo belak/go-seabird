@@ -8,7 +8,6 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
 )
 
 type NickTrackerPlugin struct {
@@ -24,25 +23,23 @@ const (
 	ModeMinus
 )
 
-func init() {
-	bot.RegisterPlugin("nicktracker", NewNickTrackerPlugin)
-}
-
-func NewNickTrackerPlugin(b *bot.Bot, bm *irc.BasicMux, m *mux.CommandMux, db *sqlx.DB) (*NickTrackerPlugin, error) {
-	p := &NickTrackerPlugin{
+func NewNickTrackerPlugin(db *sqlx.DB) bot.Plugin {
+	return &NickTrackerPlugin{
 		db,
 		make(map[string]string),
 	}
+}
 
-	bm.Event("001", p.Welcome)
-	bm.Event("005", p.Support)
-	bm.Event("352", p.Who)
-	bm.Event("JOIN", p.Join)
-	bm.Event("PART", p.Part)
-	bm.Event("MODE", p.Mode)
-	bm.Event("NICK", p.Nick)
+func (p *NickTrackerPlugin) Register(b *bot.Bot) error {
+	b.BasicMux.Event("001", p.Welcome)
+	b.BasicMux.Event("005", p.Support)
+	b.BasicMux.Event("352", p.Who)
+	b.BasicMux.Event("JOIN", p.Join)
+	b.BasicMux.Event("PART", p.Part)
+	b.BasicMux.Event("MODE", p.Mode)
+	b.BasicMux.Event("NICK", p.Nick)
 
-	return p, nil
+	return nil
 }
 
 func (p *NickTrackerPlugin) Welcome(c *irc.Client, e *irc.Event) {
