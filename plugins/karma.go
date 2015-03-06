@@ -18,32 +18,30 @@ type KarmaUser struct {
 	Score int
 }
 
-func init() {
-	bot.RegisterPlugin("karma", NewKarmaPlugin)
-}
-
 type KarmaPlugin struct {
 	db *sqlx.DB
 }
 
 var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
-	p := &KarmaPlugin{
+func NewKarmaPlugin(db *sqlx.DB) bot.Plugin {
+	return &KarmaPlugin{
 		db,
 	}
+}
 
-	c.Event("karma", p.Karma, &mux.HelpInfo{
+func (p *KarmaPlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("karma", p.Karma, &mux.HelpInfo{
 		"<nick>",
 		"Gives karma for given user",
 	})
-	c.Event("topkarma", p.TopKarma, &mux.HelpInfo{
+	b.CommandMux.Event("topkarma", p.TopKarma, &mux.HelpInfo{
 		Description: "Reports the user with the most karma",
 	})
-	c.Event("bottomkarma", p.BottomKarma, &mux.HelpInfo{
+	b.CommandMux.Event("bottomkarma", p.BottomKarma, &mux.HelpInfo{
 		Description: "Reports the user with the least karma",
 	})
-	b.Event("PRIVMSG", p.Msg)
+	b.BasicMux.Event("PRIVMSG", p.Msg)
 
 	return nil
 }

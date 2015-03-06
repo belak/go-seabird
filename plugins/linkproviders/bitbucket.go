@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/plugins"
 )
 
@@ -51,12 +50,8 @@ var bitbucketIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issue/([^/]+)/[^
 var bitbucketPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
 var bitbucketPrefix = "[Bitbucket]"
 
-func init() {
-	bot.RegisterPlugin("linkprovider:bitbucket", NewBitbucketProvider)
-}
-
 func NewBitbucketProvider(p *plugins.URLPlugin) error {
-	p.Register("bitbucket.org", HandleBitbucket)
+	p.RegisterProvider("bitbucket.org", HandleBitbucket)
 	return nil
 }
 

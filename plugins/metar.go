@@ -12,8 +12,27 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("metar", NewMetarPlugin)
+type MetarPlugin struct{}
+
+func NewMetarPlugin() bot.Plugin {
+	return &MetarPlugin{}
+}
+
+func (p *MetarPlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("metar", Metar, &mux.HelpInfo{
+		"<station>",
+		"Gives METAR report for given airport code",
+	})
+
+	return nil
+}
+
+func Metar(c *irc.Client, e *irc.Event) {
+	if !e.FromChannel() {
+		return
+	}
+
+	c.MentionReply(e, "%s", metar(e.Trailing()))
 }
 
 func metar(code string) string {
@@ -46,21 +65,4 @@ func metar(code string) string {
 	}
 
 	return "No results"
-}
-
-func NewMetarPlugin(m *mux.CommandMux) error {
-	m.Event("metar", Metar, &mux.HelpInfo{
-		"<station>",
-		"Gives METAR report for given airport code",
-	})
-
-	return nil
-}
-
-func Metar(c *irc.Client, e *irc.Event) {
-	if !e.FromChannel() {
-		return
-	}
-
-	c.MentionReply(e, "%s", metar(e.Trailing()))
 }

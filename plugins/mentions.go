@@ -3,17 +3,16 @@ package plugins
 import (
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
 )
-
-func init() {
-	bot.RegisterPlugin("mentions", NewMentionsPlugin)
-}
 
 type MentionsPlugin struct{}
 
-func NewMentionsPlugin(m *mux.MentionMux) error {
-	m.Event(Mentions)
+func NewMentionsPlugin() bot.Plugin {
+	return &MentionsPlugin{}
+}
+
+func (p *MentionsPlugin) Register(b *bot.Bot) error {
+	b.MentionMux.Event(Mentions)
 	return nil
 }
 

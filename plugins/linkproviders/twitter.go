@@ -27,10 +27,6 @@ var twitterStatusRegex = regexp.MustCompile(`^/.*?/status/(.+)$`)
 var twitterUserRegex = regexp.MustCompile(`^/([^/]+)$`)
 var twitterPrefix = "[Twitter]"
 
-func init() {
-	bot.RegisterPlugin("linkprovider:twitter", NewTwitterProvider)
-}
-
 func NewTwitterProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 	t := &TwitterProvider{}
 
@@ -44,7 +40,7 @@ func NewTwitterProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 	anaconda.SetConsumerSecret(tc.ConsumerSecret)
 	t.api = anaconda.NewTwitterApi(tc.AccessToken, tc.AccessTokenSecret)
 
-	p.Register("twitter.com", t.Handle)
+	p.RegisterProvider("twitter.com", t.Handle)
 
 	return nil
 }

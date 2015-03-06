@@ -8,19 +8,21 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("math", NewMathPlugin)
+type MathPlugin struct{}
+
+func NewMathPlugin() bot.Plugin {
+	return &MathPlugin{}
 }
 
-func NewMathPlugin(m *mux.CommandMux) error {
-	m.Event("math", mathExpr, &mux.HelpInfo{
+func (p *MathPlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("math", p.Expr, &mux.HelpInfo{
 		"<expr>",
 		"Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
 	return nil
 }
 
-func mathExpr(c *irc.Client, e *irc.Event) {
+func (p *MathPlugin) Expr(c *irc.Client, e *irc.Event) {
 	val, err := parseExpr(e.Trailing())
 	if err != nil {
 		c.Reply(e, "%s", err.Error())

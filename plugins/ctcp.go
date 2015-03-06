@@ -8,26 +8,23 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
 )
-
-func init() {
-	bot.RegisterPlugin("ctcp", NewCTCPPlugin)
-}
 
 type CTCPPlugin struct {
 	EnableGit bool
 }
 
-func NewCTCPPlugin(b *bot.Bot, m *mux.CTCPMux) error {
-	p := &CTCPPlugin{}
+func NewCTCPPlugin() bot.Plugin {
+	return &CTCPPlugin{}
+}
 
+func (p *CTCPPlugin) Register(b *bot.Bot) error {
 	// NOTE: We ignore the error because ctcp config is optional
 	b.Config("ctcp", p)
 
-	m.Event("TIME", p.Time)
-	m.Event("PING", p.Ping)
-	m.Event("VERSION", p.Version)
+	b.CTCPMux.Event("TIME", p.Time)
+	b.CTCPMux.Event("PING", p.Ping)
+	b.CTCPMux.Event("VERSION", p.Version)
 
 	return nil
 }

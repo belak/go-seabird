@@ -12,24 +12,22 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("lastseen", NewLastSeenPlugin)
-}
-
 type LastSeenPlugin struct {
 	db *sqlx.DB
 }
 
-func NewLastSeenPlugin(c *mux.CommandMux, b *irc.BasicMux, db *sqlx.DB) error {
-	p := &LastSeenPlugin{
+func NewLastSeenPlugin(db *sqlx.DB) bot.Plugin {
+	return &LastSeenPlugin{
 		db,
 	}
+}
 
-	c.Event("active", p.Active, &mux.HelpInfo{
+func (p *LastSeenPlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("active", p.Active, &mux.HelpInfo{
 		"<nick>",
 		"Reports the last time user was seen",
 	})
-	b.Event("PRIVMSG", p.Msg)
+	b.BasicMux.Event("PRIVMSG", p.Msg)
 
 	return nil
 }

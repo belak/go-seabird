@@ -13,10 +13,6 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("forecast", NewForecastPlugin)
-}
-
 type LastAddress struct {
 	Nick     string
 	Location Location
@@ -95,18 +91,20 @@ type ForecastPlugin struct {
 	// CacheDuration string
 }
 
-func NewForecastPlugin(b *bot.Bot, db *sqlx.DB, m *mux.CommandMux) error {
-	p := &ForecastPlugin{}
+func NewForecastPlugin(db *sqlx.DB) bot.Plugin {
+	p := &ForecastPlugin{db: db}
 
+	return p
+}
+
+func (p *ForecastPlugin) Register(b *bot.Bot) error {
 	b.Config("forecast", p)
 
-	p.db = db
-
-	m.Event("weather", p.Weather, &mux.HelpInfo{
+	b.CommandMux.Event("weather", p.Weather, &mux.HelpInfo{
 		"<location>",
 		"Retrieves current weather for given location",
 	})
-	m.Event("forecast", p.Forecast, &mux.HelpInfo{
+	b.CommandMux.Event("forecast", p.Forecast, &mux.HelpInfo{
 		"<location>",
 		"Retrieves three-day forecast for given location",
 	})

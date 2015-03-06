@@ -45,20 +45,18 @@ type TVDBZipResponse struct {
 	} `xml:"Series"`
 }
 
-func init() {
-	bot.RegisterPlugin("tvdb", NewTVDBPlugin)
+func NewTVDBPlugin() bot.Plugin {
+	return &TVDBPlugin{}
 }
 
-func NewTVDBPlugin(b *bot.Bot, m *mux.CommandMux) error {
-	p := &TVDBPlugin{}
-
+func (p *TVDBPlugin) Register(b *bot.Bot) error {
 	b.Config("tvdb", p)
 
-	m.Event("tvdb", p.Search, &mux.HelpInfo{
+	b.CommandMux.Event("tvdb", p.Search, &mux.HelpInfo{
 		"<series>",
 		"Gives info on TVDB series, including TVDB ID",
 	})
-	m.Event("series", p.Series, &mux.HelpInfo{
+	b.CommandMux.Event("series", p.Series, &mux.HelpInfo{
 		"<series_id>",
 		"Gives expanded info on TVDB series using TVDB ID",
 	})

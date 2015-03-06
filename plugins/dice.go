@@ -9,21 +9,22 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
 )
-
-func init() {
-	bot.RegisterPlugin("dice", NewDicePlugin)
-}
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-func NewDicePlugin(m *mux.MentionMux) error {
-	m.Event(Dice)
+type DicePlugin struct{}
+
+func NewDicePlugin() bot.Plugin {
+	return &DicePlugin{}
+}
+
+func (p *DicePlugin) Register(b *bot.Bot) error {
+	b.MentionMux.Event(p.Dice)
 	return nil
 }
 
-func Dice(c *irc.Client, e *irc.Event) {
+func (p *DicePlugin) Dice(c *irc.Client, e *irc.Event) {
 	var rolls []string
 	totalCount := 0
 

@@ -16,12 +16,14 @@ type ShortenResult struct {
 	LongUrl string `json:"longUrl"`
 }
 
-func init() {
-	bot.RegisterPlugin("tiny", NewTinyPlugin)
+type TinyPlugin struct{}
+
+func NewTinyPlugin() bot.Plugin {
+	return &TinyPlugin{}
 }
 
-func NewTinyPlugin(m *mux.CommandMux) error {
-	m.Event("tiny", Shorten, &mux.HelpInfo{
+func (p *TinyPlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("tiny", Shorten, &mux.HelpInfo{
 		"<url>",
 		"Shortens given URL",
 	})

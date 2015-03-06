@@ -29,10 +29,6 @@ var githubPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull/([^/]+)$`)
 var githubGistRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 var githubPrefix = "[Github]"
 
-func init() {
-	bot.RegisterPlugin("linkprovider:github", NewGithubProvider)
-}
-
 func NewGithubProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 	t := &GithubProvider{}
 
@@ -47,8 +43,8 @@ func NewGithubProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 
 	t.api = github.NewClient(tr.Client())
 
-	p.Register("github.com", t.HandleGithub)
-	p.Register("gist.github.com", t.HandleGist)
+	p.RegisterProvider("github.com", t.HandleGithub)
+	p.RegisterProvider("gist.github.com", t.HandleGist)
 
 	return nil
 }

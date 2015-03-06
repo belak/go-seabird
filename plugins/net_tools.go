@@ -17,36 +17,34 @@ type NetToolsPlugin struct {
 	Key string
 }
 
-func init() {
-	bot.RegisterPlugin("net_tools", NewNetToolsPlugin)
+func NewNetToolsPlugin() bot.Plugin {
+	return &NetToolsPlugin{}
 }
 
-func NewNetToolsPlugin(b *bot.Bot, m *mux.CommandMux) error {
-	p := &NetToolsPlugin{}
-
+func (p *NetToolsPlugin) Register(b *bot.Bot) error {
 	b.Config("net_tools", p)
 
-	m.Event("rdns", p.RDNS, &mux.HelpInfo{
+	b.CommandMux.Event("rdns", p.RDNS, &mux.HelpInfo{
 		"<ip>",
 		"Does a reverse DNS lookup on the given IP",
 	})
-	m.Event("dig", p.Dig, &mux.HelpInfo{
+	b.CommandMux.Event("dig", p.Dig, &mux.HelpInfo{
 		"<domain>",
 		"Retrieves IP records for given domain",
 	})
-	m.Event("ping", p.Ping, &mux.HelpInfo{
+	b.CommandMux.Event("ping", p.Ping, &mux.HelpInfo{
 		"<host>",
 		"Pings given host once",
 	})
-	m.Event("traceroute", p.Traceroute, &mux.HelpInfo{
+	b.CommandMux.Event("traceroute", p.Traceroute, &mux.HelpInfo{
 		"<host>",
 		"Runs traceroute on given host and returns pastebin URL for results",
 	})
-	m.Event("whois", p.Whois, &mux.HelpInfo{
+	b.CommandMux.Event("whois", p.Whois, &mux.HelpInfo{
 		"<domain>",
 		"Runs whois on given domain and returns pastebin URL for results",
 	})
-	m.Event("dnscheck", p.DnsCheck, &mux.HelpInfo{
+	b.CommandMux.Event("dnscheck", p.DnsCheck, &mux.HelpInfo{
 		"<domain>",
 		"Returns DNSCheck URL for domain",
 	})

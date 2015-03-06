@@ -12,10 +12,6 @@ import (
 	"github.com/belak/seabird/mux"
 )
 
-func init() {
-	bot.RegisterPlugin("wiki", NewWikiPlugin)
-}
-
 type WikiResponse struct {
 	Parse struct {
 		Title string `json:"title"`
@@ -25,8 +21,14 @@ type WikiResponse struct {
 	} `json:"parse"`
 }
 
-func NewWikiPlugin(c *mux.CommandMux) error {
-	c.Event("wiki", Wiki, &mux.HelpInfo{
+type WikiPlugin struct{}
+
+func NewWikiPlugin() bot.Plugin {
+	return &WikiPlugin{}
+}
+
+func (p *WikiPlugin) Register(b *bot.Bot) error {
+	b.CommandMux.Event("wiki", Wiki, &mux.HelpInfo{
 		"<topic>",
 		"Retrieves first section from most relevant Wikipedia article to given topic",
 	})
@@ -35,9 +37,7 @@ func NewWikiPlugin(c *mux.CommandMux) error {
 }
 
 func transformQuery(query string) string {
-	query = strings.Replace(query, " ", "_", -1)
-
-	return query
+	return strings.Replace(query, " ", "_", -1)
 }
 
 func Wiki(c *irc.Client, e *irc.Event) {
