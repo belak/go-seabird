@@ -6,6 +6,7 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/plugins"
+	"github.com/belak/seabird/utils"
 )
 
 type RedditUser struct {
@@ -69,7 +70,7 @@ func redditGetUser(c *irc.Client, e *irc.Event, url string) bool {
 	}
 
 	ru := &RedditUser{}
-	err := JsonRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
+	err := utils.JsonRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
 	if err != nil {
 		return false
 	}
@@ -92,7 +93,7 @@ func redditGetComment(c *irc.Client, e *irc.Event, url string) bool {
 	}
 
 	rc := []RedditComment{}
-	err := JsonRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
+	err := utils.JsonRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
 	if err != nil || len(rc) < 1 {
 		return false
 	}
@@ -112,7 +113,7 @@ func redditGetSub(c *irc.Client, e *irc.Event, url string) bool {
 	}
 
 	rs := &RedditSub{}
-	err := JsonRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
+	err := utils.JsonRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
 	if err != nil {
 		return false
 	}

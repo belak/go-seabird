@@ -1,4 +1,4 @@
-package linkproviders
+package utils
 
 import (
 	"encoding/json"

@@ -1,6 +1,6 @@
 FROM golang:1.4-wheezy
 
-RUN apt-get update && apt-get install -y whois \
+RUN apt-get update && apt-get install -y whois traceroute \
 		--no-install-recommends \
 	&& rm -rf /var/lib/apt/lists/*
 

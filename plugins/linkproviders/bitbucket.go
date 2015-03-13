@@ -9,6 +9,7 @@ import (
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/plugins"
+	"github.com/belak/seabird/utils"
 )
 
 type BitbucketUser struct {
@@ -78,7 +79,7 @@ func bitbucketGetUser(c *irc.Client, e *irc.Event, url *url.URL) bool {
 	user := matches[1]
 
 	bu := &BitbucketUser{}
-	err := JsonRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
+	err := utils.JsonRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
 	if err != nil {
 		return false
 	}
@@ -99,7 +100,7 @@ func bitbucketGetRepo(c *irc.Client, e *irc.Event, url *url.URL) bool {
 	repo := matches[2]
 
 	br := &BitbucketRepo{}
-	err := JsonRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
+	err := utils.JsonRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
 	if err != nil {
 		return false
 	}
@@ -130,7 +131,7 @@ func bitbucketGetIssue(c *irc.Client, e *irc.Event, url *url.URL) bool {
 	issueNum := matches[3]
 
 	bi := &BitbucketIssue{}
-	err := JsonRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
+	err := utils.JsonRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
 	if err != nil {
 		return false
 	}
@@ -165,7 +166,7 @@ func bitbucketGetPull(c *irc.Client, e *irc.Event, url *url.URL) bool {
 	pullNum := matches[3]
 
 	bpr := &BitbucketPullRequest{}
-	err := JsonRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
+	err := utils.JsonRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
 	if err != nil {
 		return false
 	}
