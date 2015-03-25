@@ -2,21 +2,45 @@
 
 seabird is a golang library written as a wrapper around [belak/irc](https://github.com/belak/irc) to make making IRC bots more convenient. Note that currently there is no stability guarantee and interfaces may change at any time.
 
+## Requirements
+
+ * Go 1.4
+ * Mercurial
+ * gcc
+ * sqlite3
+
+```
+apt-get install golang mercurial gcc sqlite3
+```
+
 ## Building
 
-Once you have go installed and configured, run the following:
+Once you have go installed, set your GOPATH. For example
+
+```
+mkdir $HOME/go
+export GOPATH=$HOME/go
+
+export PATH=$PATH:$GOPATH/bin
+```
+
+run the following to download and build seabird:
 
 ```
 go get github.com/belak/seabird
 ```
 
-This will build the seabird binary and place it in your `$GOPATH/src`.
+This will build the seabird binary and place it in your `$GOPATH/bin`.
 
 ## Configuring
 
 A sample config file is provided [here](./config.toml)
 
-Config is pulled from the environment variable SEABIRD_CONFIG
+Config is pulled from the environment variable SEABIRD_CONFIG. Set with
+
+```
+export SEABIRD_CONFIG=$HOME/config.toml
+```
 
 ## Options
 
@@ -26,6 +50,21 @@ Command line options are as follows:
 --config=
 Specify an alternate config file location
 ```
+
+## Running
+
+Once the config file is set, create the sqlite database by running
+
+```
+cat $GOPATH/src/github.com/belak/seabird/schema.sql | sqlite3 dev.db
+```
+
+Start the bot by simply runnning
+
+```
+seabird
+```
+Note you can append `&` to the end of the seabird command to fork it to the background.
 
 ## Usage
 
