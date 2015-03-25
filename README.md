@@ -7,7 +7,7 @@ seabird is a golang library written as a wrapper around [belak/irc](https://gith
  * Go 1.4
  * Mercurial
  * gcc
- * sqlite3
+ * sqlite3 or postgresql
 
 ```
 apt-get install golang mercurial gcc sqlite3
@@ -24,7 +24,7 @@ export GOPATH=$HOME/go
 export PATH=$PATH:$GOPATH/bin
 ```
 
-run the following to download and build seabird:
+Run the following to download and build seabird:
 
 ```
 go get github.com/belak/seabird
@@ -42,15 +42,6 @@ Config is pulled from the environment variable SEABIRD_CONFIG. Set with
 export SEABIRD_CONFIG=$HOME/config.toml
 ```
 
-## Options
-
-Command line options are as follows:
-
-```
---config=
-Specify an alternate config file location
-```
-
 ## Running
 
 Once the config file is set, create the sqlite database by running
@@ -65,16 +56,6 @@ Start the bot by simply runnning
 seabird
 ```
 Note you can append `&` to the end of the seabird command to fork it to the background.
-
-## Usage
-
-See [here](./bot)
-
-## Plugins
-
-TODO: Add plugin documentation
-
-See [here](./bot) for plugin structure.
 
 ## Muxes
 
