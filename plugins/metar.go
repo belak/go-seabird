@@ -36,6 +36,8 @@ func Metar(c *irc.Client, e *irc.Event) {
 }
 
 func metar(code string) string {
+	code = strings.ToUpper(code)
+
 	for _, letter := range code {
 		if !unicode.IsDigit(letter) && !unicode.IsLetter(letter) {
 			return "Not a valid airport code"
