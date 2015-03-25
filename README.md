@@ -7,9 +7,10 @@ seabird is a golang library written as a wrapper around [belak/irc](https://gith
  * Go 1.4
  * Mercurial
  * gcc
+ * sqlite3
 
 ```
-apt-get install golang mercurial gcc
+apt-get install golang mercurial gcc sqlite3
 ```
 
 ## Building

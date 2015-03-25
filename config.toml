@@ -21,3 +21,26 @@ cmds = [
 plugins = [
   "chance"
 ]
+
+[db]
+driver     = "sqlite3"
+datasource = "dev.db"
+
+[ctcp]
+enablegit = false
+
+[forecast]
+key = ""
+
+[github]
+token = ""
+
+[net_tools]
+key = ""
+
+[twitter]
+consumerkey       = ""
+consumersecret    = ""
+accesstoken       = ""
+accesstokensecret = ""
+
