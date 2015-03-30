@@ -60,7 +60,7 @@ func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
 func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 	for _, rawurl := range urlRegex.FindAllString(e.Trailing(), -1) {
 		go func(raw string) {
-			u, err := url.ParseRequestURI(rawurl)
+			u, err := url.ParseRequestURI(raw)
 			if err != nil {
 				return
 			}
@@ -84,7 +84,7 @@ func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 				}
 			}
 
-			defaultLinkProvider(rawurl, c, e)
+			defaultLinkProvider(raw, c, e)
 		}(rawurl)
 	}
 }
