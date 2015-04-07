@@ -65,6 +65,9 @@ func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 				return
 			}
 
+			// Strip the last character if it's a slash
+			u.Path = strings.TrimRight(u.Path, "/")
+
 			for _, provider := range p.providers[u.Host] {
 				if provider(c, e, u) {
 					return
