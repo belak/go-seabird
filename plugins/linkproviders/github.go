@@ -120,7 +120,7 @@ func (t *GithubProvider) getRepo(c *irc.Client, e *irc.Event, url string) bool {
 	repoName := matches[2]
 	repo, _, err := t.api.Repositories.Get(user, repoName)
 	// If the repo doesn't have a name, we get outta there
-	if repo.FullName == nil || *repo.FullName == "" || err != nil {
+	if err != nil || repo.FullName == nil || *repo.FullName == "" {
 		return false
 	}
 
