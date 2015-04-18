@@ -9,9 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 	"golang.org/x/net/html"
 )
 
@@ -32,7 +31,7 @@ type URLPlugin struct {
 	providers map[string][]LinkProvider
 }
 
-type LinkProvider func(c *irc.Client, e *irc.Event, url *url.URL) bool
+type LinkProvider func(b *bot.Bot, m *irc.Message, url *url.URL) bool
 
 func NewURLPlugin() bot.Plugin {
 	return &URLPlugin{
@@ -43,7 +42,7 @@ func NewURLPlugin() bot.Plugin {
 func (p *URLPlugin) Register(b *bot.Bot) error {
 	b.BasicMux.Event("PRIVMSG", p.URLTitle)
 
-	b.CommandMux.Event("down", IsItDown, &mux.HelpInfo{
+	b.CommandMux.Event("down", IsItDown, &bot.HelpInfo{
 		"<website>",
 		"Checks if given website is down",
 	})
@@ -57,8 +56,8 @@ func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
 	return nil
 }
 
-func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
-	for _, rawurl := range urlRegex.FindAllString(e.Trailing(), -1) {
+func (p *URLPlugin) URLTitle(b *bot.Bot, m *irc.Message) {
+	for _, rawurl := range urlRegex.FindAllString(m.Trailing(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)
 			if err != nil {
@@ -66,7 +65,7 @@ func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 			}
 
 			for _, provider := range p.providers[u.Host] {
-				if provider(c, e, u) {
+				if provider(b, m, u) {
 					return
 				}
 			}
@@ -78,18 +77,18 @@ func (p *URLPlugin) URLTitle(c *irc.Client, e *irc.Event) {
 			if strings.HasPrefix(u.Host, "www.") {
 				host := u.Host[4:]
 				for _, provider := range p.providers[host] {
-					if provider(c, e, u) {
+					if provider(b, m, u) {
 						return
 					}
 				}
 			}
 
-			defaultLinkProvider(raw, c, e)
+			defaultLinkProvider(raw, b, m)
 		}(rawurl)
 	}
 }
 
-func defaultLinkProvider(url string, c *irc.Client, e *irc.Event) bool {
+func defaultLinkProvider(url string, b *bot.Bot, m *irc.Message) bool {
 	var client = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -146,18 +145,18 @@ func defaultLinkProvider(url string, c *irc.Client, e *irc.Event) bool {
 
 	if str, ok := f(z); ok {
 		// Title: title title
-		c.Reply(e, "Title: %s", str)
+		b.Reply(m, "Title: %s", str)
 		return true
 	} else {
 		return false
 	}
 }
 
-func IsItDown(c *irc.Client, e *irc.Event) {
+func IsItDown(b *bot.Bot, m *irc.Message) {
 	go func() {
-		url, err := url.Parse(e.Trailing())
+		url, err := url.Parse(m.Trailing())
 		if err != nil {
-			c.Reply(e, "URL doesn't appear to be valid")
+			b.Reply(m, "URL doesn't appear to be valid")
 			return
 		}
 
@@ -167,10 +166,10 @@ func IsItDown(c *irc.Client, e *irc.Event) {
 
 		r, err := client.Head(url.String())
 		if err != nil || r.StatusCode != 200 {
-			c.Reply(e, "It's not just you! %s looks down from here.", url)
+			b.Reply(m, "It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		c.Reply(e, "It's just you! %s looks up from here!", url)
+		b.Reply(m, "It's just you! %s looks up from here!", url)
 	}()
 }

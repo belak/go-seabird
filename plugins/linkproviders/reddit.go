@@ -4,9 +4,10 @@ import (
 	"net/url"
 	"regexp"
 
-	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/plugins"
 	"github.com/belak/seabird/utils"
+	"github.com/belak/sorcix-irc"
 )
 
 type RedditUser struct {
@@ -51,19 +52,19 @@ func NewRedditProvider(p *plugins.URLPlugin) error {
 	return nil
 }
 
-func HandleReddit(c *irc.Client, e *irc.Event, u *url.URL) bool {
+func HandleReddit(b *bot.Bot, m *irc.Message, u *url.URL) bool {
 	if redditUserRegex.MatchString(u.Path) {
-		return redditGetUser(c, e, u.Path)
+		return redditGetUser(b, m, u.Path)
 	} else if redditCommentRegex.MatchString(u.Path) {
-		return redditGetComment(c, e, u.Path)
+		return redditGetComment(b, m, u.Path)
 	} else if redditSubRegex.MatchString(u.Path) {
-		return redditGetSub(c, e, u.Path)
+		return redditGetSub(b, m, u.Path)
 	}
 
 	return false
 }
 
-func redditGetUser(c *irc.Client, e *irc.Event, url string) bool {
+func redditGetUser(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := redditUserRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -81,12 +82,12 @@ func redditGetUser(c *irc.Client, e *irc.Event, url string) bool {
 		gold = " [gold]"
 	}
 
-	c.Reply(e, "%s %s%s has %d link karma and %d comment karma", redditPrefix, ru.Data.Name, gold, ru.Data.LinkKarma, ru.Data.CommentKarma)
+	b.Reply(m, "%s %s%s has %d link karma and %d comment karma", redditPrefix, ru.Data.Name, gold, ru.Data.LinkKarma, ru.Data.CommentKarma)
 
 	return true
 }
 
-func redditGetComment(c *irc.Client, e *irc.Event, url string) bool {
+func redditGetComment(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := redditCommentRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -101,12 +102,12 @@ func redditGetComment(c *irc.Client, e *irc.Event, url string) bool {
 	cm := rc[0].Data.Children[0].Data
 
 	// Title title - jsvana (/r/vim, score: 5)
-	c.Reply(e, "%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
+	b.Reply(m, "%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
 
 	return true
 }
 
-func redditGetSub(c *irc.Client, e *irc.Event, url string) bool {
+func redditGetSub(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := redditSubRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -119,7 +120,7 @@ func redditGetSub(c *irc.Client, e *irc.Event, url string) bool {
 	}
 
 	// /r/vim - Description description (1 subscriber, 2 actives)
-	c.Reply(e, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.Url, rs.Data.Description, lazyPluralize(rs.Data.Subscribers, "subscriber"), lazyPluralize(rs.Data.Actives, "active"))
+	b.Reply(m, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.Url, rs.Data.Description, lazyPluralize(rs.Data.Subscribers, "subscriber"), lazyPluralize(rs.Data.Actives, "active"))
 
 	return true
 }

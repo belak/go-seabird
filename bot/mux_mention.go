@@ -1,11 +1,11 @@
-package mux
+package bot
 
 import (
 	"strings"
 	"sync"
 	"unicode"
 
-	"github.com/belak/irc"
+	"github.com/belak/sorcix-irc"
 )
 
 // MentionMux is a simple IRC event multiplexer, based on a slice of Handlers
@@ -14,7 +14,7 @@ import (
 // Client has been mentioned. The nick, punctuation and any leading or
 // trailing spaces are removed from the message.
 type MentionMux struct {
-	handlers []irc.HandlerFunc
+	handlers []HandlerFunc
 	lock     *sync.RWMutex
 }
 
@@ -27,7 +27,7 @@ func NewMentionMux() *MentionMux {
 }
 
 // MentionMux.Event will register a Handler
-func (m *MentionMux) Event(h irc.HandlerFunc) {
+func (m *MentionMux) Event(h HandlerFunc) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
 
@@ -35,14 +35,14 @@ func (m *MentionMux) Event(h irc.HandlerFunc) {
 }
 
 // HandleEvent strips off the nick punctuation and spaces and runs the handlers
-func (m *MentionMux) HandleEvent(c *irc.Client, e *irc.Event) {
-	if e.Command != "PRIVMSG" {
+func (m *MentionMux) HandleEvent(b *Bot, msg *irc.Message) {
+	if msg.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
 	}
 
-	lastArg := e.Trailing()
-	nick := c.CurrentNick()
+	lastArg := msg.Trailing()
+	nick := b.currentNick
 
 	// We only handle this event if it starts with the
 	// current bot's nick followed by punctuation
@@ -55,15 +55,16 @@ func (m *MentionMux) HandleEvent(c *irc.Client, e *irc.Event) {
 	}
 
 	// Copy it into a new Event
-	newEvent := e.Copy()
+	var newEvent *irc.Message
+	*newEvent = *msg
 
 	// Strip the nick, punctuation, and spaces from the message
-	newEvent.Args[len(newEvent.Args)-1] = strings.TrimSpace(lastArg[len(nick)+1:])
+	newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(lastArg[len(nick)+1:])
 
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	for _, h := range m.handlers {
-		h(c, newEvent)
+		h(b, newEvent)
 	}
 }

@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/sorcix-irc"
 )
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
@@ -24,11 +24,11 @@ func (p *DicePlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func (p *DicePlugin) Dice(c *irc.Client, e *irc.Event) {
+func (p *DicePlugin) Dice(b *bot.Bot, m *irc.Message) {
 	var rolls []string
 	totalCount := 0
 
-	matches := diceRe.FindAllStringSubmatch(e.Trailing(), -1)
+	matches := diceRe.FindAllStringSubmatch(m.Trailing(), -1)
 	for _, match := range matches {
 		if len(match) != 3 {
 			continue
@@ -42,13 +42,13 @@ func (p *DicePlugin) Dice(c *irc.Client, e *irc.Event) {
 
 		// Clamp count
 		if count < 0 {
-			c.MentionReply(e, "You cannot request a negative number of rolls")
+			b.MentionReply(m, "You cannot request a negative number of rolls")
 			return
 		}
 
 		totalCount += count
 		if totalCount > 100 {
-			c.MentionReply(e, "You cannot request more than 100 dice")
+			b.MentionReply(m, "You cannot request more than 100 dice")
 			return
 		}
 
@@ -56,13 +56,13 @@ func (p *DicePlugin) Dice(c *irc.Client, e *irc.Event) {
 		size, _ := strconv.Atoi(match[2])
 
 		if size > 100 {
-			c.MentionReply(e, "You cannot request dice larger than 100")
+			b.MentionReply(m, "You cannot request dice larger than 100")
 			return
 		}
 
 		// Clamp size
 		if size < 1 {
-			c.MentionReply(e, "You cannot request dice smaller than 1")
+			b.MentionReply(m, "You cannot request dice smaller than 1")
 			return
 		}
 
@@ -75,6 +75,6 @@ func (p *DicePlugin) Dice(c *irc.Client, e *irc.Event) {
 	}
 
 	if len(rolls) > 0 {
-		c.MentionReply(e, "%s", strings.Join(rolls, " "))
+		b.MentionReply(m, "%s", strings.Join(rolls, " "))
 	}
 }

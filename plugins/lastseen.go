@@ -7,9 +7,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type LastSeenPlugin struct {
@@ -23,7 +22,7 @@ func NewLastSeenPlugin(db *sqlx.DB) bot.Plugin {
 }
 
 func (p *LastSeenPlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("active", p.Active, &mux.HelpInfo{
+	b.CommandMux.Event("active", p.Active, &bot.HelpInfo{
 		"<nick>",
 		"Reports the last time user was seen",
 	})
@@ -32,17 +31,17 @@ func (p *LastSeenPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func (p *LastSeenPlugin) Active(c *irc.Client, e *irc.Event) {
-	nick := e.Trailing()
+func (p *LastSeenPlugin) Active(b *bot.Bot, m *irc.Message) {
+	nick := m.Trailing()
 	if nick == "" {
-		c.MentionReply(e, "Nick required")
+		b.MentionReply(m, "Nick required")
 		return
 	}
 
-	channel := e.Args[0]
+	channel := m.Params[0]
 	msg := p.getLastSeen(nick, channel)
 
-	c.MentionReply(e, "%s", msg)
+	b.MentionReply(m, "%s", msg)
 }
 
 func (p *LastSeenPlugin) getLastSeen(nick, channel string) string {
@@ -86,13 +85,13 @@ func (p *LastSeenPlugin) isActive(nick, channel string) bool {
 	return isActiveTime(lastseen)
 }
 
-func (p *LastSeenPlugin) Msg(c *irc.Client, e *irc.Event) {
-	if len(e.Args) < 2 || !e.FromChannel() || e.Identity.Nick == "" {
+func (p *LastSeenPlugin) Msg(b *bot.Bot, m *irc.Message) {
+	if len(m.Params) < 2 || !bot.MessageFromChannel(m) || m.Prefix.Name == "" {
 		return
 	}
 
-	nick := e.Identity.Nick
-	channel := e.Args[0]
+	nick := m.Prefix.Name
+	channel := m.Params[0]
 
 	p.updateLastSeen(nick, channel)
 }

@@ -8,9 +8,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type KarmaUser struct {
@@ -31,14 +30,14 @@ func NewKarmaPlugin(db *sqlx.DB) bot.Plugin {
 }
 
 func (p *KarmaPlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("karma", p.Karma, &mux.HelpInfo{
+	b.CommandMux.Event("karma", p.Karma, &bot.HelpInfo{
 		"<nick>",
 		"Gives karma for given user",
 	})
-	b.CommandMux.Event("topkarma", p.TopKarma, &mux.HelpInfo{
+	b.CommandMux.Event("topkarma", p.TopKarma, &bot.HelpInfo{
 		Description: "Reports the user with the most karma",
 	})
-	b.CommandMux.Event("bottomkarma", p.BottomKarma, &mux.HelpInfo{
+	b.CommandMux.Event("bottomkarma", p.BottomKarma, &bot.HelpInfo{
 		Description: "Reports the user with the least karma",
 	})
 	b.BasicMux.Event("PRIVMSG", p.Msg)
@@ -90,38 +89,38 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 	return score
 }
 
-func (p *KarmaPlugin) Karma(c *irc.Client, e *irc.Event) {
-	c.MentionReply(e, "%s's karma is %d", e.Trailing(), p.GetKarmaFor(e.Trailing()))
+func (p *KarmaPlugin) Karma(b *bot.Bot, m *irc.Message) {
+	b.MentionReply(m, "%s's karma is %d", m.Trailing(), p.GetKarmaFor(m.Trailing()))
 }
 
-func (p *KarmaPlugin) TopKarma(c *irc.Client, e *irc.Event) {
+func (p *KarmaPlugin) TopKarma(b *bot.Bot, m *irc.Message) {
 	user := &KarmaUser{}
 	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score DESC LIMIT 1")
 	if err != nil {
-		c.MentionReply(e, "Error fetching scores")
+		b.MentionReply(m, "Error fetching scores")
 		return
 	}
 
-	c.MentionReply(e, "%s has the top karma with %d", user.Name, user.Score)
+	b.MentionReply(m, "%s has the top karma with %d", user.Name, user.Score)
 }
 
-func (p *KarmaPlugin) BottomKarma(c *irc.Client, e *irc.Event) {
+func (p *KarmaPlugin) BottomKarma(b *bot.Bot, m *irc.Message) {
 	user := &KarmaUser{}
 	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score ASC LIMIT 1")
 	if err != nil {
-		c.MentionReply(e, "Error fetching scores")
+		b.MentionReply(m, "Error fetching scores")
 		return
 	}
 
-	c.MentionReply(e, "%s has the bottom karma with %d", user.Name, user.Score)
+	b.MentionReply(m, "%s has the bottom karma with %d", user.Name, user.Score)
 }
 
-func (p *KarmaPlugin) Msg(c *irc.Client, e *irc.Event) {
-	if len(e.Args) < 2 || !e.FromChannel() {
+func (p *KarmaPlugin) Msg(b *bot.Bot, m *irc.Message) {
+	if len(m.Params) < 2 || !bot.MessageFromChannel(m) {
 		return
 	}
 
-	matches := regex.FindAllStringSubmatch(e.Trailing(), -1)
+	matches := regex.FindAllStringSubmatch(m.Trailing(), -1)
 	if len(matches) > 0 {
 		for _, v := range matches {
 			if len(v) < 3 {
@@ -136,12 +135,12 @@ func (p *KarmaPlugin) Msg(c *irc.Client, e *irc.Event) {
 			}
 
 			name := strings.ToLower(v[1])
-			if name == e.Identity.Nick {
+			if name == m.Prefix.Name {
 				// penalize self-karma
 				diff = -1
 			}
 
-			c.Reply(e, "%s's karma is now %d", v[1], p.UpdateKarma(name, diff))
+			b.Reply(m, "%s's karma is now %d", v[1], p.UpdateKarma(name, diff))
 		}
 	}
 }

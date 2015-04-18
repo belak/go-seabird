@@ -10,9 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type TVDBPlugin struct {
@@ -52,11 +51,11 @@ func NewTVDBPlugin() bot.Plugin {
 func (p *TVDBPlugin) Register(b *bot.Bot) error {
 	b.Config("tvdb", p)
 
-	b.CommandMux.Event("tvdb", p.Search, &mux.HelpInfo{
+	b.CommandMux.Event("tvdb", p.Search, &bot.HelpInfo{
 		"<series>",
 		"Gives info on TVDB series, including TVDB ID",
 	})
-	b.CommandMux.Event("series", p.Series, &mux.HelpInfo{
+	b.CommandMux.Event("series", p.Series, &bot.HelpInfo{
 		"<series_id>",
 		"Gives expanded info on TVDB series using TVDB ID",
 	})
@@ -64,23 +63,23 @@ func (p *TVDBPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func (p *TVDBPlugin) Search(c *irc.Client, e *irc.Event) {
+func (p *TVDBPlugin) Search(b *bot.Bot, m *irc.Message) {
 	go func() {
-		if e.Trailing() == "" {
-			c.MentionReply(e, "Series required")
+		if m.Trailing() == "" {
+			b.MentionReply(m, "Series required")
 			return
 		}
 
-		resp, err := http.Get("http://thetvdb.com/api/GetSeries.php?seriesname=" + url.QueryEscape(e.Trailing()))
+		resp, err := http.Get("http://thetvdb.com/api/GetSeries.php?seriesname=" + url.QueryEscape(m.Trailing()))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
 
 		data, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
@@ -93,12 +92,12 @@ func (p *TVDBPlugin) Search(c *irc.Client, e *irc.Event) {
 		tr := &TVDBResponse{}
 		err = xml.NewDecoder(strings.NewReader(xmlData)).Decode(tr)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		if len(tr.Series) == 0 {
-			c.MentionReply(e, "No series found")
+			b.MentionReply(m, "No series found")
 			return
 		}
 
@@ -112,37 +111,37 @@ func (p *TVDBPlugin) Search(c *irc.Client, e *irc.Event) {
 		}
 		out += " [id: " + series.Id + "]"
 
-		c.MentionReply(e, "%s", out)
+		b.MentionReply(m, "%s", out)
 	}()
 }
 
-func (p *TVDBPlugin) Series(c *irc.Client, e *irc.Event) {
+func (p *TVDBPlugin) Series(b *bot.Bot, m *irc.Message) {
 	go func() {
-		if e.Trailing() == "" {
-			c.MentionReply(e, "Series required")
+		if m.Trailing() == "" {
+			b.MentionReply(m, "Series required")
 			return
 		}
 
-		id := e.Trailing()
+		id := m.Trailing()
 		language := "en"
 
 		resp, err := http.Get("http://thetvdb.com/api/" + p.Key + "/series/" + id + "/all/" + language + ".zip")
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
 
 		body, err := ioutil.ReadAll(resp.Body)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		// Create zipfile from stream
 		zipfile, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len([]byte(body))))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
@@ -151,14 +150,14 @@ func (p *TVDBPlugin) Series(c *irc.Client, e *irc.Event) {
 			if f.Name == language+".xml" {
 				zipped, err := f.Open()
 				if err != nil {
-					c.MentionReply(e, "%s", err)
+					b.MentionReply(m, "%s", err)
 					return
 				}
 				defer zipped.Close()
 
 				body, err := ioutil.ReadAll(zipped)
 				if err != nil {
-					c.MentionReply(e, "%s", err)
+					b.MentionReply(m, "%s", err)
 					return
 				}
 
@@ -171,7 +170,7 @@ func (p *TVDBPlugin) Series(c *irc.Client, e *irc.Event) {
 				v := TVDBZipResponse{}
 				err = xml.Unmarshal([]byte(data), &v)
 				if err != nil {
-					c.MentionReply(e, "%s", err)
+					b.MentionReply(m, "%s", err)
 					return
 				}
 
@@ -189,7 +188,7 @@ func (p *TVDBPlugin) Series(c *irc.Client, e *irc.Event) {
 				if s.Genre != "" {
 					out += " Genre(s): " + changeBars(s.Genre) + "."
 				}
-				c.MentionReply(e, "%s", out)
+				b.MentionReply(m, "%s", out)
 			}
 		}
 	}()

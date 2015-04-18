@@ -6,9 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type GooglePlugin struct{}
@@ -28,11 +27,11 @@ func NewGooglePlugin() bot.Plugin {
 }
 
 func (p *GooglePlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("g", Web, &mux.HelpInfo{
+	b.CommandMux.Event("g", Web, &bot.HelpInfo{
 		"<query>",
 		"Retrieves top Google web search result for given query",
 	})
-	b.CommandMux.Event("gi", Image, &mux.HelpInfo{
+	b.CommandMux.Event("gi", Image, &bot.HelpInfo{
 		"<query>",
 		"Retrieves top Google images search result for given query",
 	})
@@ -40,24 +39,24 @@ func (p *GooglePlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func Web(c *irc.Client, e *irc.Event) {
-	googleSearch(c, e, "web", e.Trailing())
+func Web(b *bot.Bot, m *irc.Message) {
+	googleSearch(b, m, "web", m.Trailing())
 }
 
-func Image(c *irc.Client, e *irc.Event) {
-	googleSearch(c, e, "images", e.Trailing())
+func Image(b *bot.Bot, m *irc.Message) {
+	googleSearch(b, m, "images", m.Trailing())
 }
 
-func googleSearch(c *irc.Client, e *irc.Event, service, query string) {
+func googleSearch(b *bot.Bot, m *irc.Message, service, query string) {
 	go func() {
 		if query == "" {
-			c.MentionReply(e, "Query required")
+			b.MentionReply(m, "Query required")
 			return
 		}
 
-		resp, err := http.Get("https://ajax.googleapis.com/ajax/services/search/" + service + "?v=1.0&q=" + url.QueryEscape(e.Trailing()))
+		resp, err := http.Get("https://ajax.googleapis.com/ajax/services/search/" + service + "?v=1.0&q=" + url.QueryEscape(m.Trailing()))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -65,15 +64,15 @@ func googleSearch(c *irc.Client, e *irc.Event, service, query string) {
 		gr := &GoogleResponse{}
 		err = json.NewDecoder(resp.Body).Decode(gr)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		if gr.ResponseStatus != 200 || len(gr.ResponseData.Results) == 0 {
-			c.MentionReply(e, "Error fetching search results")
+			b.MentionReply(m, "Error fetching search results")
 			return
 		}
 
-		c.MentionReply(e, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].Url)
+		b.MentionReply(m, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].Url)
 	}()
 }
