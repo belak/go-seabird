@@ -7,9 +7,8 @@ import (
 
 	"golang.org/x/net/html"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type WikiResponse struct {
@@ -28,7 +27,7 @@ func NewWikiPlugin() bot.Plugin {
 }
 
 func (p *WikiPlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("wiki", Wiki, &mux.HelpInfo{
+	b.CommandMux.Event("wiki", Wiki, &bot.HelpInfo{
 		"<topic>",
 		"Retrieves first section from most relevant Wikipedia article to given topic",
 	})
@@ -40,16 +39,16 @@ func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func Wiki(c *irc.Client, e *irc.Event) {
+func Wiki(b *bot.Bot, m *irc.Message) {
 	go func() {
-		if e.Trailing() == "" {
-			c.MentionReply(e, "Query required")
+		if m.Trailing() == "" {
+			b.MentionReply(m, "Query required")
 			return
 		}
 
-		resp, err := http.Get("http://en.wikipedia.org/w/api.php?format=json&action=parse&page=" + transformQuery(e.Trailing()))
+		resp, err := http.Get("http://en.wikipedia.org/w/api.php?format=json&action=parse&page=" + transformQuery(m.Trailing()))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -57,13 +56,13 @@ func Wiki(c *irc.Client, e *irc.Event) {
 		wr := &WikiResponse{}
 		err = json.NewDecoder(resp.Body).Decode(wr)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		z, err := html.Parse(strings.NewReader(wr.Parse.Text.Data))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
@@ -110,9 +109,9 @@ func Wiki(c *irc.Client, e *irc.Event) {
 		}
 
 		if str, ok := f(z); ok {
-			c.MentionReply(e, "%s", str)
+			b.MentionReply(m, "%s", str)
 		} else {
-			c.MentionReply(e, "Error finding text")
+			b.MentionReply(m, "Error finding text")
 		}
 	}()
 }

@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type ShortenResult struct {
@@ -23,7 +22,7 @@ func NewTinyPlugin() bot.Plugin {
 }
 
 func (p *TinyPlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("tiny", Shorten, &mux.HelpInfo{
+	b.CommandMux.Event("tiny", Shorten, &bot.HelpInfo{
 		"<url>",
 		"Shortens given URL",
 	})
@@ -31,25 +30,25 @@ func (p *TinyPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func Shorten(c *irc.Client, e *irc.Event) {
+func Shorten(b *bot.Bot, m *irc.Message) {
 	go func() {
-		if e.Trailing() == "" {
-			c.MentionReply(e, "URL required")
+		if m.Trailing() == "" {
+			b.MentionReply(m, "URL required")
 			return
 		}
 
 		url := "https://www.googleapis.com/urlshortener/v1/url"
 
-		data := map[string]string{"longUrl": e.Trailing()}
+		data := map[string]string{"longUrl": m.Trailing()}
 		out, err := json.Marshal(data)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		resp, err := http.Post(url, "application/json", bytes.NewBuffer(out))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -57,10 +56,10 @@ func Shorten(c *irc.Client, e *irc.Event) {
 		sr := &ShortenResult{}
 		err = json.NewDecoder(resp.Body).Decode(sr)
 		if err != nil {
-			c.MentionReply(e, "Error reading server response")
+			b.MentionReply(m, "Error reading server response")
 			return
 		}
 
-		c.MentionReply(e, sr.Id)
+		b.MentionReply(m, sr.Id)
 	}()
 }

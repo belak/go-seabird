@@ -5,9 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type IssueResult struct {
@@ -25,7 +24,7 @@ func NewIssuesPlugin() bot.Plugin {
 func (p *IssuesPlugin) Register(b *bot.Bot) error {
 	b.Config("github", p)
 
-	b.CommandMux.Event("issue", p.CreateIssue, &mux.HelpInfo{
+	b.CommandMux.Event("issue", p.CreateIssue, &bot.HelpInfo{
 		"<issue title>",
 		"Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
 	})
@@ -33,11 +32,11 @@ func (p *IssuesPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func (p *IssuesPlugin) CreateIssue(c *irc.Client, e *irc.Event) {
+func (p *IssuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 	go func() {
-		title := e.Trailing()
+		title := m.Trailing()
 		if title == "" {
-			c.MentionReply(e, "Issue title required")
+			b.MentionReply(m, "Issue title required")
 			return
 		}
 
@@ -46,24 +45,24 @@ func (p *IssuesPlugin) CreateIssue(c *irc.Client, e *irc.Event) {
 		hc := &http.Client{}
 		params := map[string]string{
 			"title": title,
-			"body":  "Filed by " + e.Identity.Nick + " in " + e.Args[0],
+			"body":  "Filed by " + m.Prefix.Name + " in " + m.Params[0],
 		}
 		body, err := json.Marshal(params)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		req, err := http.NewRequest("POST", url, bytes.NewReader(body))
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
 		req.Header.Add("Authorization", "token "+p.Token)
 		resp, err := hc.Do(req)
 		if err != nil {
-			c.MentionReply(e, "%s", err)
+			b.MentionReply(m, "%s", err)
 			return
 		}
 		defer resp.Body.Close()
@@ -71,9 +70,9 @@ func (p *IssuesPlugin) CreateIssue(c *irc.Client, e *irc.Event) {
 		ir := &IssueResult{}
 		err = json.NewDecoder(resp.Body).Decode(ir)
 		if err != nil {
-			c.MentionReply(e, "Error reading server response")
+			b.MentionReply(m, "Error reading server response")
 		}
 
-		c.MentionReply(e, "Issue created. %s", ir.Url)
+		b.MentionReply(m, "Issue created. %s", ir.Url)
 	}()
 }

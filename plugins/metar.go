@@ -7,9 +7,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type MetarPlugin struct{}
@@ -19,7 +18,7 @@ func NewMetarPlugin() bot.Plugin {
 }
 
 func (p *MetarPlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("metar", Metar, &mux.HelpInfo{
+	b.CommandMux.Event("metar", Metar, &bot.HelpInfo{
 		"<station>",
 		"Gives METAR report for given airport code",
 	})
@@ -27,12 +26,12 @@ func (p *MetarPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func Metar(c *irc.Client, e *irc.Event) {
-	if !e.FromChannel() {
+func Metar(b *bot.Bot, m *irc.Message) {
+	if !bot.MessageFromChannel(m) {
 		return
 	}
 
-	c.MentionReply(e, "%s", metar(e.Trailing()))
+	b.MentionReply(m, "%s", metar(m.Trailing()))
 }
 
 func metar(code string) string {

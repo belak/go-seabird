@@ -1,8 +1,8 @@
 package plugins
 
 import (
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/sorcix-irc"
 )
 
 type MentionsPlugin struct{}
@@ -16,13 +16,13 @@ func (p *MentionsPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func Mentions(c *irc.Client, e *irc.Event) {
-	switch e.Trailing() {
+func Mentions(b *bot.Bot, m *irc.Message) {
+	switch m.Trailing() {
 	case "ping":
-		c.MentionReply(e, "pong")
+		b.MentionReply(m, "pong")
 	case "scoobysnack", "scooby snack":
-		c.Reply(e, "Scooby Dooby Doo!")
+		b.Reply(m, "Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
-		c.Reply(e, ":)")
+		b.Reply(m, ":)")
 	}
 }

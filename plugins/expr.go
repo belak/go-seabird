@@ -3,9 +3,8 @@ package plugins
 //go:generate go tool yacc -o expr_y.go expr.y
 
 import (
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type MathPlugin struct{}
@@ -15,19 +14,19 @@ func NewMathPlugin() bot.Plugin {
 }
 
 func (p *MathPlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("math", p.Expr, &mux.HelpInfo{
+	b.CommandMux.Event("math", p.Expr, &bot.HelpInfo{
 		"<expr>",
 		"Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
 	return nil
 }
 
-func (p *MathPlugin) Expr(c *irc.Client, e *irc.Event) {
-	val, err := parseExpr(e.Trailing())
+func (p *MathPlugin) Expr(b *bot.Bot, m *irc.Message) {
+	val, err := parseExpr(m.Trailing())
 	if err != nil {
-		c.Reply(e, "%s", err.Error())
+		b.Reply(m, "%s", err.Error())
 		return
 	}
 
-	c.Reply(e, "%s=%g", e.Trailing(), val)
+	b.Reply(m, "%s=%g", m.Trailing(), val)
 }

@@ -4,9 +4,8 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 var coinNames = []string{
@@ -27,10 +26,10 @@ func NewChancePlugin() bot.Plugin {
 }
 
 func (p *ChancePlugin) Register(b *bot.Bot) error {
-	b.CommandMux.Event("roulette", p.Roulette, &mux.HelpInfo{
+	b.CommandMux.Event("roulette", p.Roulette, &bot.HelpInfo{
 		Description: "Click... click... BANG!",
 	})
-	b.CommandMux.Event("coin", p.Coin, &mux.HelpInfo{
+	b.CommandMux.Event("coin", p.Coin, &bot.HelpInfo{
 		"[heads|tails]",
 		"Guess the coin flip. If you guess wrong, you're out!",
 	})
@@ -38,17 +37,17 @@ func (p *ChancePlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func (p *ChancePlugin) Roulette(c *irc.Client, e *irc.Event) {
-	if !e.FromChannel() {
+func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {
+	if !bot.MessageFromChannel(m) {
 		return
 	}
 
-	if len(e.Args) < 1 || len(e.Args[0]) < 1 {
+	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
 		// Invalid message
 		return
 	}
 
-	shotsLeft := p.rouletteShotsLeft[e.Args[0]]
+	shotsLeft := p.rouletteShotsLeft[m.Params[0]]
 
 	var msg string
 	if shotsLeft < 1 {
@@ -58,22 +57,22 @@ func (p *ChancePlugin) Roulette(c *irc.Client, e *irc.Event) {
 
 	shotsLeft -= 1
 	if shotsLeft < 1 {
-		c.MentionReply(e, "%sBANG!", msg)
-		c.Writef("KICK %s %s", e.Args[0], e.Identity.Nick)
+		b.MentionReply(m, "%sBANG!", msg)
+		b.Writef("KICK %s %s", m.Params[0], m.Prefix.Name)
 	} else {
-		c.MentionReply(e, "%sClick.", msg)
+		b.MentionReply(m, "%sClick.", msg)
 	}
 
-	p.rouletteShotsLeft[e.Args[0]] = shotsLeft
+	p.rouletteShotsLeft[m.Params[0]] = shotsLeft
 }
 
-func (p *ChancePlugin) Coin(c *irc.Client, e *irc.Event) {
-	if !e.FromChannel() {
+func (p *ChancePlugin) Coin(b *bot.Bot, m *irc.Message) {
+	if !bot.MessageFromChannel(m) {
 		return
 	}
 
 	guess := -1
-	guessStr := e.Trailing()
+	guessStr := m.Trailing()
 	for k, v := range coinNames {
 		if guessStr == v {
 			guess = k
@@ -82,10 +81,10 @@ func (p *ChancePlugin) Coin(c *irc.Client, e *irc.Event) {
 	}
 
 	if guess == -1 {
-		c.Writef(
+		b.Writef(
 			"KICK %s %s :That's not a valid coin side. Options are: %s",
-			e.Args[0],
-			e.Identity.Nick,
+			m.Params[0],
+			m.Prefix.Name,
 			strings.Join(coinNames, ", "),
 		)
 		return
@@ -94,8 +93,8 @@ func (p *ChancePlugin) Coin(c *irc.Client, e *irc.Event) {
 	flip := rand.Intn(2)
 
 	if flip == guess {
-		c.MentionReply(e, "Lucky guess!")
+		b.MentionReply(m, "Lucky guess!")
 	} else {
-		c.Writef("KICK %s %s :%s", e.Args[0], e.Identity.Nick, "Sorry! Better luck next time!")
+		b.Writef("KICK %s %s :%s", m.Params[0], m.Prefix.Name, "Sorry! Better luck next time!")
 	}
 }

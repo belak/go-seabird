@@ -14,8 +14,8 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/sorcix-irc"
 )
 
 func init() {
@@ -87,8 +87,8 @@ func (au *GenericAuth) getHash() hash.Hash {
 	return h
 }
 
-func (au *GenericAuth) LoginHandler(b *bot.Bot, e *irc.Event) {
-	u := au.getUser(e.Identity.Nick)
+func (au *GenericAuth) LoginHandler(b *bot.Bot, m *irc.Message) {
+	u := au.getUser(e.Prefix.Nick)
 	if u.Account != "" {
 		b.MentionReply(e, "you are already logged in as '%s'", u.Account)
 		return

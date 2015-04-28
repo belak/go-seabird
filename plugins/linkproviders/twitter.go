@@ -7,9 +7,9 @@ import (
 
 	"github.com/ChimeraCoder/anaconda"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/plugins"
+	"github.com/belak/sorcix-irc"
 )
 
 type TwitterConfig struct {
@@ -45,17 +45,17 @@ func NewTwitterProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 	return nil
 }
 
-func (t *TwitterProvider) Handle(c *irc.Client, e *irc.Event, u *url.URL) bool {
+func (t *TwitterProvider) Handle(b *bot.Bot, m *irc.Message, u *url.URL) bool {
 	if twitterUserRegex.MatchString(u.Path) {
-		return t.getUser(c, e, u.Path)
+		return t.getUser(b, m, u.Path)
 	} else if twitterStatusRegex.MatchString(u.Path) {
-		return t.getTweet(c, e, u.Path)
+		return t.getTweet(b, m, u.Path)
 	}
 
 	return false
 }
 
-func (t *TwitterProvider) getUser(c *irc.Client, e *irc.Event, url string) bool {
+func (t *TwitterProvider) getUser(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := twitterUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -67,12 +67,12 @@ func (t *TwitterProvider) getUser(c *irc.Client, e *irc.Event, url string) bool 
 	}
 
 	// Jay Vana (@jsvana) - Description description
-	c.Reply(e, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
+	b.Reply(m, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
 
 	return true
 }
 
-func (t *TwitterProvider) getTweet(c *irc.Client, e *irc.Event, url string) bool {
+func (t *TwitterProvider) getTweet(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := twitterStatusRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -89,7 +89,7 @@ func (t *TwitterProvider) getTweet(c *irc.Client, e *irc.Event, url string) bool
 	}
 
 	// Tweet text (@jsvana)
-	c.Reply(e, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
+	b.Reply(m, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
 
 	return true
 }

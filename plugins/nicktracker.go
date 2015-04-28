@@ -6,8 +6,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
+	"github.com/belak/sorcix-irc"
 )
 
 type NickTrackerPlugin struct {
@@ -42,18 +42,18 @@ func (p *NickTrackerPlugin) Register(b *bot.Bot) error {
 	return nil
 }
 
-func (p *NickTrackerPlugin) Welcome(c *irc.Client, e *irc.Event) {
+func (p *NickTrackerPlugin) Welcome(b *bot.Bot, m *irc.Message) {
 	p.db.Exec("DELETE FROM nicks")
 
 	// Request all prefixes to be reported
-	c.Writef("CAP REQ multi-prefix")
+	b.Writef("CAP REQ multi-prefix")
 }
 
-func (p *NickTrackerPlugin) Support(c *irc.Client, e *irc.Event) {
+func (p *NickTrackerPlugin) Support(b *bot.Bot, m *irc.Message) {
 	// Format: PREFIX=(ov)@+
 	prefix := regexp.MustCompile(`^PREFIX=\(([A-Za-z]+)\)([@&%~+]+)$`)
 
-	for _, arg := range e.Args {
+	for _, arg := range m.Params {
 		matches := prefix.FindStringSubmatch(arg)
 		if len(matches) == 3 {
 			p.modes = make(map[string]string)
@@ -66,17 +66,17 @@ func (p *NickTrackerPlugin) Support(c *irc.Client, e *irc.Event) {
 	}
 }
 
-func (p *NickTrackerPlugin) Who(c *irc.Client, e *irc.Event) {
+func (p *NickTrackerPlugin) Who(b *bot.Bot, m *irc.Message) {
 	// Format: sinisalo.freenode.net 352 starkbot #encoded ~belak encoded/developer/belak kornbluth.freenode.net belak G+ :0 Kaleb Elwert
-	if len(e.Args) < 7 {
+	if len(m.Params) < 7 {
 		// Modes are index 6
 		return
 	}
 
 	// Mode format: H@+
-	channel := e.Args[1]
-	nick := e.Args[5]
-	flags := e.Args[6][1:]
+	channel := m.Params[1]
+	nick := m.Params[5]
+	flags := m.Params[6][1:]
 	modes := ""
 	for _, ch := range flags {
 		modes += p.modes[string(ch)]
@@ -85,40 +85,40 @@ func (p *NickTrackerPlugin) Who(c *irc.Client, e *irc.Event) {
 	p.addNick(channel, nick, modes)
 }
 
-func (p *NickTrackerPlugin) Join(c *irc.Client, e *irc.Event) {
-	if len(e.Args) == 0 {
+func (p *NickTrackerPlugin) Join(b *bot.Bot, m *irc.Message) {
+	if len(m.Params) == 0 {
 		// No channel
 		return
 	}
 
 	// Check if it's a JOIN for the bot
-	if e.Identity.Nick == c.CurrentNick() {
+	if m.Prefix.Name == b.CurrentNick() {
 		// Fire off a WHO
-		c.Writef("WHO %s", e.Args[0])
+		b.Writef("WHO %s", m.Params[0])
 	} else {
-		p.addNick(e.Args[0], e.Identity.Nick, "")
+		p.addNick(m.Params[0], m.Prefix.Name, "")
 	}
 }
 
-func (p *NickTrackerPlugin) Part(c *irc.Client, e *irc.Event) {
+func (p *NickTrackerPlugin) Part(b *bot.Bot, m *irc.Message) {
 	// Delete nick+channel entry from table
-	if len(e.Args) == 0 {
+	if len(m.Params) == 0 {
 		// No channel
 		return
 	}
 
-	p.db.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", e.Identity.Nick, e.Args[0])
+	p.db.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", m.Prefix.Name, m.Params[0])
 }
 
-func (p *NickTrackerPlugin) Mode(c *irc.Client, e *irc.Event) {
+func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
 	// Format: :ChanServ!ChanServ@services. MODE #encoded +v starkbot
-	if len(e.Args) < 3 {
+	if len(m.Params) < 3 {
 		return
 	}
 
-	channel := e.Args[0]
-	nick := e.Args[2]
-	changedModes := e.Args[1]
+	channel := m.Params[0]
+	nick := m.Params[2]
+	changedModes := m.Params[1]
 
 	var modes string
 	err := p.db.Get(&modes, "SELECT flags FROM nicks WHERE channel=$1 AND nick=$2", channel, nick)
@@ -162,22 +162,20 @@ func (p *NickTrackerPlugin) Mode(c *irc.Client, e *irc.Event) {
 	p.db.Exec("UPDATE nicks SET flags=$1 WHERE channel=$2 AND nick=$3", modes, channel, nick)
 }
 
-func (p *NickTrackerPlugin) Nick(c *irc.Client, e *irc.Event) {
+func (p *NickTrackerPlugin) Nick(b *bot.Bot, m *irc.Message) {
 	// Format: :jsvana!~jsvana@encoded/developer/jsvana NICK :foobarbaz
-	if len(e.Args) < 1 {
+	if len(m.Params) < 1 {
 		// No nick
 		return
 	}
 
-	nickRegex := regexp.MustCompile(`(?i)^([a-z_\-\[\]\\^{}|` + "`" + `][a-z0-9_\-\[\]\\^{}|` + "`" + `]*)!`)
-	matches := nickRegex.FindStringSubmatch(e.Prefix)
-	if len(matches) < 2 {
+	if m.Prefix.Name == "" {
 		// No nick
 		return
 	}
 
-	oldNick := matches[1]
-	newNick := e.Args[0]
+	oldNick := m.Prefix.Name
+	newNick := m.Params[0]
 
 	p.db.Exec("UPDATE nicks SET nick=$1 WHERE nick=$2", newNick, oldNick)
 }

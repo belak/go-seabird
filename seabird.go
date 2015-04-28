@@ -54,7 +54,7 @@ func main() {
 	}
 
 	registerPlugin(plugins.NewChancePlugin())
-	registerPlugin(plugins.NewCTCPPlugin())
+	//registerPlugin(plugins.NewCTCPPlugin())
 	registerPlugin(plugins.NewDicePlugin())
 	registerPlugin(plugins.NewMathPlugin())
 	registerPlugin(plugins.NewForecastPlugin(db))

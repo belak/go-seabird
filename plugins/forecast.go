@@ -8,9 +8,8 @@ import (
 
 	"github.com/jmoiron/sqlx"
 
-	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/mux"
+	"github.com/belak/sorcix-irc"
 )
 
 type LastAddress struct {
@@ -100,11 +99,11 @@ func NewForecastPlugin(db *sqlx.DB) bot.Plugin {
 func (p *ForecastPlugin) Register(b *bot.Bot) error {
 	b.Config("forecast", p)
 
-	b.CommandMux.Event("weather", p.Weather, &mux.HelpInfo{
+	b.CommandMux.Event("weather", p.Weather, &bot.HelpInfo{
 		"<location>",
 		"Retrieves current weather for given location",
 	})
-	b.CommandMux.Event("forecast", p.Forecast, &mux.HelpInfo{
+	b.CommandMux.Event("forecast", p.Forecast, &bot.HelpInfo{
 		"<location>",
 		"Retrieves three-day forecast for given location",
 	})
@@ -135,17 +134,17 @@ func (p *ForecastPlugin) forecastQuery(loc *Location) (*ForecastResponse, error)
 	return &f, nil
 }
 
-func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
+func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 	var err error
 
-	l := e.Trailing()
+	l := m.Trailing()
 	loc := &Location{}
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", e.Identity.Nick)
+		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", m.Prefix.Name)
 		if err != nil {
-			return nil, fmt.Errorf("Could not find a location for %q", e.Identity.Nick)
+			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
 	} else {
 		loc, err = FetchLocation(l)
@@ -154,14 +153,14 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
 		}
 
 		_, err = p.db.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
-			e.Identity.Nick, loc.Address, loc.Lat, loc.Lon,
+			m.Prefix.Name, loc.Address, loc.Lat, loc.Lon,
 		)
 		if err == nil {
 			return loc, nil
 		}
 
 		_, err = p.db.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
-			loc.Address, loc.Lat, loc.Lon, e.Identity.Nick,
+			loc.Address, loc.Lat, loc.Lon, m.Prefix.Name,
 		)
 		if err != nil {
 			return nil, err
@@ -171,24 +170,24 @@ func (p *ForecastPlugin) getLocation(e *irc.Event) (*Location, error) {
 	return loc, nil
 }
 
-func (p *ForecastPlugin) Forecast(c *irc.Client, e *irc.Event) {
-	loc, err := p.getLocation(e)
+func (p *ForecastPlugin) Forecast(b *bot.Bot, m *irc.Message) {
+	loc, err := p.getLocation(m)
 	if err != nil {
-		c.MentionReply(e, "%s", err.Error())
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		c.MentionReply(e, "%s", err.Error())
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	c.MentionReply(e, "3 day forecast for %s.", loc.Address)
+	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(block.Time, 0).Weekday()
 
-		c.MentionReply(e,
+		b.MentionReply(m,
 			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
@@ -198,21 +197,21 @@ func (p *ForecastPlugin) Forecast(c *irc.Client, e *irc.Event) {
 	}
 }
 
-func (p *ForecastPlugin) Weather(c *irc.Client, e *irc.Event) {
-	loc, err := p.getLocation(e)
+func (p *ForecastPlugin) Weather(b *bot.Bot, m *irc.Message) {
+	loc, err := p.getLocation(m)
 	if err != nil {
-		c.MentionReply(e, "%s", err.Error())
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		c.MentionReply(e, "%s", err.Error())
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
 	today := fc.Daily.Data[0]
-	c.MentionReply(e,
+	b.MentionReply(m,
 		"%s. Currently %.1f. High %.2f, Low %.2f, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,
