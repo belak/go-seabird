@@ -55,7 +55,7 @@ func (m *MentionMux) HandleEvent(b *Bot, msg *irc.Message) {
 	}
 
 	// Copy it into a new Event
-	var newEvent *irc.Message
+	newEvent := &irc.Message{}
 	*newEvent = *msg
 
 	// Strip the nick, punctuation, and spaces from the message

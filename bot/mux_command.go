@@ -129,7 +129,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 	}
 
 	// Copy it into a new Event
-	var newEvent *irc.Message
+	newEvent := &irc.Message{}
 	*newEvent = *msg
 
 	// Chop off the command itself
