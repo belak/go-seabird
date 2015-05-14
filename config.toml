@@ -44,3 +44,6 @@ consumersecret    = ""
 accesstoken       = ""
 accesstokensecret = ""
 
+[youtube]
+key               = ""
+
