@@ -1,13 +1,13 @@
 package linkproviders
 
 import (
-	"net/url"
-	"net/http"
 	"encoding/json"
-	"strings"
 	"fmt"
+	"net/http"
+	"net/url"
+	"strings"
 
-	"github.com/ChannelMeter/iso8601duration"
+	duration "github.com/ChannelMeter/iso8601duration"
 
 	"github.com/belak/seabird/bot"
 	"github.com/belak/seabird/plugins"
@@ -85,10 +85,10 @@ func HandleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
 	if len(p["v"]) > 0 {
 		// using full www.youtube.com/?v=bbq
 		id = p["v"][0]
-	}else {
+	} else {
 		// using short youtu.be/bbq
 		path := strings.Split(req.Path, "/")
-		if len(path) < 1{
+		if len(path) < 1 {
 			return false
 		}
 		id = path[1]
@@ -98,7 +98,7 @@ func HandleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
 	time, title := getVideo(id, tc.Key)
 
 	// Invalid video ID or no results
-	if time=="" && title=="" {
+	if time == "" && title == "" {
 		return false
 	}
 
@@ -132,27 +132,22 @@ func getVideo(id string, key string) (time string, title string) {
 
 	v := videos.Items[0]
 
-	// Format the duration
+	// Convert duration from ISO8601
 	d, err := duration.FromString(v.ContentDetails.Duration)
 	if err != nil {
 		return "", ""
 	}
 
-	// always show minutes:seconds even if 00:01 or 1:00
-        dr := fmt.Sprintf("%02d:%02d", d.Minutes, d.Seconds)
+	var dr string
 
-        // add Hours if not zero
-        if(d.Hours > 0) {
-                dr = fmt.Sprintf("%02d:%s", d.Hours, dr)
-        }
-        // add Days if not zero. overwrite all other time string
-        if(d.Days > 0){
-                dr = fmt.Sprintf("%02d:%02d:%02d:%02d", d.Days, d.Hours, d.Minutes, d.Seconds)
-        }
+	// Print Days and Hours only if they're not 0
+	if d.Days > 0 {
+		dr = fmt.Sprintf("%02d:%02d:%02d:%02d", d.Days, d.Hours, d.Minutes, d.Seconds)
+	} else if d.Hours > 0 {
+		dr = fmt.Sprintf("%02d:%02d:%02d", d.Hours, d.Minutes, d.Seconds)
+	} else {
+		dr = fmt.Sprintf("%02d:%02d", d.Minutes, d.Seconds)
+	}
 
 	return dr, v.Snippet.Title
 }
-
-
-
-
