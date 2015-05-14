@@ -44,3 +44,7 @@ consumersecret    = ""
 accesstoken       = ""
 accesstokensecret = ""
 
+# https://developers.google.com/youtube/registering_an_application
+[youtube]
+key               = ""
+

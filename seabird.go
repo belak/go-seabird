@@ -96,6 +96,11 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	err = linkproviders.NewYoutubeProvider(b, up)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	err = b.Run()
 	if err != nil {
 		log.Fatalln(err)
