@@ -90,7 +90,14 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 }
 
 func (p *KarmaPlugin) Karma(b *bot.Bot, m *irc.Message) {
-	b.MentionReply(m, "%s's karma is %d", m.Trailing(), p.GetKarmaFor(m.Trailing()))
+	term := strings.TrimSpace(m.Trailing())
+
+	// If we don't provide a term, search for the current nick
+	if term == "" {
+		term = m.Prefix.Name
+	}
+
+	b.MentionReply(m, "%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
 func (p *KarmaPlugin) TopKarma(b *bot.Bot, m *irc.Message) {
