@@ -101,6 +101,11 @@ func main() {
 		log.Fatalln(err)
 	}
 
+	err = linkproviders.NewXKCDProvider(up)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	err = b.Run()
 	if err != nil {
 		log.Fatalln(err)

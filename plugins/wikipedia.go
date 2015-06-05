@@ -6,9 +6,11 @@ import (
 	"strings"
 
 	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
 
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
+	"github.com/yhat/scrape"
 )
 
 type WikiResponse struct {
@@ -66,52 +68,21 @@ func Wiki(b *bot.Bot, m *irc.Message) {
 			return
 		}
 
-		// DFS that searches the tree for any node named p then
-		// returns the data of that node's first child
-		var f func(*html.Node) (string, bool)
-		f = func(n *html.Node) (string, bool) {
-			// If it's an element and it's a title node, look for a child
-			if n.Type == html.ElementNode && n.Data == "p" {
-				if n.FirstChild != nil {
-					t := ""
-					for c := n.FirstChild; c != nil; c = c.NextSibling {
-						if c.Type == html.ElementNode && c.FirstChild != nil && c.FirstChild.Type == html.ElementNode {
-							// For those pesky <span><spans>s
-							continue
-						} else if c.Type == html.ElementNode && c.FirstChild != nil {
-							t += c.FirstChild.Data
-						} else {
-							t += c.Data
-						}
-					}
+		n, ok := scrape.Find(z, scrape.ByTag(atom.P))
+		if ok {
+			t := scrape.Text(n)
 
-					// TODO: Remove arbitrary limit
-					if len(t) > 256 {
-						t = t[:256]
-					}
-
-					if t != "" {
-						return t, true
-					} else {
-						return "", false
-					}
-				}
+			if len(t) > 256 {
+				t = t[:253]
+				t = t + "..."
 			}
 
-			// Loop through all nodes and try recursing
-			for c := n.FirstChild; c != nil; c = c.NextSibling {
-				if str, ok := f(c); ok {
-					return str, true
-				}
+			if t != "" {
+				b.MentionReply(m, "%s", t)
+				return
 			}
-
-			return "", false
 		}
 
-		if str, ok := f(z); ok {
-			b.MentionReply(m, "%s", str)
-		} else {
-			b.MentionReply(m, "Error finding text")
-		}
+		b.MentionReply(m, "Error finding text")
 	}()
 }

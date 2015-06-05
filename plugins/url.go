@@ -9,9 +9,12 @@ import (
 	"strings"
 	"time"
 
+	"github.com/yhat/scrape"
+	"golang.org/x/net/html"
+	"golang.org/x/net/html/atom"
+
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
-	"golang.org/x/net/html"
 )
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
@@ -115,44 +118,15 @@ func defaultLinkProvider(url string, b *bot.Bot, m *irc.Message) bool {
 		return false
 	}
 
-	var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
+	// Scrape the tree for the first title node we find
+	n, ok := scrape.Find(z, scrape.ByTag(atom.Title))
 
-	// DFS that searches the tree for any node named title then
-	// returns the data of that node's first child
-	var f func(*html.Node) (string, bool)
-	f = func(n *html.Node) (string, bool) {
-		// If it's an element and it's a title node, look for a child
-		if n.Type == html.ElementNode && n.Data == "title" {
-			if n.FirstChild != nil {
-				t := n.FirstChild.Data
-				t = titleRegex.ReplaceAllString(t, " ")
-				t = strings.TrimSpace(t)
-
-				if t != "" {
-					return t, true
-				} else {
-					return "", false
-				}
-			}
-		}
-
-		// Loop through all nodes and try recursing
-		for c := n.FirstChild; c != nil; c = c.NextSibling {
-			if str, ok := f(c); ok {
-				return str, true
-			}
-		}
-
-		return "", false
+	// If we got a result, pull the text from it
+	if ok {
+		b.Reply(m, "Title: %s", scrape.Text(n))
 	}
 
-	if str, ok := f(z); ok {
-		// Title: title title
-		b.Reply(m, "Title: %s", str)
-		return true
-	} else {
-		return false
-	}
+	return ok
 }
 
 func IsItDown(b *bot.Bot, m *irc.Message) {
