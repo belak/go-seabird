@@ -137,6 +137,11 @@ func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 		return false
 	}
 
+	// If there isn't a user, we can probably assume they're anonymous
+	if bi.ReportedBy.Username == "" {
+		bi.ReportedBy.Username = "Anonymous"
+	}
+
 	// Issue #51 on belak/seabird [open] - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
 	out := fmt.Sprintf("Issue #%s on %s/%s [%s]", issueNum, user, repo, bi.Status)
 	if bi.Priority != "" && bi.Metadata.Kind != "" {
