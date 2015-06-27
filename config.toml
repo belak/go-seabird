@@ -1,4 +1,6 @@
 [core]
+pidfile = "/var/run/seabird/seabird.pid"
+
 # Connection info
 host          = "chat.freenode.net:6697"
 tls           = true
