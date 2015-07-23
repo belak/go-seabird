@@ -6,11 +6,13 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
 )
+
+func init() {
+	bot.RegisterPlugin("forecast", NewForecastPlugin)
+}
 
 type LastAddress struct {
 	Nick     string
@@ -86,17 +88,13 @@ type ForecastResponse struct {
 
 type ForecastPlugin struct {
 	Key string
-	db  *sqlx.DB
+	b   *bot.Bot
 	// CacheDuration string
 }
 
-func NewForecastPlugin(db *sqlx.DB) bot.Plugin {
-	p := &ForecastPlugin{db: db}
+func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &ForecastPlugin{b: b}
 
-	return p
-}
-
-func (p *ForecastPlugin) Register(b *bot.Bot) error {
 	b.Config("forecast", p)
 
 	b.CommandMux.Event("weather", p.Weather, &bot.HelpInfo{
@@ -108,7 +106,7 @@ func (p *ForecastPlugin) Register(b *bot.Bot) error {
 		"Retrieves three-day forecast for given location",
 	})
 
-	return nil
+	return p, nil
 }
 
 func (p *ForecastPlugin) forecastQuery(loc *Location) (*ForecastResponse, error) {
@@ -142,7 +140,7 @@ func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", m.Prefix.Name)
+		err = p.b.DB.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", m.Prefix.Name)
 		if err != nil {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
@@ -152,14 +150,14 @@ func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 			return nil, err
 		}
 
-		_, err = p.db.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
+		_, err = p.b.DB.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
 			m.Prefix.Name, loc.Address, loc.Lat, loc.Lon,
 		)
 		if err == nil {
 			return loc, nil
 		}
 
-		_, err = p.db.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
+		_, err = p.b.DB.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
 			loc.Address, loc.Lat, loc.Lon, m.Prefix.Name,
 		)
 		if err != nil {

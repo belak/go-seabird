@@ -4,14 +4,15 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("nicktracker", NewNickTrackerPlugin)
+}
+
 type NickTrackerPlugin struct {
-	db    *sqlx.DB
 	modes map[string]string
 }
 
@@ -23,14 +24,11 @@ const (
 	ModeMinus
 )
 
-func NewNickTrackerPlugin(db *sqlx.DB) bot.Plugin {
-	return &NickTrackerPlugin{
-		db,
+func NewNickTrackerPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &NickTrackerPlugin{
 		make(map[string]string),
 	}
-}
 
-func (p *NickTrackerPlugin) Register(b *bot.Bot) error {
 	b.BasicMux.Event("001", p.Welcome)
 	b.BasicMux.Event("005", p.Support)
 	b.BasicMux.Event("352", p.Who)
@@ -39,11 +37,11 @@ func (p *NickTrackerPlugin) Register(b *bot.Bot) error {
 	b.BasicMux.Event("MODE", p.Mode)
 	b.BasicMux.Event("NICK", p.Nick)
 
-	return nil
+	return p, nil
 }
 
 func (p *NickTrackerPlugin) Welcome(b *bot.Bot, m *irc.Message) {
-	p.db.Exec("DELETE FROM nicks")
+	b.DB.Exec("DELETE FROM nicks")
 
 	// Request all prefixes to be reported
 	b.Writef("CAP REQ multi-prefix")
@@ -82,7 +80,7 @@ func (p *NickTrackerPlugin) Who(b *bot.Bot, m *irc.Message) {
 		modes += p.modes[string(ch)]
 	}
 
-	p.addNick(channel, nick, modes)
+	p.addNick(b, channel, nick, modes)
 }
 
 func (p *NickTrackerPlugin) Join(b *bot.Bot, m *irc.Message) {
@@ -96,7 +94,7 @@ func (p *NickTrackerPlugin) Join(b *bot.Bot, m *irc.Message) {
 		// Fire off a WHO
 		b.Writef("WHO %s", m.Params[0])
 	} else {
-		p.addNick(m.Params[0], m.Prefix.Name, "")
+		p.addNick(b, m.Params[0], m.Prefix.Name, "")
 	}
 }
 
@@ -107,7 +105,7 @@ func (p *NickTrackerPlugin) Part(b *bot.Bot, m *irc.Message) {
 		return
 	}
 
-	p.db.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", m.Prefix.Name, m.Params[0])
+	b.DB.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", m.Prefix.Name, m.Params[0])
 }
 
 func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
@@ -121,7 +119,7 @@ func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
 	changedModes := m.Params[1]
 
 	var modes string
-	err := p.db.Get(&modes, "SELECT flags FROM nicks WHERE channel=$1 AND nick=$2", channel, nick)
+	err := b.DB.Get(&modes, "SELECT flags FROM nicks WHERE channel=$1 AND nick=$2", channel, nick)
 	if err != nil {
 		return
 	}
@@ -159,7 +157,7 @@ func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
 		}
 	}
 
-	p.db.Exec("UPDATE nicks SET flags=$1 WHERE channel=$2 AND nick=$3", modes, channel, nick)
+	b.DB.Exec("UPDATE nicks SET flags=$1 WHERE channel=$2 AND nick=$3", modes, channel, nick)
 }
 
 func (p *NickTrackerPlugin) Nick(b *bot.Bot, m *irc.Message) {
@@ -177,11 +175,11 @@ func (p *NickTrackerPlugin) Nick(b *bot.Bot, m *irc.Message) {
 	oldNick := m.Prefix.Name
 	newNick := m.Params[0]
 
-	p.db.Exec("UPDATE nicks SET nick=$1 WHERE nick=$2", newNick, oldNick)
+	b.DB.Exec("UPDATE nicks SET nick=$1 WHERE nick=$2", newNick, oldNick)
 }
 
-func (p *NickTrackerPlugin) addNick(channel, nick, modes string) {
+func (p *NickTrackerPlugin) addNick(b *bot.Bot, channel, nick, modes string) {
 	//nickRegex := regexp.MustCompile(`(?i)([@~+%&]?)([a-z_\-\[\]\\^{}|`+"`"+`][a-z0-9_\-\[\]\\^{}|`+"`"+`]*)$`)
 
-	p.db.Exec("INSERT INTO nicks VALUES ($1, $2, $3)", nick, channel, modes)
+	b.DB.Exec("INSERT INTO nicks VALUES ($1, $2, $3)", nick, channel, modes)
 }

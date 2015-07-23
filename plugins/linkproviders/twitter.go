@@ -12,6 +12,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url/twitter", NewTwitterProvider)
+}
+
 type TwitterConfig struct {
 	ConsumerKey       string
 	ConsumerSecret    string
@@ -27,13 +31,17 @@ var twitterStatusRegex = regexp.MustCompile(`^/.*?/status/(.+)$`)
 var twitterUserRegex = regexp.MustCompile(`^/([^/]+)$`)
 var twitterPrefix = "[Twitter]"
 
-func NewTwitterProvider(b *bot.Bot, p *plugins.URLPlugin) error {
+func NewTwitterProvider(b *bot.Bot) (bot.Plugin, error) {
+	// Ensure that the url plugin is loaded
+	b.LoadPlugin("url")
+	p := b.Plugins["url"].(*plugins.URLPlugin)
+
 	t := &TwitterProvider{}
 
 	tc := &TwitterConfig{}
 	err := b.Config("twitter", tc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	anaconda.SetConsumerKey(tc.ConsumerKey)
@@ -42,7 +50,7 @@ func NewTwitterProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 
 	p.RegisterProvider("twitter.com", t.Handle)
 
-	return nil
+	return nil, nil
 }
 
 func (t *TwitterProvider) Handle(b *bot.Bot, m *irc.Message, u *url.URL) bool {

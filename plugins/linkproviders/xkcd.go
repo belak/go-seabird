@@ -15,16 +15,24 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url/xkcd", NewXKCDProvider)
+}
+
 var xkcdRegex = regexp.MustCompile(`^/([^/]+)$`)
 var xkcdPrefix = "[XKCD]"
 
 type XKCDProvider struct{}
 
-func NewXKCDProvider(p *plugins.URLPlugin) error {
+func NewXKCDProvider(b *bot.Bot) (bot.Plugin, error) {
+	// Ensure that the url plugin is loaded
+	b.LoadPlugin("url")
+	p := b.Plugins["url"].(*plugins.URLPlugin)
+
 	t := &XKCDProvider{}
 	p.RegisterProvider("xkcd.com", t.Handle)
 
-	return nil
+	return nil, nil
 }
 
 func (p *XKCDProvider) Handle(b *bot.Bot, m *irc.Message, url *url.URL) bool {

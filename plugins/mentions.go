@@ -5,15 +5,16 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
-type MentionsPlugin struct{}
-
-func NewMentionsPlugin() bot.Plugin {
-	return &MentionsPlugin{}
+func init() {
+	bot.RegisterPlugin("mentions", NewMentionsPlugin)
 }
 
-func (p *MentionsPlugin) Register(b *bot.Bot) error {
+type MentionsPlugin struct{}
+
+func NewMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &MentionsPlugin{}
 	b.MentionMux.Event(Mentions)
-	return nil
+	return p, nil
 }
 
 func Mentions(b *bot.Bot, m *irc.Message) {

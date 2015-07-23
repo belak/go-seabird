@@ -9,6 +9,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("issues", NewIssuesPlugin)
+}
+
 type IssueResult struct {
 	Url string `json:"html_url"`
 }
@@ -17,11 +21,8 @@ type IssuesPlugin struct {
 	Token string
 }
 
-func NewIssuesPlugin() bot.Plugin {
-	return &IssuesPlugin{}
-}
-
-func (p *IssuesPlugin) Register(b *bot.Bot) error {
+func NewIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &IssuesPlugin{}
 	b.Config("github", p)
 
 	b.CommandMux.Event("issue", p.CreateIssue, &bot.HelpInfo{
@@ -29,7 +30,7 @@ func (p *IssuesPlugin) Register(b *bot.Bot) error {
 		"Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
 	})
 
-	return nil
+	return p, nil
 }
 
 func (p *IssuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {

@@ -7,18 +7,21 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
-type MathPlugin struct{}
-
-func NewMathPlugin() bot.Plugin {
-	return &MathPlugin{}
+func init() {
+	bot.RegisterPlugin("math", NewMathPlugin)
 }
 
-func (p *MathPlugin) Register(b *bot.Bot) error {
+type MathPlugin struct{}
+
+func NewMathPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &MathPlugin{}
+
 	b.CommandMux.Event("math", p.Expr, &bot.HelpInfo{
 		"<expr>",
 		"Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
-	return nil
+
+	return p, nil
 }
 
 func (p *MathPlugin) Expr(b *bot.Bot, m *irc.Message) {

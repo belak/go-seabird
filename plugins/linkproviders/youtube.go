@@ -14,6 +14,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url/youtube", NewYoutubeProvider)
+}
+
 var youtubePrefix = "[YouTube]"
 
 type YoutubeConfig struct {
@@ -63,12 +67,16 @@ type Videos struct {
 	} `json:"items"`
 }
 
-func NewYoutubeProvider(b *bot.Bot, p *plugins.URLPlugin) error {
+func NewYoutubeProvider(b *bot.Bot) (bot.Plugin, error) {
+	// Ensure that the url plugin is loaded
+	b.LoadPlugin("url")
+	p := b.Plugins["url"].(*plugins.URLPlugin)
+
 	// Listen for youtube.com and youtu.be URLs
 	p.RegisterProvider("youtube.com", HandleYoutube)
 	p.RegisterProvider("youtu.be", HandleYoutube)
 
-	return nil
+	return nil, nil
 }
 
 func HandleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
