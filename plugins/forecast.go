@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
 )
@@ -88,12 +90,13 @@ type ForecastResponse struct {
 
 type ForecastPlugin struct {
 	Key string
-	b   *bot.Bot
+	db  *sqlx.DB
 	// CacheDuration string
 }
 
 func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &ForecastPlugin{b: b}
+	b.LoadPlugin("db")
+	p := &ForecastPlugin{db: b.Plugins["db"].(*sqlx.DB)}
 
 	b.Config("forecast", p)
 
@@ -140,7 +143,7 @@ func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		err = p.b.DB.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", m.Prefix.Name)
+		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", m.Prefix.Name)
 		if err != nil {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
@@ -150,14 +153,14 @@ func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 			return nil, err
 		}
 
-		_, err = p.b.DB.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
+		_, err = p.db.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
 			m.Prefix.Name, loc.Address, loc.Lat, loc.Lon,
 		)
 		if err == nil {
 			return loc, nil
 		}
 
-		_, err = p.b.DB.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
+		_, err = p.db.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
 			loc.Address, loc.Lat, loc.Lon, m.Prefix.Name,
 		)
 		if err != nil {

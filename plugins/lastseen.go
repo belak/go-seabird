@@ -5,6 +5,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
 )
@@ -14,11 +16,13 @@ func init() {
 }
 
 type LastSeenPlugin struct {
-	b *bot.Bot
+	db *sqlx.DB
 }
 
 func NewLastSeenPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &LastSeenPlugin{b}
+	p := &LastSeenPlugin{
+		b.Plugins["db"].(*sqlx.DB),
+	}
 
 	b.CommandMux.Event("active", p.Active, &bot.HelpInfo{
 		"<nick>",
@@ -44,7 +48,7 @@ func (p *LastSeenPlugin) Active(b *bot.Bot, m *irc.Message) {
 
 func (p *LastSeenPlugin) getLastSeen(nick, channel string) string {
 	var lastseen int64
-	err := p.b.DB.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
+	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
 	if err != nil {
 		return "Unknown user"
 	}
@@ -75,7 +79,7 @@ func formatDate(t time.Time) string {
 
 func (p *LastSeenPlugin) isActive(nick, channel string) bool {
 	var lastseen int64
-	err := p.b.DB.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
+	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
 	if err != nil {
 		return false
 	}
@@ -99,14 +103,14 @@ func (p *LastSeenPlugin) updateLastSeen(nick, channel string) {
 	name := strings.ToLower(nick)
 	now := time.Now().Unix()
 
-	_, err := p.b.DB.Exec("INSERT INTO lastseen VALUES ($1, $2, $3)", name, channel, now)
+	_, err := p.db.Exec("INSERT INTO lastseen VALUES ($1, $2, $3)", name, channel, now)
 	// If it was a nil error, we got the insert
 	if err == nil {
 		return
 	}
 
 	// Grab a transaction, just in case
-	tx, err := p.b.DB.Beginx()
+	tx, err := p.db.Beginx()
 	defer tx.Commit()
 
 	if err != nil {
