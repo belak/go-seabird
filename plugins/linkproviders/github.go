@@ -14,6 +14,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url/github", NewGithubProvider)
+}
+
 type GithubConfig struct {
 	Token string
 }
@@ -29,13 +33,17 @@ var githubPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull/([^/]+)$`)
 var githubGistRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 var githubPrefix = "[Github]"
 
-func NewGithubProvider(b *bot.Bot, p *plugins.URLPlugin) error {
+func NewGithubProvider(b *bot.Bot) (bot.Plugin, error) {
+	// Ensure that the url plugin is loaded
+	b.LoadPlugin("url")
+	p := b.Plugins["url"].(*plugins.URLPlugin)
+
 	t := &GithubProvider{}
 
 	tc := &GithubConfig{}
 	err := b.Config("github", tc)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	tr := &oauth.Transport{
 		Token: &oauth.Token{AccessToken: tc.Token},
@@ -46,7 +54,7 @@ func NewGithubProvider(b *bot.Bot, p *plugins.URLPlugin) error {
 	p.RegisterProvider("github.com", t.HandleGithub)
 	p.RegisterProvider("gist.github.com", t.HandleGist)
 
-	return nil
+	return nil, nil
 }
 
 func (t *GithubProvider) HandleGithub(b *bot.Bot, m *irc.Message, url *url.URL) bool {

@@ -10,6 +10,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("google", NewGooglePlugin)
+}
+
 type GooglePlugin struct{}
 
 type GoogleResponse struct {
@@ -22,11 +26,9 @@ type GoogleResponse struct {
 	ResponseStatus int `json:"responseStatus"`
 }
 
-func NewGooglePlugin() bot.Plugin {
-	return &GooglePlugin{}
-}
+func NewGooglePlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &GooglePlugin{}
 
-func (p *GooglePlugin) Register(b *bot.Bot) error {
 	b.CommandMux.Event("g", Web, &bot.HelpInfo{
 		"<query>",
 		"Retrieves top Google web search result for given query",
@@ -36,7 +38,7 @@ func (p *GooglePlugin) Register(b *bot.Bot) error {
 		"Retrieves top Google images search result for given query",
 	})
 
-	return nil
+	return p, nil
 }
 
 func Web(b *bot.Bot, m *irc.Message) {

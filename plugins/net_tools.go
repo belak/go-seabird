@@ -12,15 +12,17 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("nettools", NewNetToolsPlugin)
+}
+
 type NetToolsPlugin struct {
 	Key string
 }
 
-func NewNetToolsPlugin() bot.Plugin {
-	return &NetToolsPlugin{}
-}
+func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &NetToolsPlugin{}
 
-func (p *NetToolsPlugin) Register(b *bot.Bot) error {
 	b.Config("net_tools", p)
 
 	b.CommandMux.Event("rdns", p.RDNS, &bot.HelpInfo{
@@ -48,7 +50,7 @@ func (p *NetToolsPlugin) Register(b *bot.Bot) error {
 		"Returns DNSCheck URL for domain",
 	})
 
-	return nil
+	return p, nil
 }
 
 func (p *NetToolsPlugin) RDNS(b *bot.Bot, m *irc.Message) {

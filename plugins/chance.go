@@ -8,6 +8,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("chance", NewChancePlugin)
+}
+
 var coinNames = []string{
 	"heads",
 	"tails",
@@ -18,14 +22,12 @@ type ChancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func NewChancePlugin() bot.Plugin {
-	return &ChancePlugin{
+func NewChancePlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &ChancePlugin{
 		6,
 		make(map[string]int),
 	}
-}
 
-func (p *ChancePlugin) Register(b *bot.Bot) error {
 	b.CommandMux.Event("roulette", p.Roulette, &bot.HelpInfo{
 		Description: "Click... click... BANG!",
 	})
@@ -34,7 +36,7 @@ func (p *ChancePlugin) Register(b *bot.Bot) error {
 		"Guess the coin flip. If you guess wrong, you're out!",
 	})
 
-	return nil
+	return p, nil
 }
 
 func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {

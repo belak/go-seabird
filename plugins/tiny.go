@@ -9,6 +9,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("tiny", NewTinyPlugin)
+}
+
 type ShortenResult struct {
 	Kind    string `json:"kind"`
 	Id      string `json:"id"`
@@ -17,17 +21,15 @@ type ShortenResult struct {
 
 type TinyPlugin struct{}
 
-func NewTinyPlugin() bot.Plugin {
-	return &TinyPlugin{}
-}
+func NewTinyPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &TinyPlugin{}
 
-func (p *TinyPlugin) Register(b *bot.Bot) error {
 	b.CommandMux.Event("tiny", Shorten, &bot.HelpInfo{
 		"<url>",
 		"Shortens given URL",
 	})
 
-	return nil
+	return p, nil
 }
 
 func Shorten(b *bot.Bot, m *irc.Message) {

@@ -11,17 +11,18 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("dice", NewDicePlugin)
+}
+
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
 type DicePlugin struct{}
 
-func NewDicePlugin() bot.Plugin {
-	return &DicePlugin{}
-}
-
-func (p *DicePlugin) Register(b *bot.Bot) error {
+func NewDicePlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &DicePlugin{}
 	b.MentionMux.Event(p.Dice)
-	return nil
+	return p, nil
 }
 
 func (p *DicePlugin) Dice(b *bot.Bot, m *irc.Message) {

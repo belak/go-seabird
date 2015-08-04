@@ -10,11 +10,15 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	"github.com/jmoiron/sqlx"
 	"github.com/nightlyone/lockfile"
 
 	"github.com/belak/sorcix-irc"
 )
 
+// MessageFromChannel runs a simple check to see if a message came
+// from a channel or a person. It is only designed to work on PRIVMSG
+// lines.
 func MessageFromChannel(m *irc.Message) bool {
 	if len(m.Params) == 0 {
 		return false
@@ -24,7 +28,12 @@ func MessageFromChannel(m *irc.Message) bool {
 	return len(loc) > 0 && (loc[0] == irc.Channel || loc[0] == irc.Distributed)
 }
 
-type BotConfig struct {
+type dbConfig struct {
+	Driver     string
+	DataSource string
+}
+
+type coreConfig struct {
 	PidFile string
 
 	Nick string
@@ -38,13 +47,23 @@ type BotConfig struct {
 
 	Cmds   []string
 	Prefix string
+
+	Plugins []string
 }
 
+// A Bot is our wrapper around the irc.Conn. It could be used for a
+// general client, but the provided convenience functions are designed
+// around using this package to write a bot.
 type Bot struct {
 	// Everything needed for plugins
 	BasicMux   *BasicMux
 	CommandMux *CommandMux
 	MentionMux *MentionMux
+
+	Auth AuthProvider
+	DB   *sqlx.DB
+
+	Plugins map[string]interface{}
 
 	// Stuff needed for the IRC client
 	currentNick string
@@ -54,24 +73,32 @@ type Bot struct {
 	md         toml.MetaData
 
 	// Internal things
-	conn   *irc.Conn
-	config *BotConfig
-	err    error
+	conn           *irc.Conn
+	config         *coreConfig
+	err            error
+	loadingPlugins map[string]bool
 }
 
+// NewBot will return a new Bot given the name of a toml config file.
 func NewBot(conf string) (*Bot, error) {
 	b := &Bot{
 		NewBasicMux(),
 		nil,
 		NewMentionMux(),
+		&nullAuthProvider{},
+		nil,
+		make(map[string]interface{}),
 		"",
 		make(map[string]toml.Primitive),
 		toml.MetaData{},
 		nil,
-		&BotConfig{},
+		&coreConfig{},
 		nil,
+		make(map[string]bool),
 	}
 
+	// Decode the file, but leave all the config sections intact
+	// so we can decode those later.
 	b.md, b.err = toml.DecodeFile(conf, b.confValues)
 	if b.err != nil {
 		return nil, b.err
@@ -100,17 +127,28 @@ func NewBot(conf string) (*Bot, error) {
 		}
 	})
 
+	// We try to load the database, but if it fails, we live with
+	// it because the user may not have needed the db. We consider
+	// "failing" not having the db section.
+	dbc := &dbConfig{}
+	err := b.Config("db", dbc)
+	if err == nil {
+		b.DB, b.err = sqlx.Connect(dbc.Driver, dbc.DataSource)
+		if b.err != nil {
+			return nil, b.err
+		}
+	}
+
 	return b, nil
 }
 
+// CurrentNick returns the current nick of the bot.
 func (b *Bot) CurrentNick() string {
 	return b.currentNick
 }
 
-func (b *Bot) RegisterPlugin(p Plugin) error {
-	return p.Register(b)
-}
-
+// Config will decode the config section for the given name into the
+// given interface{}
 func (b *Bot) Config(name string, c interface{}) error {
 	if v, ok := b.confValues[name]; ok {
 		return b.md.PrimitiveDecode(v, c)
@@ -118,6 +156,7 @@ func (b *Bot) Config(name string, c interface{}) error {
 	return fmt.Errorf("Config section for %q missing", name)
 }
 
+// Send is a simple function to send an IRC message
 func (b *Bot) Send(m *irc.Message) {
 	if b.err != nil {
 		return
@@ -129,6 +168,8 @@ func (b *Bot) Send(m *irc.Message) {
 	}
 }
 
+// Reply to an irc.Message with a convenience wrapper around
+// fmt.Sprintf
 func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) {
 	if len(m.Params) == 0 || len(m.Params[0]) == 0 {
 		log.Println("Invalid IRC event")
@@ -153,6 +194,8 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) {
 	b.Send(out)
 }
 
+// MentionReply acts the same as Bot.Reply but it will prefix it with the
+// user's nick if we are in a channel.
 func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) {
 	if len(m.Params) == 0 || len(m.Params[0]) == 0 {
 		log.Println("Invalid IRC event")
@@ -235,15 +278,82 @@ func (b *Bot) mainLoop(conn io.ReadWriteCloser) error {
 	return b.err
 }
 
+// Write will write an raw IRC message to the stream
 func (b *Bot) Write(line string) {
 	b.Send(irc.ParseMessage(line))
 }
 
+// Writef is a convenience method around fmt.Sprintf and Bot.Write
 func (b *Bot) Writef(format string, args ...interface{}) {
 	b.Write(fmt.Sprintf(format, args...))
 }
 
+// PluginLoaded will return true if a plugin is loaded and false otherwise
+func (b *Bot) PluginLoaded(name string) bool {
+	_, ok := b.Plugins[name]
+	return ok
+}
+
+// LoadPlugin will ensure a plugin is loaded. It is designed to be
+// usable in other plugins, so they can ensure plugins they depend on
+// are loaded before using them.
+func (b *Bot) LoadPlugin(name string) error {
+	// We don't need to load the plugin if it's already loaded
+	if b.PluginLoaded(name) {
+		return nil
+	}
+
+	// Ensure the plugin exists
+	factory, ok := plugins[name]
+	if !ok {
+		return fmt.Errorf("Plugin %s does not exist", name)
+	}
+
+	// If we're trying to load this plugin already, this is a
+	// circular load and we should bail.
+	if v := b.loadingPlugins[name]; v {
+		return fmt.Errorf("Plugin %s getting loaded circularly", name)
+	}
+
+	// Set a flag stating that we're loading this plugin
+	b.loadingPlugins[name] = true
+
+	// Actually load the plugin
+	plugin, err := factory(b)
+	if err != nil {
+		return fmt.Errorf("Plugin %s failed to load", name)
+	}
+
+	// Save the value returned from the plugin factory.
+	b.Plugins[name] = plugin
+
+	// Unset the flag saying we're loading this because we're done now.
+	delete(b.loadingPlugins, name)
+
+	return nil
+}
+
+// Run starts the bot and loops until it dies
 func (b *Bot) Run() error {
+	// Load all the plugins we need. If there were plugins
+	// specified in the config, just load those. Otherwise load
+	// ALL of them.
+	if len(b.config.Plugins) != 0 {
+		for _, name := range b.config.Plugins {
+			err := b.LoadPlugin(name)
+			if err != nil {
+				return err
+			}
+		}
+	} else {
+		for name := range plugins {
+			err := b.LoadPlugin(name)
+			if err != nil {
+				return err
+			}
+		}
+	}
+
 	// If we have a pidfile configured, create it and write the PID
 	if b.config.PidFile != "" {
 		l, err := lockfile.New(b.config.PidFile)

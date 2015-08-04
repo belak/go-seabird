@@ -13,6 +13,10 @@ import (
 	"github.com/yhat/scrape"
 )
 
+func init() {
+	bot.RegisterPlugin("wiki", NewWikiPlugin)
+}
+
 type WikiResponse struct {
 	Parse struct {
 		Title string `json:"title"`
@@ -24,17 +28,15 @@ type WikiResponse struct {
 
 type WikiPlugin struct{}
 
-func NewWikiPlugin() bot.Plugin {
-	return &WikiPlugin{}
-}
+func NewWikiPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &WikiPlugin{}
 
-func (p *WikiPlugin) Register(b *bot.Bot) error {
 	b.CommandMux.Event("wiki", Wiki, &bot.HelpInfo{
 		"<topic>",
 		"Retrieves first section from most relevant Wikipedia article to given topic",
 	})
 
-	return nil
+	return p, nil
 }
 
 func transformQuery(query string) string {

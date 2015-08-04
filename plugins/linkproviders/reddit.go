@@ -10,6 +10,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url/reddit", NewRedditProvider)
+}
+
 type RedditUser struct {
 	Data struct {
 		Name         string `json:"name"`
@@ -47,9 +51,13 @@ var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
 var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
-func NewRedditProvider(p *plugins.URLPlugin) error {
+func NewRedditProvider(b *bot.Bot) (bot.Plugin, error) {
+	// Ensure that the url plugin is loaded
+	b.LoadPlugin("url")
+	p := b.Plugins["url"].(*plugins.URLPlugin)
+
 	p.RegisterProvider("reddit.com", HandleReddit)
-	return nil
+	return nil, nil
 }
 
 func HandleReddit(b *bot.Bot, m *irc.Message, u *url.URL) bool {

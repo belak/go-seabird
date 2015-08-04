@@ -11,19 +11,21 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
-type MetarPlugin struct{}
-
-func NewMetarPlugin() bot.Plugin {
-	return &MetarPlugin{}
+func init() {
+	bot.RegisterPlugin("metar", NewMetarPlugin)
 }
 
-func (p *MetarPlugin) Register(b *bot.Bot) error {
+type MetarPlugin struct{}
+
+func NewMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &MetarPlugin{}
+
 	b.CommandMux.Event("metar", Metar, &bot.HelpInfo{
 		"<station>",
 		"Gives METAR report for given airport code",
 	})
 
-	return nil
+	return p, nil
 }
 
 func Metar(b *bot.Bot, m *irc.Message) {

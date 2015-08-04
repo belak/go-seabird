@@ -6,11 +6,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
 )
+
+func init() {
+	bot.RegisterPlugin("karma", NewKarmaPlugin)
+}
 
 type KarmaUser struct {
 	Name  string
@@ -18,18 +20,14 @@ type KarmaUser struct {
 }
 
 type KarmaPlugin struct {
-	db *sqlx.DB
+	b *bot.Bot
 }
 
 var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaPlugin(db *sqlx.DB) bot.Plugin {
-	return &KarmaPlugin{
-		db,
-	}
-}
+func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &KarmaPlugin{b}
 
-func (p *KarmaPlugin) Register(b *bot.Bot) error {
 	b.CommandMux.Event("karma", p.Karma, &bot.HelpInfo{
 		"<nick>",
 		"Gives karma for given user",
@@ -42,7 +40,7 @@ func (p *KarmaPlugin) Register(b *bot.Bot) error {
 	})
 	b.BasicMux.Event("PRIVMSG", p.Msg)
 
-	return nil
+	return p, nil
 }
 
 func (p *KarmaPlugin) CleanedName(name string) string {
@@ -51,7 +49,7 @@ func (p *KarmaPlugin) CleanedName(name string) string {
 
 func (p *KarmaPlugin) GetKarmaFor(name string) int {
 	var score int
-	err := p.db.Get(&score, "SELECT score FROM karma WHERE name=$1", p.CleanedName(name))
+	err := p.b.DB.Get(&score, "SELECT score FROM karma WHERE name=$1", p.CleanedName(name))
 	if err != nil {
 		return 0
 	}
@@ -60,14 +58,14 @@ func (p *KarmaPlugin) GetKarmaFor(name string) int {
 }
 
 func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
-	_, err := p.db.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
+	_, err := p.b.DB.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.CleanedName(name), diff)
 	// If it was a nil error, we got the insert
 	if err == nil {
 		return diff
 	}
 
 	// Grab a transaction, just in case
-	tx, err := p.db.Beginx()
+	tx, err := p.b.DB.Beginx()
 	defer tx.Commit()
 
 	if err != nil {
@@ -102,7 +100,7 @@ func (p *KarmaPlugin) Karma(b *bot.Bot, m *irc.Message) {
 
 func (p *KarmaPlugin) TopKarma(b *bot.Bot, m *irc.Message) {
 	user := &KarmaUser{}
-	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score DESC LIMIT 1")
+	err := p.b.DB.Get(user, "SELECT name, score FROM karma ORDER BY score DESC LIMIT 1")
 	if err != nil {
 		b.MentionReply(m, "Error fetching scores")
 		return
@@ -113,7 +111,7 @@ func (p *KarmaPlugin) TopKarma(b *bot.Bot, m *irc.Message) {
 
 func (p *KarmaPlugin) BottomKarma(b *bot.Bot, m *irc.Message) {
 	user := &KarmaUser{}
-	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score ASC LIMIT 1")
+	err := p.b.DB.Get(user, "SELECT name, score FROM karma ORDER BY score ASC LIMIT 1")
 	if err != nil {
 		b.MentionReply(m, "Error fetching scores")
 		return

@@ -13,6 +13,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url/bitbucket", NewBitbucketProvider)
+}
+
 type BitbucketUser struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"display_name"`
@@ -52,9 +56,13 @@ var bitbucketIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issue/([^/]+)/[^
 var bitbucketPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
 var bitbucketPrefix = "[Bitbucket]"
 
-func NewBitbucketProvider(p *plugins.URLPlugin) error {
+func NewBitbucketProvider(b *bot.Bot) (bot.Plugin, error) {
+	// Ensure that the url plugin is loaded
+	b.LoadPlugin("url")
+	p := b.Plugins["url"].(*plugins.URLPlugin)
+
 	p.RegisterProvider("bitbucket.org", HandleBitbucket)
-	return nil
+	return nil, nil
 }
 
 func HandleBitbucket(b *bot.Bot, m *irc.Message, url *url.URL) bool {

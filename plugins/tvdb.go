@@ -14,6 +14,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("tvdb", NewTVDBPlugin)
+}
+
 type TVDBPlugin struct {
 	Key string
 }
@@ -44,11 +48,9 @@ type TVDBZipResponse struct {
 	} `xml:"Series"`
 }
 
-func NewTVDBPlugin() bot.Plugin {
-	return &TVDBPlugin{}
-}
+func NewTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &TVDBPlugin{}
 
-func (p *TVDBPlugin) Register(b *bot.Bot) error {
 	b.Config("tvdb", p)
 
 	b.CommandMux.Event("tvdb", p.Search, &bot.HelpInfo{
@@ -60,7 +62,7 @@ func (p *TVDBPlugin) Register(b *bot.Bot) error {
 		"Gives expanded info on TVDB series using TVDB ID",
 	})
 
-	return nil
+	return p, nil
 }
 
 func (p *TVDBPlugin) Search(b *bot.Bot, m *irc.Message) {

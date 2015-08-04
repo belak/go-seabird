@@ -17,6 +17,10 @@ import (
 	"github.com/belak/sorcix-irc"
 )
 
+func init() {
+	bot.RegisterPlugin("url", NewURLPlugin)
+}
+
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
 // and I don't know if it's worth the time to make it better.
 var urlRegex = regexp.MustCompile(`https?://[^ ]+`)
@@ -36,13 +40,11 @@ type URLPlugin struct {
 
 type LinkProvider func(b *bot.Bot, m *irc.Message, url *url.URL) bool
 
-func NewURLPlugin() bot.Plugin {
-	return &URLPlugin{
+func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
+	p := &URLPlugin{
 		providers: make(map[string][]LinkProvider),
 	}
-}
 
-func (p *URLPlugin) Register(b *bot.Bot) error {
 	b.BasicMux.Event("PRIVMSG", p.URLTitle)
 
 	b.CommandMux.Event("down", IsItDown, &bot.HelpInfo{
@@ -50,7 +52,7 @@ func (p *URLPlugin) Register(b *bot.Bot) error {
 		"Checks if given website is down",
 	})
 
-	return nil
+	return p, nil
 }
 
 func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
