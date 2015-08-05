@@ -1,29 +1,3 @@
-[core]
-pidfile = "/var/run/seabird/seabird.pid"
-
-# Connection info
-host          = "chat.freenode.net:6697"
-tls           = true
-tls_no_verify = false
-
-# User info
-nick = "HelloWorld"
-user = "seabird"
-name = "seabird"
-pass = "qwertyasdf"
-
-# Global config
-prefix = "!"
-
-# Startup commands
-cmds = [
-  "JOIN #encoded"
-]
-
-plugins = [
-  "chance"
-]
-
 [db]
 driver     = "sqlite3"
 datasource = "dev.db"

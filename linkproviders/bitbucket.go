@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/plugins"
-	"github.com/belak/seabird/utils"
 	"github.com/belak/sorcix-irc"
+	"github.com/seabird-irc/plugins"
+	"github.com/seabird-irc/plugins/utils"
 )
 
 func init() {
