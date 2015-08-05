@@ -4,6 +4,8 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/jmoiron/sqlx"
+
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
 )
@@ -14,6 +16,7 @@ func init() {
 
 type NickTrackerPlugin struct {
 	modes map[string]string
+	db    *sqlx.DB
 }
 
 type ModeState int
@@ -25,8 +28,10 @@ const (
 )
 
 func NewNickTrackerPlugin(b *bot.Bot) (bot.Plugin, error) {
+	b.LoadPlugin("db")
 	p := &NickTrackerPlugin{
 		make(map[string]string),
+		b.Plugins["db"].(*sqlx.DB),
 	}
 
 	b.BasicMux.Event("001", p.Welcome)
@@ -41,7 +46,7 @@ func NewNickTrackerPlugin(b *bot.Bot) (bot.Plugin, error) {
 }
 
 func (p *NickTrackerPlugin) Welcome(b *bot.Bot, m *irc.Message) {
-	b.DB.Exec("DELETE FROM nicks")
+	p.db.Exec("DELETE FROM nicks")
 
 	// Request all prefixes to be reported
 	b.Writef("CAP REQ multi-prefix")
@@ -80,7 +85,7 @@ func (p *NickTrackerPlugin) Who(b *bot.Bot, m *irc.Message) {
 		modes += p.modes[string(ch)]
 	}
 
-	p.addNick(b, channel, nick, modes)
+	p.addNick(channel, nick, modes)
 }
 
 func (p *NickTrackerPlugin) Join(b *bot.Bot, m *irc.Message) {
@@ -94,7 +99,7 @@ func (p *NickTrackerPlugin) Join(b *bot.Bot, m *irc.Message) {
 		// Fire off a WHO
 		b.Writef("WHO %s", m.Params[0])
 	} else {
-		p.addNick(b, m.Params[0], m.Prefix.Name, "")
+		p.addNick(m.Params[0], m.Prefix.Name, "")
 	}
 }
 
@@ -105,7 +110,7 @@ func (p *NickTrackerPlugin) Part(b *bot.Bot, m *irc.Message) {
 		return
 	}
 
-	b.DB.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", m.Prefix.Name, m.Params[0])
+	p.db.Exec("DELETE FROM nicks WHERE nick=$1 AND channel=$2", m.Prefix.Name, m.Params[0])
 }
 
 func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
@@ -119,7 +124,7 @@ func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
 	changedModes := m.Params[1]
 
 	var modes string
-	err := b.DB.Get(&modes, "SELECT flags FROM nicks WHERE channel=$1 AND nick=$2", channel, nick)
+	err := p.db.Get(&modes, "SELECT flags FROM nicks WHERE channel=$1 AND nick=$2", channel, nick)
 	if err != nil {
 		return
 	}
@@ -157,7 +162,7 @@ func (p *NickTrackerPlugin) Mode(b *bot.Bot, m *irc.Message) {
 		}
 	}
 
-	b.DB.Exec("UPDATE nicks SET flags=$1 WHERE channel=$2 AND nick=$3", modes, channel, nick)
+	p.db.Exec("UPDATE nicks SET flags=$1 WHERE channel=$2 AND nick=$3", modes, channel, nick)
 }
 
 func (p *NickTrackerPlugin) Nick(b *bot.Bot, m *irc.Message) {
@@ -175,11 +180,11 @@ func (p *NickTrackerPlugin) Nick(b *bot.Bot, m *irc.Message) {
 	oldNick := m.Prefix.Name
 	newNick := m.Params[0]
 
-	b.DB.Exec("UPDATE nicks SET nick=$1 WHERE nick=$2", newNick, oldNick)
+	p.db.Exec("UPDATE nicks SET nick=$1 WHERE nick=$2", newNick, oldNick)
 }
 
-func (p *NickTrackerPlugin) addNick(b *bot.Bot, channel, nick, modes string) {
+func (p *NickTrackerPlugin) addNick(channel, nick, modes string) {
 	//nickRegex := regexp.MustCompile(`(?i)([@~+%&]?)([a-z_\-\[\]\\^{}|`+"`"+`][a-z0-9_\-\[\]\\^{}|`+"`"+`]*)$`)
 
-	b.DB.Exec("INSERT INTO nicks VALUES ($1, $2, $3)", nick, channel, modes)
+	p.db.Exec("INSERT INTO nicks VALUES ($1, $2, $3)", nick, channel, modes)
 }

@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/jmoiron/sqlx"
 	"github.com/nightlyone/lockfile"
 
 	"github.com/belak/sorcix-irc"
@@ -26,11 +25,6 @@ func MessageFromChannel(m *irc.Message) bool {
 
 	loc := m.Params[0]
 	return len(loc) > 0 && (loc[0] == irc.Channel || loc[0] == irc.Distributed)
-}
-
-type dbConfig struct {
-	Driver     string
-	DataSource string
 }
 
 type coreConfig struct {
@@ -61,8 +55,9 @@ type Bot struct {
 	MentionMux *MentionMux
 
 	Auth AuthProvider
-	DB   *sqlx.DB
 
+	// A simple map of the name of the plugin to the returned
+	// plugin
 	Plugins map[string]interface{}
 
 	// Stuff needed for the IRC client
@@ -86,7 +81,6 @@ func NewBot(conf string) (*Bot, error) {
 		nil,
 		NewMentionMux(),
 		&nullAuthProvider{},
-		nil,
 		make(map[string]interface{}),
 		"",
 		make(map[string]toml.Primitive),
@@ -126,18 +120,6 @@ func NewBot(conf string) (*Bot, error) {
 			bot.Write(v)
 		}
 	})
-
-	// We try to load the database, but if it fails, we live with
-	// it because the user may not have needed the db. We consider
-	// "failing" not having the db section.
-	dbc := &dbConfig{}
-	err := b.Config("db", dbc)
-	if err == nil {
-		b.DB, b.err = sqlx.Connect(dbc.Driver, dbc.DataSource)
-		if b.err != nil {
-			return nil, b.err
-		}
-	}
 
 	return b, nil
 }
