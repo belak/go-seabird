@@ -190,6 +190,13 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) {
 	b.Reply(m, format, v...)
 }
 
+// HasPerm is a convenience function for checking a user's permissions
+func (b *Bot) HasPerm(m *irc.Message, perm string) bool {
+	user := b.Auth.LookupUser(b, m.Prefix)
+	
+	return user.HasPerm(b, perm)
+}
+
 func (b *Bot) mainLoop(conn io.ReadWriteCloser) error {
 	b.conn = irc.NewConn(conn)
 
