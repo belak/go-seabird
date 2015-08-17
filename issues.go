@@ -41,7 +41,7 @@ func (p *IssuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 			return
 		}
 
-		url := "https://api.github.com/repos/seabird-irc/plugins/issues"
+		url := "https://api.github.com/repos/belak/seabird-plugins/issues"
 
 		hc := &http.Client{}
 		params := map[string]string{
