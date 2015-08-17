@@ -191,8 +191,8 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) {
 }
 
 // CheckPerm is a convenience function for checking a user's permissions
-func (b *Bot) CheckPerm(m *irc.Message, perm string) bool {
-	user := b.Auth.LookupUser(b, &irc.Prefix{Name: m.Name, User: m.User, Host: m.Host})
+func (b *Bot) HasPerm(m *irc.Message, perm string) bool {
+	user := b.Auth.LookupUser(b, m.Prefix)
 	
 	return user.HasPerm(b, perm)
 }
