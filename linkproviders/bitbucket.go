@@ -7,10 +7,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/belak/seabird-plugins"
+	"github.com/belak/seabird-plugins/utils"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
-	"github.com/seabird-irc/plugins"
-	"github.com/seabird-irc/plugins/utils"
 )
 
 func init() {

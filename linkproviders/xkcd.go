@@ -10,9 +10,9 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
+	"github.com/belak/seabird-plugins"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
-	"github.com/seabird-irc/plugins"
 )
 
 func init() {

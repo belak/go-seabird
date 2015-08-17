@@ -9,9 +9,9 @@ import (
 	"code.google.com/p/goauth2/oauth"
 	"github.com/google/go-github/github"
 
+	"github.com/belak/seabird-plugins"
 	"github.com/belak/seabird/bot"
 	"github.com/belak/sorcix-irc"
-	"github.com/seabird-irc/plugins"
 )
 
 func init() {
