@@ -6,8 +6,8 @@ import (
 	"regexp"
 	"strconv"
 
-	"code.google.com/p/goauth2/oauth"
 	"github.com/google/go-github/github"
+	"golang.org/x/oauth2"
 
 	"github.com/belak/seabird-plugins"
 	"github.com/belak/seabird/bot"
@@ -40,16 +40,20 @@ func NewGithubProvider(b *bot.Bot) (bot.Plugin, error) {
 
 	t := &GithubProvider{}
 
-	tc := &GithubConfig{}
-	err := b.Config("github", tc)
+	gc := &GithubConfig{}
+	err := b.Config("github", gc)
 	if err != nil {
 		return nil, err
 	}
-	tr := &oauth.Transport{
-		Token: &oauth.Token{AccessToken: tc.Token},
-	}
 
-	t.api = github.NewClient(tr.Client())
+	// Create an oauth2 client
+	ts := oauth2.StaticTokenSource(
+		&oauth2.Token{AccessToken: gc.Token},
+	)
+	tc := oauth2.NewClient(oauth2.NoContext, ts)
+
+	// Create a github client from the oauth2 client
+	t.api = github.NewClient(tc)
 
 	p.RegisterProvider("github.com", t.HandleGithub)
 	p.RegisterProvider("gist.github.com", t.HandleGist)
