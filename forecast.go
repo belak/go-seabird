@@ -20,6 +20,7 @@ type LastAddress struct {
 	Location Location
 }
 
+// DataPoint represents a point at a specific point in time,
 // Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
 // TODO: cleanup
 type DataPoint struct {

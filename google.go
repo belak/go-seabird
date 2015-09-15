@@ -19,7 +19,7 @@ type GooglePlugin struct{}
 type GoogleResponse struct {
 	ResponseData struct {
 		Results []struct {
-			Url   string `json:"unescapedUrl"`
+			URL   string `json:"unescapedUrl"`
 			Title string `json:"titleNoFormatting"`
 		} `json:"results"`
 	} `json:"responseData"`
@@ -75,6 +75,6 @@ func googleSearch(b *bot.Bot, m *irc.Message, service, query string) {
 			return
 		}
 
-		b.MentionReply(m, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].Url)
+		b.MentionReply(m, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].URL)
 	}()
 }

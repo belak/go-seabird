@@ -55,9 +55,9 @@ func (p *LastSeenPlugin) getLastSeen(nick, channel string) string {
 
 	if isActiveTime(lastseen) {
 		return nick + " was last seen at " + formatTime(tm)
-	} else {
-		return nick + " was last seen on " + formatDate(tm) + " at " + formatTime(tm) + " (inactive)"
 	}
+
+	return nick + " was last seen on " + formatDate(tm) + " at " + formatTime(tm) + " (inactive)"
 }
 
 func isActiveTime(lastseen int64) bool {

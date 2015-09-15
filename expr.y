@@ -1,4 +1,4 @@
-// go tool yacc math.y
+// go tool yacc expr.y
 
 %{
 package plugins
@@ -116,7 +116,7 @@ exprlist:
 
 // The parser expects the lexer to return 0 on EOF.  Give it a name
 // for clarity.
-const eof = 0
+const EOF = 0
 
 // The parser uses the type <prefix>Lex as a lexer.  It must provide
 // the methods Lex(*<prefix>SymType) int and Error(string).
@@ -164,8 +164,8 @@ func (x *yyLex) Lex(yylval *yySymType) int {
 		c := x.next()
 		switch c {
 		// If we're at the end
-		case eof:
-			return eof
+		case EOF:
+			return EOF
 
 		// Any punctuation needed for expressions
 		case '+', '-', '*', '/', '%', '^', '(', ')':
@@ -210,14 +210,14 @@ func (x *yyLex) num(c rune, yylval *yySymType) int {
 		add(&b, c)
 	}
 
-	if c != eof {
+	if c != EOF {
 		x.peek = c
 	}
 
 	tmp, err := strconv.ParseFloat(b.String(), 64)
 	if err != nil {
 		log.Printf("bad number %q", b.String())
-		return eof
+		return EOF
 	}
 
 	yylval.num = tmp
@@ -241,7 +241,7 @@ func (x *yyLex) str(c rune, yylval *yySymType) int {
 		add(&b, c)
 	}
 
-	if c != eof {
+	if c != EOF {
 		x.peek = c
 	}
 
@@ -251,14 +251,14 @@ func (x *yyLex) str(c rune, yylval *yySymType) int {
 
 // Return the next rune for the lexer.
 func (x *yyLex) next() rune {
-	if x.peek != eof {
+	if x.peek != EOF {
 		r := x.peek
-		x.peek = eof
+		x.peek = EOF
 		return r
 	}
 
 	if len(x.line) == 0 {
-		return eof
+		return EOF
 	}
 
 	c, size := utf8.DecodeRuneInString(x.line)

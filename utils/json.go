@@ -6,7 +6,7 @@ import (
 	"net/http"
 )
 
-func JsonRequest(i interface{}, format string, v ...interface{}) error {
+func JSONRequest(i interface{}, format string, v ...interface{}) error {
 	resp, err := http.Get(fmt.Sprintf(format, v...))
 	if err != nil {
 		return err

@@ -45,7 +45,7 @@ func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
 		"<domain>",
 		"Runs whois on given domain and returns pastebin URL for results",
 	})
-	b.CommandMux.Event("dnscheck", p.DnsCheck, &bot.HelpInfo{
+	b.CommandMux.Event("dnscheck", p.DNSCheck, &bot.HelpInfo{
 		"<domain>",
 		"Returns DNSCheck URL for domain",
 	})
@@ -199,7 +199,7 @@ func (p *NetToolsPlugin) Whois(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *NetToolsPlugin) DnsCheck(b *bot.Bot, m *irc.Message) {
+func (p *NetToolsPlugin) DNSCheck(b *bot.Bot, m *irc.Message) {
 	// Just for Kaleb
 	go func() {
 		if m.Trailing() == "" {

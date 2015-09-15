@@ -4,8 +4,8 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -57,7 +57,7 @@ func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {
 		msg = "Reloading the gun... "
 	}
 
-	shotsLeft -= 1
+	shotsLeft--
 	if shotsLeft < 1 {
 		b.MentionReply(m, "%sBANG!", msg)
 		b.Writef("KICK %s %s", m.Params[0], m.Prefix.Name)

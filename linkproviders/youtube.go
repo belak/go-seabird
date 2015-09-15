@@ -24,7 +24,7 @@ type YoutubeConfig struct {
 	Key string
 }
 
-// https://github.com/ChimeraCoder/gojson
+// Videos was converted using https://github.com/ChimeraCoder/gojson
 type Videos struct {
 	Items []struct {
 		ContentDetails struct {

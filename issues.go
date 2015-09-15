@@ -14,7 +14,7 @@ func init() {
 }
 
 type IssueResult struct {
-	Url string `json:"html_url"`
+	URL string `json:"html_url"`
 }
 
 type IssuesPlugin struct {
@@ -74,6 +74,6 @@ func (p *IssuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 			b.MentionReply(m, "Error reading server response")
 		}
 
-		b.MentionReply(m, "Issue created. %s", ir.Url)
+		b.MentionReply(m, "Issue created. %s", ir.URL)
 	}()
 }

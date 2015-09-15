@@ -26,7 +26,7 @@ type RedditUser struct {
 
 type RedditSub struct {
 	Data struct {
-		Url         string `json:"url"`
+		URL         string `json:"url"`
 		Subscribers int    `json:"subscribers"`
 		Description string `json:"public_description"`
 		Actives     int    `json:"accounts_active"`
@@ -79,7 +79,7 @@ func redditGetUser(b *bot.Bot, m *irc.Message, url string) bool {
 	}
 
 	ru := &RedditUser{}
-	err := utils.JsonRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
+	err := utils.JSONRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
 	if err != nil {
 		return false
 	}
@@ -102,7 +102,7 @@ func redditGetComment(b *bot.Bot, m *irc.Message, url string) bool {
 	}
 
 	rc := []RedditComment{}
-	err := utils.JsonRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
+	err := utils.JSONRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
 	if err != nil || len(rc) < 1 {
 		return false
 	}
@@ -122,13 +122,13 @@ func redditGetSub(b *bot.Bot, m *irc.Message, url string) bool {
 	}
 
 	rs := &RedditSub{}
-	err := utils.JsonRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
+	err := utils.JSONRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
 	if err != nil {
 		return false
 	}
 
 	// /r/vim - Description description (1 subscriber, 2 actives)
-	b.Reply(m, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.Url, rs.Data.Description, lazyPluralize(rs.Data.Subscribers, "subscriber"), lazyPluralize(rs.Data.Actives, "active"))
+	b.Reply(m, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.URL, rs.Data.Description, lazyPluralize(rs.Data.Subscribers, "subscriber"), lazyPluralize(rs.Data.Actives, "active"))
 
 	return true
 }

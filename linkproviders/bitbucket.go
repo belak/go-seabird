@@ -88,7 +88,7 @@ func bitbucketGetUser(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	user := matches[1]
 
 	bu := &BitbucketUser{}
-	err := utils.JsonRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
+	err := utils.JSONRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
 	if err != nil {
 		return false
 	}
@@ -109,7 +109,7 @@ func bitbucketGetRepo(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	repo := matches[2]
 
 	br := &BitbucketRepo{}
-	err := utils.JsonRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
+	err := utils.JSONRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
 	if err != nil {
 		return false
 	}
@@ -140,7 +140,7 @@ func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	issueNum := matches[3]
 
 	bi := &BitbucketIssue{}
-	err := utils.JsonRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
+	err := utils.JSONRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
 	if err != nil {
 		return false
 	}
@@ -180,7 +180,7 @@ func bitbucketGetPull(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	pullNum := matches[3]
 
 	bpr := &BitbucketPullRequest{}
-	err := utils.JsonRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
+	err := utils.JSONRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
 	if err != nil {
 		return false
 	}

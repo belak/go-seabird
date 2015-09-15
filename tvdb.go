@@ -24,7 +24,7 @@ type TVDBPlugin struct {
 
 type Series struct {
 	XMLName    xml.Name `xml:"Series"`
-	Id         string   `xml:"seriesid"`
+	ID         string   `xml:"seriesid"`
 	Name       string   `xml:"SeriesName"`
 	Network    string   `xml:"Network"`
 	FirstAired string   `xml:"FirstAired"`
@@ -111,7 +111,7 @@ func (p *TVDBPlugin) Search(b *bot.Bot, m *irc.Message) {
 		if series.FirstAired != "" {
 			out += " - " + series.FirstAired
 		}
-		out += " [id: " + series.Id + "]"
+		out += " [id: " + series.ID + "]"
 
 		b.MentionReply(m, "%s", out)
 	}()

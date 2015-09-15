@@ -15,8 +15,8 @@ func init() {
 
 type ShortenResult struct {
 	Kind    string `json:"kind"`
-	Id      string `json:"id"`
-	LongUrl string `json:"longUrl"`
+	ID      string `json:"id"`
+	LongURL string `json:"longUrl"`
 }
 
 type TinyPlugin struct{}
@@ -62,6 +62,6 @@ func Shorten(b *bot.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, sr.Id)
+		b.MentionReply(m, sr.ID)
 	}()
 }
