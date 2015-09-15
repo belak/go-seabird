@@ -14,9 +14,7 @@ func init() {
 	bot.RegisterPlugin("google", NewGooglePlugin)
 }
 
-type GooglePlugin struct{}
-
-type GoogleResponse struct {
+type googleResponse struct {
 	ResponseData struct {
 		Results []struct {
 			URL   string `json:"unescapedUrl"`
@@ -27,25 +25,23 @@ type GoogleResponse struct {
 }
 
 func NewGooglePlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &GooglePlugin{}
-
-	b.CommandMux.Event("g", Web, &bot.HelpInfo{
+	b.CommandMux.Event("g", googleWebCallback, &bot.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google web search result for given query",
 	})
-	b.CommandMux.Event("gi", Image, &bot.HelpInfo{
+	b.CommandMux.Event("gi", googleImageCallback, &bot.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google images search result for given query",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
-func Web(b *bot.Bot, m *irc.Message) {
+func googleWebCallback(b *bot.Bot, m *irc.Message) {
 	googleSearch(b, m, "web", m.Trailing())
 }
 
-func Image(b *bot.Bot, m *irc.Message) {
+func googleImageCallback(b *bot.Bot, m *irc.Message) {
 	googleSearch(b, m, "images", m.Trailing())
 }
 
@@ -63,7 +59,7 @@ func googleSearch(b *bot.Bot, m *irc.Message, service, query string) {
 		}
 		defer resp.Body.Close()
 
-		gr := &GoogleResponse{}
+		gr := &googleResponse{}
 		err = json.NewDecoder(resp.Body).Decode(gr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)

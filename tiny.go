@@ -13,26 +13,22 @@ func init() {
 	bot.RegisterPlugin("tiny", NewTinyPlugin)
 }
 
-type ShortenResult struct {
+type shortenResult struct {
 	Kind    string `json:"kind"`
 	ID      string `json:"id"`
 	LongURL string `json:"longUrl"`
 }
 
-type TinyPlugin struct{}
-
 func NewTinyPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &TinyPlugin{}
-
-	b.CommandMux.Event("tiny", Shorten, &bot.HelpInfo{
+	b.CommandMux.Event("tiny", shorten, &bot.HelpInfo{
 		Usage:       "<url>",
 		Description: "Shortens given URL",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
-func Shorten(b *bot.Bot, m *irc.Message) {
+func shorten(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "URL required")
@@ -55,7 +51,7 @@ func Shorten(b *bot.Bot, m *irc.Message) {
 		}
 		defer resp.Body.Close()
 
-		sr := &ShortenResult{}
+		sr := &shortenResult{}
 		err = json.NewDecoder(resp.Body).Decode(sr)
 		if err != nil {
 			b.MentionReply(m, "Error reading server response")

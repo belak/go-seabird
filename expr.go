@@ -11,20 +11,16 @@ func init() {
 	bot.RegisterPlugin("math", NewMathPlugin)
 }
 
-type MathPlugin struct{}
-
 func NewMathPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &MathPlugin{}
-
-	b.CommandMux.Event("math", p.Expr, &bot.HelpInfo{
+	b.CommandMux.Event("math", exprCallback, &bot.HelpInfo{
 		Usage:       "<expr>",
 		Description: "Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
-func (p *MathPlugin) Expr(b *bot.Bot, m *irc.Message) {
+func exprCallback(b *bot.Bot, m *irc.Message) {
 	val, err := parseExpr(m.Trailing())
 	if err != nil {
 		b.Reply(m, "%s", err.Error())

@@ -1,11 +1,13 @@
+// +build ignore
+
 package plugins
 
 import (
 	"regexp"
 	"strings"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 	"github.com/jmoiron/sqlx"
 )
 

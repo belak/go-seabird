@@ -15,15 +15,10 @@ func init() {
 	bot.RegisterPlugin("forecast", NewForecastPlugin)
 }
 
-type LastAddress struct {
-	Nick     string
-	Location Location
-}
-
 // DataPoint represents a point at a specific point in time,
 // Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
 // TODO: cleanup
-type DataPoint struct {
+type dataPoint struct {
 	Time                   int64
 	Summary                string
 	Icon                   string
@@ -50,10 +45,10 @@ type DataPoint struct {
 	Ozone                  float64
 }
 
-type DataBlock struct {
+type dataBlock struct {
 	Summary string
 	Icon    string
-	Data    []DataPoint
+	Data    []dataPoint
 }
 
 type alert struct {
@@ -62,7 +57,7 @@ type alert struct {
 	URI     string
 }
 
-type Flags struct {
+type flags struct {
 	DarkSkyUnavailable string
 	DarkSkyStations    []string
 	DataPointStations  []string
@@ -74,21 +69,21 @@ type Flags struct {
 	Units              string
 }
 
-type ForecastResponse struct {
+type forecastResponse struct {
 	Latitude  float64
 	Longitude float64
 	Timezone  string
 	Offset    float64
-	Currently DataPoint
-	Minutely  DataBlock
-	Hourly    DataBlock
-	Daily     DataBlock
+	Currently dataPoint
+	Minutely  dataBlock
+	Hourly    dataBlock
+	Daily     dataBlock
 	Alerts    []alert
-	Flags     Flags
+	Flags     flags
 	APICalls  int
 }
 
-type ForecastPlugin struct {
+type forecastPlugin struct {
 	Key string
 	db  *sqlx.DB
 	// CacheDuration string
@@ -96,23 +91,23 @@ type ForecastPlugin struct {
 
 func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
-	p := &ForecastPlugin{db: b.Plugins["db"].(*sqlx.DB)}
+	p := &forecastPlugin{db: b.Plugins["db"].(*sqlx.DB)}
 
 	b.Config("forecast", p)
 
-	b.CommandMux.Event("weather", p.Weather, &bot.HelpInfo{
+	b.CommandMux.Event("weather", p.weatherCallback, &bot.HelpInfo{
 		Usage:       "<location>",
 		Description: "Retrieves current weather for given location",
 	})
-	b.CommandMux.Event("forecast", p.Forecast, &bot.HelpInfo{
+	b.CommandMux.Event("forecast", p.forecastCallback, &bot.HelpInfo{
 		Usage:       "<location>",
 		Description: "Retrieves three-day forecast for given location",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
-func (p *ForecastPlugin) forecastQuery(loc *Location) (*ForecastResponse, error) {
+func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error) {
 	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
 		p.Key,
 		loc.Lat,
@@ -123,7 +118,7 @@ func (p *ForecastPlugin) forecastQuery(loc *Location) (*ForecastResponse, error)
 		return nil, err
 	}
 
-	f := ForecastResponse{}
+	f := forecastResponse{}
 	dec := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 
@@ -135,7 +130,7 @@ func (p *ForecastPlugin) forecastQuery(loc *Location) (*ForecastResponse, error)
 	return &f, nil
 }
 
-func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
+func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 	var err error
 
 	l := m.Trailing()
@@ -171,7 +166,7 @@ func (p *ForecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 	return loc, nil
 }
 
-func (p *ForecastPlugin) Forecast(b *bot.Bot, m *irc.Message) {
+func (p *forecastPlugin) forecastCallback(b *bot.Bot, m *irc.Message) {
 	loc, err := p.getLocation(m)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
@@ -198,7 +193,7 @@ func (p *ForecastPlugin) Forecast(b *bot.Bot, m *irc.Message) {
 	}
 }
 
-func (p *ForecastPlugin) Weather(b *bot.Bot, m *irc.Message) {
+func (p *forecastPlugin) weatherCallback(b *bot.Bot, m *irc.Message) {
 	loc, err := p.getLocation(m)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())

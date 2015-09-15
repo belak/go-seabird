@@ -17,7 +17,7 @@ func init() {
 	bot.RegisterPlugin("wiki", NewWikiPlugin)
 }
 
-type WikiResponse struct {
+type wikiResponse struct {
 	Parse struct {
 		Title string `json:"title"`
 		Text  struct {
@@ -26,24 +26,20 @@ type WikiResponse struct {
 	} `json:"parse"`
 }
 
-type WikiPlugin struct{}
-
 func NewWikiPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &WikiPlugin{}
-
-	b.CommandMux.Event("wiki", Wiki, &bot.HelpInfo{
+	b.CommandMux.Event("wiki", wikiCallback, &bot.HelpInfo{
 		Usage:       "<topic>",
 		Description: "Retrieves first section from most relevant Wikipedia article to given topic",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
 func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func Wiki(b *bot.Bot, m *irc.Message) {
+func wikiCallback(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Query required")
@@ -57,7 +53,7 @@ func Wiki(b *bot.Bot, m *irc.Message) {
 		}
 		defer resp.Body.Close()
 
-		wr := &WikiResponse{}
+		wr := &wikiResponse{}
 		err = json.NewDecoder(resp.Body).Decode(wr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)

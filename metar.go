@@ -15,28 +15,27 @@ func init() {
 	bot.RegisterPlugin("metar", NewMetarPlugin)
 }
 
-type MetarPlugin struct{}
-
 func NewMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &MetarPlugin{}
-
-	b.CommandMux.Event("metar", Metar, &bot.HelpInfo{
+	b.CommandMux.Event("metar", metarCallback, &bot.HelpInfo{
 		Usage:       "<station>",
 		Description: "Gives METAR report for given airport code",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
-func Metar(b *bot.Bot, m *irc.Message) {
+func metarCallback(b *bot.Bot, m *irc.Message) {
 	if !m.FromChannel() {
 		return
 	}
 
-	b.MentionReply(m, "%s", metar(m.Trailing()))
+	b.MentionReply(m, "%s", Metar(m.Trailing()))
 }
 
-func metar(code string) string {
+// Metar is a simple function which takes a string representing the
+// airport code and returns a string representing the response or an
+// error.
+func Metar(code string) string {
 	code = strings.ToUpper(code)
 
 	for _, letter := range code {

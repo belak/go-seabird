@@ -16,12 +16,12 @@ func init() {
 	bot.RegisterPlugin("nettools", NewNetToolsPlugin)
 }
 
-type NetToolsPlugin struct {
+type netToolsPlugin struct {
 	Key string
 }
 
 func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &NetToolsPlugin{}
+	p := &netToolsPlugin{}
 
 	b.Config("net_tools", p)
 
@@ -53,7 +53,7 @@ func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return p, nil
 }
 
-func (p *NetToolsPlugin) RDNS(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) RDNS(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Argument required")
@@ -80,7 +80,7 @@ func (p *NetToolsPlugin) RDNS(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *NetToolsPlugin) Dig(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Dig(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Domain required")
@@ -108,7 +108,7 @@ func (p *NetToolsPlugin) Dig(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *NetToolsPlugin) Ping(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Ping(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Host required")
@@ -131,7 +131,7 @@ func (p *NetToolsPlugin) Ping(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *NetToolsPlugin) Traceroute(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Traceroute(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Host required")
@@ -165,7 +165,7 @@ func (p *NetToolsPlugin) Traceroute(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *NetToolsPlugin) Whois(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Whois(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Domain required")
@@ -199,7 +199,7 @@ func (p *NetToolsPlugin) Whois(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *NetToolsPlugin) DNSCheck(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) DNSCheck(b *bot.Bot, m *irc.Message) {
 	// Just for Kaleb
 	go func() {
 		if m.Trailing() == "" {

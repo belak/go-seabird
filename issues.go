@@ -13,16 +13,16 @@ func init() {
 	bot.RegisterPlugin("issues", NewIssuesPlugin)
 }
 
-type IssueResult struct {
+type issueResult struct {
 	URL string `json:"html_url"`
 }
 
-type IssuesPlugin struct {
+type issuesPlugin struct {
 	Token string
 }
 
 func NewIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &IssuesPlugin{}
+	p := &issuesPlugin{}
 	b.Config("github", p)
 
 	b.CommandMux.Event("issue", p.CreateIssue, &bot.HelpInfo{
@@ -33,7 +33,7 @@ func NewIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return p, nil
 }
 
-func (p *IssuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
+func (p *issuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 	go func() {
 		title := m.Trailing()
 		if title == "" {
@@ -68,7 +68,7 @@ func (p *IssuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 		}
 		defer resp.Body.Close()
 
-		ir := &IssueResult{}
+		ir := &issueResult{}
 		err = json.NewDecoder(resp.Body).Decode(ir)
 		if err != nil {
 			b.MentionReply(m, "Error reading server response")

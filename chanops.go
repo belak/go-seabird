@@ -13,17 +13,14 @@ func init() {
 	bot.RegisterPlugin("chanops", NewChanOpsPlugin)
 }
 
-type ChanOpsPlugin struct{}
-
 func NewChanOpsPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &ChanOpsPlugin{}
-	b.Command("join", "[channel]", p.Join)
-	b.Command("part", "", p.Part)
-	b.Command("say", "[dest] [message]", p.Say)
-	return p, nil
+	b.Command("join", "[channel]", chanopsJoin)
+	b.Command("part", "", chanopsPart)
+	b.Command("say", "[dest] [message]", chanopsSay)
+	return nil, nil
 }
 
-func (p *ChanOpsPlugin) Join(b *bot.Bot, e *irc.Event) {
+func chanopsJoin(b *bot.Bot, e *irc.Event) {
 	if !b.CheckPerm(e.Identity.Nick, "chanops.join") {
 		b.MentionReply(e, "You don't have permission to do that!")
 		return
@@ -38,7 +35,7 @@ func (p *ChanOpsPlugin) Join(b *bot.Bot, e *irc.Event) {
 	b.C.Writef("JOIN %s", ch)
 }
 
-func (p *ChanOpsPlugin) Part(b *bot.Bot, e *irc.Event) {
+func chanopsPart(b *bot.Bot, e *irc.Event) {
 	if !b.CheckPerm(e.Identity.Nick, "chanops.part") {
 		b.MentionReply(e, "You don't have permission to do that!")
 		return
@@ -52,7 +49,7 @@ func (p *ChanOpsPlugin) Part(b *bot.Bot, e *irc.Event) {
 	b.C.Writef("PART %s :%s", e.Args[0], msg)
 }
 
-func (p *ChanOpsPlugin) Say(b *bot.Bot, e *irc.Event) {
+func chanopsSay(b *bot.Bot, e *irc.Event) {
 	if !b.CheckPerm(e.Identity.Nick, "chanops.say") {
 		b.MentionReply(e, "You don't have permission to do that!")
 		return

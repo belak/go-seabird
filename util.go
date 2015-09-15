@@ -7,9 +7,7 @@ import (
 	"net/url"
 )
 
-type LocationResult struct{}
-
-type LocationResponse struct {
+type locationResponse struct {
 	Results []struct {
 		Address  string `json:"formatted_address"`
 		Geometry struct {
@@ -22,12 +20,16 @@ type LocationResponse struct {
 	Status string `json:"status"`
 }
 
+// Location represents basic location data as queried from the Google
+// geocoding api
 type Location struct {
 	Address string
 	Lat     float64
 	Lon     float64
 }
 
+// FetchLocation takes a string and attempts to find a single location
+// using Google's geocoder
 func FetchLocation(where string) (*Location, error) {
 	if where == "" {
 		return nil, errors.New("Empty query string")
@@ -45,7 +47,7 @@ func FetchLocation(where string) (*Location, error) {
 		return nil, err
 	}
 
-	loc := LocationResponse{}
+	loc := locationResponse{}
 	dec := json.NewDecoder(r.Body)
 	defer r.Body.Close()
 	dec.Decode(&loc)

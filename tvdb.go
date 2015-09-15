@@ -18,11 +18,11 @@ func init() {
 	bot.RegisterPlugin("tvdb", NewTVDBPlugin)
 }
 
-type TVDBPlugin struct {
+type tvdbPlugin struct {
 	Key string
 }
 
-type Series struct {
+type tvdbSeries struct {
 	XMLName    xml.Name `xml:"Series"`
 	ID         string   `xml:"seriesid"`
 	Name       string   `xml:"SeriesName"`
@@ -30,12 +30,12 @@ type Series struct {
 	FirstAired string   `xml:"FirstAired"`
 }
 
-type TVDBResponse struct {
-	XMLName xml.Name `xml:"Data"`
-	Series  []Series `xml:"Series"`
+type tvdbResponse struct {
+	XMLName xml.Name     `xml:"Data"`
+	Series  []tvdbSeries `xml:"Series"`
 }
 
-type TVDBZipResponse struct {
+type tvdbZipResponse struct {
 	XMLName xml.Name `xml:"Data"`
 	Series  struct {
 		XMLName    xml.Name `xml:"Series"`
@@ -49,7 +49,7 @@ type TVDBZipResponse struct {
 }
 
 func NewTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &TVDBPlugin{}
+	p := &tvdbPlugin{}
 
 	b.Config("tvdb", p)
 
@@ -65,7 +65,7 @@ func NewTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return p, nil
 }
 
-func (p *TVDBPlugin) Search(b *bot.Bot, m *irc.Message) {
+func (p *tvdbPlugin) Search(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Series required")
@@ -91,7 +91,7 @@ func (p *TVDBPlugin) Search(b *bot.Bot, m *irc.Message) {
 		xmlData = strings.Replace(xmlData, "&lt;", "<", -1)
 		xmlData = strings.Replace(xmlData, "&gt;", ">", -1)
 
-		tr := &TVDBResponse{}
+		tr := &tvdbResponse{}
 		err = xml.NewDecoder(strings.NewReader(xmlData)).Decode(tr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
@@ -117,7 +117,7 @@ func (p *TVDBPlugin) Search(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *TVDBPlugin) Series(b *bot.Bot, m *irc.Message) {
+func (p *tvdbPlugin) Series(b *bot.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Series required")
@@ -169,7 +169,7 @@ func (p *TVDBPlugin) Series(b *bot.Bot, m *irc.Message) {
 				data = strings.Replace(data, "&lt;", "<", -1)
 				data = strings.Replace(data, "&gt;", ">", -1)
 
-				v := TVDBZipResponse{}
+				v := tvdbZipResponse{}
 				err = xml.Unmarshal([]byte(data), &v)
 				if err != nil {
 					b.MentionReply(m, "%s", err)

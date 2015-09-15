@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -17,15 +17,12 @@ func init() {
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-type DicePlugin struct{}
-
 func NewDicePlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &DicePlugin{}
-	b.MentionMux.Event(p.Dice)
-	return p, nil
+	b.MentionMux.Event(diceCallback)
+	return nil, nil
 }
 
-func (p *DicePlugin) Dice(b *bot.Bot, m *irc.Message) {
+func diceCallback(b *bot.Bot, m *irc.Message) {
 	var rolls []string
 	totalCount := 0
 

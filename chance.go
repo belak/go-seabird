@@ -17,29 +17,29 @@ var coinNames = []string{
 	"tails",
 }
 
-type ChancePlugin struct {
+type chancePlugin struct {
 	RouletteGunSize   int
 	rouletteShotsLeft map[string]int
 }
 
 func NewChancePlugin(b *bot.Bot) (bot.Plugin, error) {
-	p := &ChancePlugin{
+	p := &chancePlugin{
 		6,
 		make(map[string]int),
 	}
 
-	b.CommandMux.Event("roulette", p.Roulette, &bot.HelpInfo{
+	b.CommandMux.Event("roulette", p.rouletteCallback, &bot.HelpInfo{
 		Description: "Click... click... BANG!",
 	})
-	b.CommandMux.Event("coin", p.Coin, &bot.HelpInfo{
+	b.CommandMux.Event("coin", p.coinCallback, &bot.HelpInfo{
 		Usage:       "[heads|tails]",
 		Description: "Guess the coin flip. If you guess wrong, you're out!",
 	})
 
-	return p, nil
+	return nil, nil
 }
 
-func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {
+func (p *chancePlugin) rouletteCallback(b *bot.Bot, m *irc.Message) {
 	if !m.FromChannel() {
 		return
 	}
@@ -68,7 +68,7 @@ func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {
 	p.rouletteShotsLeft[m.Params[0]] = shotsLeft
 }
 
-func (p *ChancePlugin) Coin(b *bot.Bot, m *irc.Message) {
+func (p *chancePlugin) coinCallback(b *bot.Bot, m *irc.Message) {
 	if !m.FromChannel() {
 		return
 	}

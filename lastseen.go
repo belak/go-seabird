@@ -14,24 +14,24 @@ func init() {
 	bot.RegisterPlugin("lastseen", NewLastSeenPlugin)
 }
 
-type LastSeenPlugin struct {
+type lastSeenPlugin struct {
 	db *sqlx.DB
 }
 
 func NewLastSeenPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
-	p := &LastSeenPlugin{b.Plugins["db"].(*sqlx.DB)}
+	p := &lastSeenPlugin{b.Plugins["db"].(*sqlx.DB)}
 
-	b.CommandMux.Event("active", p.Active, &bot.HelpInfo{
+	b.CommandMux.Event("active", p.activeCallback, &bot.HelpInfo{
 		Usage:       "<nick>",
 		Description: "Reports the last time user was seen",
 	})
-	b.BasicMux.Event("PRIVMSG", p.Msg)
+	b.BasicMux.Event("PRIVMSG", p.msgCallback)
 
 	return p, nil
 }
 
-func (p *LastSeenPlugin) Active(b *bot.Bot, m *irc.Message) {
+func (p *lastSeenPlugin) activeCallback(b *bot.Bot, m *irc.Message) {
 	nick := m.Trailing()
 	if nick == "" {
 		b.MentionReply(m, "Nick required")
@@ -44,7 +44,7 @@ func (p *LastSeenPlugin) Active(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s", msg)
 }
 
-func (p *LastSeenPlugin) getLastSeen(nick, channel string) string {
+func (p *lastSeenPlugin) getLastSeen(nick, channel string) string {
 	var lastseen int64
 	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
 	if err != nil {
@@ -75,7 +75,7 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), t.Month().String(), t.Year())
 }
 
-func (p *LastSeenPlugin) isActive(nick, channel string) bool {
+func (p *lastSeenPlugin) isActive(nick, channel string) bool {
 	var lastseen int64
 	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
 	if err != nil {
@@ -85,7 +85,7 @@ func (p *LastSeenPlugin) isActive(nick, channel string) bool {
 	return isActiveTime(lastseen)
 }
 
-func (p *LastSeenPlugin) Msg(b *bot.Bot, m *irc.Message) {
+func (p *lastSeenPlugin) msgCallback(b *bot.Bot, m *irc.Message) {
 	if len(m.Params) < 2 || !m.FromChannel() || m.Prefix.Name == "" {
 		return
 	}
@@ -97,7 +97,7 @@ func (p *LastSeenPlugin) Msg(b *bot.Bot, m *irc.Message) {
 }
 
 // Thanks to @belak for the comments
-func (p *LastSeenPlugin) updateLastSeen(nick, channel string) {
+func (p *lastSeenPlugin) updateLastSeen(nick, channel string) {
 	name := strings.ToLower(nick)
 	now := time.Now().Unix()
 

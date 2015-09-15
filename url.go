@@ -34,20 +34,25 @@ var client = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
+// LinkProvider is a callback to be registered with the URLPlugin. It
+// takes the same parameters as a normal IRC callback in addition to a
+// *url.URL representing the found url. It returns true if it was able
+// to handle that url and false otherwise.
+type LinkProvider func(b *bot.Bot, m *irc.Message, url *url.URL) bool
+
+// URLPlugin stores all registeres URL LinkProviders
 type URLPlugin struct {
 	providers map[string][]LinkProvider
 }
-
-type LinkProvider func(b *bot.Bot, m *irc.Message, url *url.URL) bool
 
 func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &URLPlugin{
 		providers: make(map[string][]LinkProvider),
 	}
 
-	b.BasicMux.Event("PRIVMSG", p.URLTitle)
+	b.BasicMux.Event("PRIVMSG", p.callback)
 
-	b.CommandMux.Event("down", IsItDown, &bot.HelpInfo{
+	b.CommandMux.Event("down", isItDownCallback, &bot.HelpInfo{
 		Usage:       "<website>",
 		Description: "Checks if given website is down",
 	})
@@ -55,13 +60,14 @@ func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return p, nil
 }
 
+// RegisterProvider registers a LinkProvider for a specific domain.
 func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
 	p.providers[domain] = append(p.providers[domain], f)
 
 	return nil
 }
 
-func (p *URLPlugin) URLTitle(b *bot.Bot, m *irc.Message) {
+func (p *URLPlugin) callback(b *bot.Bot, m *irc.Message) {
 	for _, rawurl := range urlRegex.FindAllString(m.Trailing(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)
@@ -131,7 +137,7 @@ func defaultLinkProvider(url string, b *bot.Bot, m *irc.Message) bool {
 	return ok
 }
 
-func IsItDown(b *bot.Bot, m *irc.Message) {
+func isItDownCallback(b *bot.Bot, m *irc.Message) {
 	go func() {
 		url, err := url.Parse(m.Trailing())
 		if err != nil {
