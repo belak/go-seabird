@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 // CommandMux is a simple IRC event multiplexer, based on the BasicMux.
@@ -26,7 +26,7 @@ type CommandMux struct {
 	cmdHelp map[string]*HelpInfo
 }
 
-// This will create an initialized BasicMux with no handlers.
+// NewCommandMux will create an initialized BasicMux with no handlers.
 func NewCommandMux(prefix string) *CommandMux {
 	m := &CommandMux{
 		NewBasicMux(),
@@ -54,7 +54,7 @@ func (m *CommandMux) help(b *Bot, msg *irc.Message) {
 		// Sort everything
 		sort.Strings(keys)
 
-		if MessageFromChannel(msg) {
+		if msg.FromChannel() {
 			// If they said "!help" in a channel, list all available commands
 			b.Reply(msg, "Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
 		} else {
@@ -66,7 +66,7 @@ func (m *CommandMux) help(b *Bot, msg *irc.Message) {
 		if help == nil {
 			b.Reply(msg, "There is no help available for command %q", cmd)
 		} else {
-			lines := help.Format(m.prefix, cmd)
+			lines := help.format(m.prefix, cmd)
 			for _, line := range lines {
 				b.Reply(msg, "%s", line)
 			}
@@ -76,7 +76,7 @@ func (m *CommandMux) help(b *Bot, msg *irc.Message) {
 	}
 }
 
-func (h *HelpInfo) Format(prefix, command string) []string {
+func (h *HelpInfo) format(prefix, command string) []string {
 	if h.Usage == "" && h.Description == "" {
 		return []string{"There is no help available for command " + command}
 	}
@@ -94,7 +94,7 @@ func (h *HelpInfo) Format(prefix, command string) []string {
 	return ret
 }
 
-// CommandMux.Event will register a Handler
+// Event will register a Handler as both a private and public command
 func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
 	m.private.Event(c, h)
 	m.public.Event(c, h)
@@ -102,12 +102,14 @@ func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
 	m.cmdHelp[c] = help
 }
 
+// Channel will register a handler as a public command
 func (m *CommandMux) Channel(c string, h HandlerFunc, help *HelpInfo) {
 	m.public.Event(c, h)
 
 	m.cmdHelp[c] = help
 }
 
+// Private will register a handler as a private command
 func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 	m.private.Event(c, h)
 
@@ -141,7 +143,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 
 	newEvent.Command = msgParts[0][len(m.prefix):]
 
-	if MessageFromChannel(newEvent) {
+	if newEvent.FromChannel() {
 		m.public.HandleEvent(b, newEvent)
 	} else {
 		m.private.HandleEvent(b, newEvent)
