@@ -5,7 +5,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 // MentionMux is a simple IRC event multiplexer, based on a slice of Handlers
@@ -18,7 +18,7 @@ type MentionMux struct {
 	lock     *sync.RWMutex
 }
 
-// This will create an initialized MentionMux with no handlers.
+// NewMentionMux will create an initialized MentionMux with no handlers.
 func NewMentionMux() *MentionMux {
 	return &MentionMux{
 		nil,
@@ -26,7 +26,7 @@ func NewMentionMux() *MentionMux {
 	}
 }
 
-// MentionMux.Event will register a Handler
+// Event will register a Handler
 func (m *MentionMux) Event(h HandlerFunc) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -42,7 +42,7 @@ func (m *MentionMux) HandleEvent(b *Bot, msg *irc.Message) {
 	}
 
 	lastArg := msg.Trailing()
-	nick := b.currentNick
+	nick := b.CurrentNick()
 
 	// We only handle this event if it starts with the
 	// current bot's nick followed by punctuation

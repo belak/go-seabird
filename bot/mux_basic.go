@@ -3,7 +3,7 @@ package bot
 import (
 	"sync"
 
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 // BasicMux is a simple IRC event multiplexer.
@@ -17,7 +17,7 @@ type BasicMux struct {
 	mu *sync.Mutex
 }
 
-// This will create an initialized BasicMux with no handlers.
+// NewBasicMux will create an initialized BasicMux with no handlers.
 func NewBasicMux() *BasicMux {
 	return &BasicMux{
 		make(map[string][]HandlerFunc),
@@ -25,7 +25,7 @@ func NewBasicMux() *BasicMux {
 	}
 }
 
-// BasicMux.Event will register a Handler
+// Event will register a Handler
 func (mux *BasicMux) Event(c string, h HandlerFunc) {
 	mux.mu.Lock()
 	defer mux.mu.Unlock()

@@ -1,6 +1,6 @@
 package bot
 
-import "github.com/belak/sorcix-irc"
+import "github.com/belak/irc"
 
 // Handler is an interface representing objects which can be
 // registered to serve a particular Event.Command or subcommand in the

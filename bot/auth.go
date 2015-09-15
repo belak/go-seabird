@@ -1,7 +1,7 @@
 package bot
 
 import (
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 // AuthUser is the user returned by an AuthProvider's LookupUser
