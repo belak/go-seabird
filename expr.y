@@ -181,13 +181,14 @@ func (x *yyLex) Lex(yylval *yySymType) int {
 		default:
 			if unicode.IsSpace(c) {
 				// Clear out whitespace
+				continue
 			} else if unicode.IsLetter(c) {
 				return x.str(c, yylval)
 			} else if unicode.IsNumber(c) {
 				return x.num(c, yylval)
-			} else {
-				log.Printf("unrecognized character %q", c)
 			}
+
+			log.Printf("unrecognized character %q", c)
 		}
 	}
 }
