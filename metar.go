@@ -8,7 +8,7 @@ import (
 	"unicode"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -29,7 +29,7 @@ func NewMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
 }
 
 func Metar(b *bot.Bot, m *irc.Message) {
-	if !bot.MessageFromChannel(m) {
+	if !m.FromChannel() {
 		return
 	}
 

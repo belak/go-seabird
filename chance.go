@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -40,7 +40,7 @@ func NewChancePlugin(b *bot.Bot) (bot.Plugin, error) {
 }
 
 func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {
-	if !bot.MessageFromChannel(m) {
+	if !m.FromChannel() {
 		return
 	}
 
@@ -69,7 +69,7 @@ func (p *ChancePlugin) Roulette(b *bot.Bot, m *irc.Message) {
 }
 
 func (p *ChancePlugin) Coin(b *bot.Bot, m *irc.Message) {
-	if !bot.MessageFromChannel(m) {
+	if !m.FromChannel() {
 		return
 	}
 

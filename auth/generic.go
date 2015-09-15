@@ -15,7 +15,7 @@ import (
 	"labix.org/v2/mgo/bson"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 func init() {

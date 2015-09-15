@@ -7,7 +7,7 @@ import (
 	"unicode"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -123,7 +123,7 @@ func (p *KarmaPlugin) BottomKarma(b *bot.Bot, m *irc.Message) {
 }
 
 func (p *KarmaPlugin) Msg(b *bot.Bot, m *irc.Message) {
-	if len(m.Params) < 2 || !bot.MessageFromChannel(m) {
+	if len(m.Params) < 2 || !m.FromChannel() {
 		return
 	}
 

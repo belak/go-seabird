@@ -6,7 +6,7 @@ import (
 	"time"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -86,7 +86,7 @@ func (p *LastSeenPlugin) isActive(nick, channel string) bool {
 }
 
 func (p *LastSeenPlugin) Msg(b *bot.Bot, m *irc.Message) {
-	if len(m.Params) < 2 || !bot.MessageFromChannel(m) || m.Prefix.Name == "" {
+	if len(m.Params) < 2 || !m.FromChannel() || m.Prefix.Name == "" {
 		return
 	}
 

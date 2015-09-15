@@ -14,7 +14,7 @@ import (
 	"golang.org/x/net/html/atom"
 
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 func init() {

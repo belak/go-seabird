@@ -2,7 +2,7 @@ package plugins
 
 import (
 	"github.com/belak/seabird/bot"
-	"github.com/belak/sorcix-irc"
+	"github.com/belak/irc"
 )
 
 func init() {
