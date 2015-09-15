@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -25,8 +25,8 @@ func NewTinyPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &TinyPlugin{}
 
 	b.CommandMux.Event("tiny", Shorten, &bot.HelpInfo{
-		"<url>",
-		"Shortens given URL",
+		Usage:       "<url>",
+		Description: "Shortens given URL",
 	})
 
 	return p, nil

@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -30,12 +30,12 @@ func NewGooglePlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &GooglePlugin{}
 
 	b.CommandMux.Event("g", Web, &bot.HelpInfo{
-		"<query>",
-		"Retrieves top Google web search result for given query",
+		Usage:       "<query>",
+		Description: "Retrieves top Google web search result for given query",
 	})
 	b.CommandMux.Event("gi", Image, &bot.HelpInfo{
-		"<query>",
-		"Retrieves top Google images search result for given query",
+		Usage:       "<query>",
+		Description: "Retrieves top Google images search result for given query",
 	})
 
 	return p, nil

@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -54,12 +54,12 @@ func NewTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.Config("tvdb", p)
 
 	b.CommandMux.Event("tvdb", p.Search, &bot.HelpInfo{
-		"<series>",
-		"Gives info on TVDB series, including TVDB ID",
+		Usage:       "<series>",
+		Description: "Gives info on TVDB series, including TVDB ID",
 	})
 	b.CommandMux.Event("series", p.Series, &bot.HelpInfo{
-		"<series_id>",
-		"Gives expanded info on TVDB series using TVDB ID",
+		Usage:       "<series_id>",
+		Description: "Gives expanded info on TVDB series using TVDB ID",
 	})
 
 	return p, nil

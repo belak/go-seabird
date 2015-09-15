@@ -60,7 +60,7 @@ var yyToknames = [...]string{
 }
 var yyStatenames = [...]string{}
 
-const yyEOFCode = 1
+const yyEofCode = 1
 const yyErrCode = 2
 const yyMaxDepth = 200
 
@@ -605,7 +605,7 @@ yydefault:
 			if yyDebug >= 2 {
 				__yyfmt__.Printf("error recovery discards %s\n", yyTokname(yytoken))
 			}
-			if yytoken == yyEOFCode {
+			if yytoken == yyEofCode {
 				goto ret1
 			}
 			yychar = -1

@@ -13,8 +13,8 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -48,8 +48,8 @@ func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.BasicMux.Event("PRIVMSG", p.URLTitle)
 
 	b.CommandMux.Event("down", IsItDown, &bot.HelpInfo{
-		"<website>",
-		"Checks if given website is down",
+		Usage:       "<website>",
+		Description: "Checks if given website is down",
 	})
 
 	return p, nil

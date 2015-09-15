@@ -3,8 +3,8 @@ package plugins
 //go:generate go tool yacc -o expr_y.go expr.y
 
 import (
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -17,8 +17,8 @@ func NewMathPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &MathPlugin{}
 
 	b.CommandMux.Event("math", p.Expr, &bot.HelpInfo{
-		"<expr>",
-		"Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
+		Usage:       "<expr>",
+		Description: "Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
 
 	return p, nil

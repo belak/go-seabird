@@ -8,8 +8,8 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 	"github.com/yhat/scrape"
 )
 
@@ -32,8 +32,8 @@ func NewWikiPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &WikiPlugin{}
 
 	b.CommandMux.Event("wiki", Wiki, &bot.HelpInfo{
-		"<topic>",
-		"Retrieves first section from most relevant Wikipedia article to given topic",
+		Usage:       "<topic>",
+		Description: "Retrieves first section from most relevant Wikipedia article to given topic",
 	})
 
 	return p, nil

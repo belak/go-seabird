@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -101,12 +101,12 @@ func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.Config("forecast", p)
 
 	b.CommandMux.Event("weather", p.Weather, &bot.HelpInfo{
-		"<location>",
-		"Retrieves current weather for given location",
+		Usage:       "<location>",
+		Description: "Retrieves current weather for given location",
 	})
 	b.CommandMux.Event("forecast", p.Forecast, &bot.HelpInfo{
-		"<location>",
-		"Retrieves three-day forecast for given location",
+		Usage:       "<location>",
+		Description: "Retrieves three-day forecast for given location",
 	})
 
 	return p, nil

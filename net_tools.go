@@ -8,8 +8,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -26,28 +26,28 @@ func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.Config("net_tools", p)
 
 	b.CommandMux.Event("rdns", p.RDNS, &bot.HelpInfo{
-		"<ip>",
-		"Does a reverse DNS lookup on the given IP",
+		Usage:       "<ip>",
+		Description: "Does a reverse DNS lookup on the given IP",
 	})
 	b.CommandMux.Event("dig", p.Dig, &bot.HelpInfo{
-		"<domain>",
-		"Retrieves IP records for given domain",
+		Usage:       "<domain>",
+		Description: "Retrieves IP records for given domain",
 	})
 	b.CommandMux.Event("ping", p.Ping, &bot.HelpInfo{
-		"<host>",
-		"Pings given host once",
+		Usage:       "<host>",
+		Description: "Pings given host once",
 	})
 	b.CommandMux.Event("traceroute", p.Traceroute, &bot.HelpInfo{
-		"<host>",
-		"Runs traceroute on given host and returns pastebin URL for results",
+		Usage:       "<host>",
+		Description: "Runs traceroute on given host and returns pastebin URL for results",
 	})
 	b.CommandMux.Event("whois", p.Whois, &bot.HelpInfo{
-		"<domain>",
-		"Runs whois on given domain and returns pastebin URL for results",
+		Usage:       "<domain>",
+		Description: "Runs whois on given domain and returns pastebin URL for results",
 	})
 	b.CommandMux.Event("dnscheck", p.DNSCheck, &bot.HelpInfo{
-		"<domain>",
-		"Returns DNSCheck URL for domain",
+		Usage:       "<domain>",
+		Description: "Returns DNSCheck URL for domain",
 	})
 
 	return p, nil

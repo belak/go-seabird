@@ -32,8 +32,8 @@ func NewChancePlugin(b *bot.Bot) (bot.Plugin, error) {
 		Description: "Click... click... BANG!",
 	})
 	b.CommandMux.Event("coin", p.Coin, &bot.HelpInfo{
-		"[heads|tails]",
-		"Guess the coin flip. If you guess wrong, you're out!",
+		Usage:       "[heads|tails]",
+		Description: "Guess the coin flip. If you guess wrong, you're out!",
 	})
 
 	return p, nil

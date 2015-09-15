@@ -7,8 +7,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -21,8 +21,8 @@ func NewMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &MetarPlugin{}
 
 	b.CommandMux.Event("metar", Metar, &bot.HelpInfo{
-		"<station>",
-		"Gives METAR report for given airport code",
+		Usage:       "<station>",
+		Description: "Gives METAR report for given airport code",
 	})
 
 	return p, nil

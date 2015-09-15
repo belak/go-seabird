@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -31,8 +31,8 @@ func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &KarmaPlugin{b.Plugins["db"].(*sqlx.DB)}
 
 	b.CommandMux.Event("karma", p.Karma, &bot.HelpInfo{
-		"<nick>",
-		"Gives karma for given user",
+		Usage:       "<nick>",
+		Description: "Gives karma for given user",
 	})
 	b.CommandMux.Event("topkarma", p.TopKarma, &bot.HelpInfo{
 		Description: "Reports the user with the most karma",

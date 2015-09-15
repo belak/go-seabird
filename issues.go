@@ -5,8 +5,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 )
 
 func init() {
@@ -26,8 +26,8 @@ func NewIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.Config("github", p)
 
 	b.CommandMux.Event("issue", p.CreateIssue, &bot.HelpInfo{
-		"<issue title>",
-		"Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
+		Usage:       "<issue title>",
+		Description: "Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
 	})
 
 	return p, nil

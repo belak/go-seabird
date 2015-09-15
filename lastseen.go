@@ -5,8 +5,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/belak/seabird/bot"
 	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -23,8 +23,8 @@ func NewLastSeenPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &LastSeenPlugin{b.Plugins["db"].(*sqlx.DB)}
 
 	b.CommandMux.Event("active", p.Active, &bot.HelpInfo{
-		"<nick>",
-		"Reports the last time user was seen",
+		Usage:       "<nick>",
+		Description: "Reports the last time user was seen",
 	})
 	b.BasicMux.Event("PRIVMSG", p.Msg)
 
