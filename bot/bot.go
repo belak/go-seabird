@@ -3,7 +3,9 @@ package bot
 import (
 	"crypto/tls"
 	"fmt"
+	"io"
 	"log"
+	"net"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nightlyone/lockfile"
@@ -255,23 +257,25 @@ func (b *Bot) Run() error {
 		defer l.Unlock()
 	}
 
+	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
+	var c io.ReadWriteCloser
 	if b.config.TLS {
 		conf := &tls.Config{
 			InsecureSkipVerify: b.config.TLSNoVerify,
 		}
 
-		b.conn, err = irc.DialTLS(b.config.Host, conf, b.config.Nick, b.config.User, b.config.Name, b.config.Pass)
-		if err != nil {
-			return err
-		}
-
-		return b.mainLoop()
+		c, err = tls.Dial("tcp", b.config.Host, conf)
+	} else {
+		c, err = net.Dial("tcp", b.config.Host)
 	}
 
-	b.conn, err = irc.Dial(b.config.Host, b.config.Nick, b.config.User, b.config.Name, b.config.Pass)
 	if err != nil {
 		return err
 	}
 
+	// Create a client from the connection we've just opened
+	b.conn = irc.NewClient(c, b.config.Nick, b.config.User, b.config.Name, b.config.Pass)
+
+	// Start the main loop
 	return b.mainLoop()
 }
