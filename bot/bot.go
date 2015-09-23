@@ -2,6 +2,7 @@ package bot
 
 import (
 	"crypto/tls"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -49,7 +50,8 @@ type Bot struct {
 	md         toml.MetaData
 
 	// Internal things
-	conn           *irc.Client
+	conn           *irc.Conn
+	currentNick    string
 	config         *coreConfig
 	err            error
 	loadingPlugins map[string]bool
@@ -66,6 +68,7 @@ func NewBot(conf string) (*Bot, error) {
 		make(map[string]toml.Primitive),
 		toml.MetaData{},
 		nil,
+		"",
 		&coreConfig{},
 		nil,
 		make(map[string]bool),
@@ -104,7 +107,7 @@ func NewBot(conf string) (*Bot, error) {
 
 // CurrentNick returns the current nick of the bot.
 func (b *Bot) CurrentNick() string {
-	return b.conn.CurrentNick()
+	return b.currentNick
 }
 
 // Config will decode the config section for the given name into the
@@ -127,14 +130,54 @@ func (b *Bot) Send(m *irc.Message) {
 
 // Reply to an irc.Message with a convenience wrapper around
 // fmt.Sprintf
-func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) {
-	b.conn.Reply(m, format, v...)
+func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
+	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
+		return errors.New("Invalid IRC message")
+	}
+
+	target := m.Prefix.Name
+	if m.FromChannel() {
+		target = m.Params[0]
+	}
+
+	b.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
+		Command: "PRIVMSG",
+		Params: []string{
+			target,
+			fmt.Sprintf(format, v...),
+		},
+	})
+
+	return nil
 }
 
-// MentionReply acts the same as Bot.Reply but it will prefix it with the
-// user's nick if we are in a channel.
-func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) {
-	b.conn.MentionReply(m, format, v...)
+// MentionReply acts the same as Bot.Reply but it will prefix it with
+// the user's nick if we are in a channel.
+func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) error {
+	if m.FromChannel() {
+		format = "%s: " + format
+		v = prepend(v, m.Prefix.Name)
+	}
+
+	return b.Reply(m, format, v...)
+}
+
+// CTCPReply is a convenience function to respond to CTCP requests.
+func (b *Bot) CTCPReply(m *irc.Message, format string, v ...interface{}) error {
+	if m.Command != "CTCP" {
+		return errors.New("Invalid CTCP message")
+	}
+
+	b.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
+		Command: "NOTICE",
+		Params: []string{
+			m.Prefix.Name,
+			fmt.Sprintf(format, v...),
+		},
+	})
+	return nil
 }
 
 // HasPerm is a convenience function for checking a user's permissions
@@ -145,11 +188,38 @@ func (b *Bot) HasPerm(m *irc.Message, perm string) bool {
 }
 
 func (b *Bot) mainLoop() error {
+	//, b.config.Nick, b.config.User, b.config.Name, b.config.Pass)
+	// Send the initial connection info
+	if len(b.config.Pass) > 0 {
+		b.conn.Writef("PASS %s", b.config.Pass)
+	}
+
+	// Set the nick setting as the current nick
+	b.currentNick = b.config.Nick
+
+	b.conn.Writef("NICK %s", b.config.Nick)
+	b.conn.Writef("USER %s 0.0.0.0 0.0.0.0 :%s", b.config.User, b.config.Name)
+
 	var m *irc.Message
 	for {
 		m, b.err = b.conn.ReadMessage()
 		if b.err != nil {
 			break
+		}
+
+		// Internal handlers to make sure we track the
+		// currentNick correctly and send PONGs
+		if m.Command == "NICK" {
+			if m.Prefix.Name == b.currentNick && len(m.Params) > 0 {
+				b.currentNick = m.Params[0]
+			}
+		} else if m.Command == "PING" {
+			b.conn.Writef("PONG :%s", m.Trailing())
+		} else if m.Command == "001" {
+			b.currentNick = m.Params[0]
+		} else if m.Command == "437" || m.Command == "433" {
+			b.currentNick = b.currentNick + "_"
+			b.conn.Writef("NICK %s", b.currentNick)
 		}
 
 		log.Println(m)
@@ -274,7 +344,11 @@ func (b *Bot) Run() error {
 	}
 
 	// Create a client from the connection we've just opened
-	b.conn = irc.NewClient(c, b.config.Nick, b.config.User, b.config.Name, b.config.Pass)
+	b.conn = irc.NewConn(c)
+
+	b.conn.DebugCallback = func(line string) {
+		log.Println(line)
+	}
 
 	// Start the main loop
 	return b.mainLoop()
