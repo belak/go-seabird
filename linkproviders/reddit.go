@@ -4,17 +4,17 @@ import (
 	"net/url"
 	"regexp"
 
+	"github.com/belak/irc"
 	"github.com/belak/seabird-plugins"
 	"github.com/belak/seabird-plugins/utils"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/irc"
 )
 
 func init() {
 	bot.RegisterPlugin("url/reddit", NewRedditProvider)
 }
 
-type RedditUser struct {
+type redditUser struct {
 	Data struct {
 		Name         string `json:"name"`
 		LinkKarma    int    `json:"link_karma"`
@@ -24,7 +24,7 @@ type RedditUser struct {
 	} `json:"data"`
 }
 
-type RedditSub struct {
+type redditSub struct {
 	Data struct {
 		URL         string `json:"url"`
 		Subscribers int    `json:"subscribers"`
@@ -33,7 +33,7 @@ type RedditSub struct {
 	} `json:"data"`
 }
 
-type RedditComment struct {
+type redditComment struct {
 	Data struct {
 		Children []struct {
 			Data struct {
@@ -56,11 +56,11 @@ func NewRedditProvider(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)
 
-	p.RegisterProvider("reddit.com", HandleReddit)
+	p.RegisterProvider("reddit.com", redditCallback)
 	return nil, nil
 }
 
-func HandleReddit(b *bot.Bot, m *irc.Message, u *url.URL) bool {
+func redditCallback(b *bot.Bot, m *irc.Message, u *url.URL) bool {
 	if redditUserRegex.MatchString(u.Path) {
 		return redditGetUser(b, m, u.Path)
 	} else if redditCommentRegex.MatchString(u.Path) {
@@ -78,7 +78,7 @@ func redditGetUser(b *bot.Bot, m *irc.Message, url string) bool {
 		return false
 	}
 
-	ru := &RedditUser{}
+	ru := &redditUser{}
 	err := utils.JSONRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
 	if err != nil {
 		return false
@@ -101,7 +101,7 @@ func redditGetComment(b *bot.Bot, m *irc.Message, url string) bool {
 		return false
 	}
 
-	rc := []RedditComment{}
+	rc := []redditComment{}
 	err := utils.JSONRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
 	if err != nil || len(rc) < 1 {
 		return false
@@ -121,7 +121,7 @@ func redditGetSub(b *bot.Bot, m *irc.Message, url string) bool {
 		return false
 	}
 
-	rs := &RedditSub{}
+	rs := &redditSub{}
 	err := utils.JSONRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
 	if err != nil {
 		return false

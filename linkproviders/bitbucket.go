@@ -7,22 +7,22 @@ import (
 	"strings"
 	"time"
 
+	"github.com/belak/irc"
 	"github.com/belak/seabird-plugins"
 	"github.com/belak/seabird-plugins/utils"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/irc"
 )
 
 func init() {
 	bot.RegisterPlugin("url/bitbucket", NewBitbucketProvider)
 }
 
-type BitbucketUser struct {
+type bitbucketUser struct {
 	Username    string `json:"username"`
 	DisplayName string `json:"display_name"`
 }
 
-type BitbucketRepo struct {
+type bitbucketRepo struct {
 	Scm         string `json:"scm"`
 	Description string `json:"description"`
 	FullName    string `json:"full_name"`
@@ -30,11 +30,11 @@ type BitbucketRepo struct {
 	UpdatedOn   string `json:"updated_on"`
 }
 
-type BitbucketIssue struct {
+type bitbucketIssue struct {
 	Status       string        `json:"status"`
 	Priority     string        `json:"priority"`
 	Title        string        `json:"title"`
-	ReportedBy   BitbucketUser `json:"reported_by"`
+	ReportedBy   bitbucketUser `json:"reported_by"`
 	CommentCount int           `json:"comment_count"`
 	CreatedOn    string        `json:"created_on"`
 	Metadata     struct {
@@ -42,10 +42,10 @@ type BitbucketIssue struct {
 	} `json:"metadata"`
 }
 
-type BitbucketPullRequest struct {
+type bitbucketPullRequest struct {
 	State        string        `json:"state"`
 	Title        string        `json:"title"`
-	Author       BitbucketUser `json:"author"`
+	Author       bitbucketUser `json:"author"`
 	CommentCount int           `json:"comment_count"`
 	CreatedOn    string        `json:"created_on"`
 }
@@ -61,11 +61,11 @@ func NewBitbucketProvider(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)
 
-	p.RegisterProvider("bitbucket.org", HandleBitbucket)
+	p.RegisterProvider("bitbucket.org", bitbucketCallback)
 	return nil, nil
 }
 
-func HandleBitbucket(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketCallback(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	if bitbucketUserRegex.MatchString(url.Path) {
 		return bitbucketGetUser(b, m, url)
 	} else if bitbucketRepoRegex.MatchString(url.Path) {
@@ -87,7 +87,7 @@ func bitbucketGetUser(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 
 	user := matches[1]
 
-	bu := &BitbucketUser{}
+	bu := &bitbucketUser{}
 	err := utils.JSONRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
 	if err != nil {
 		return false
@@ -108,7 +108,7 @@ func bitbucketGetRepo(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	user := matches[1]
 	repo := matches[2]
 
-	br := &BitbucketRepo{}
+	br := &bitbucketRepo{}
 	err := utils.JSONRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
 	if err != nil {
 		return false
@@ -139,7 +139,7 @@ func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	repo := matches[2]
 	issueNum := matches[3]
 
-	bi := &BitbucketIssue{}
+	bi := &bitbucketIssue{}
 	err := utils.JSONRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
 	if err != nil {
 		return false
@@ -179,7 +179,7 @@ func bitbucketGetPull(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	repo := matches[2]
 	pullNum := matches[3]
 
-	bpr := &BitbucketPullRequest{}
+	bpr := &bitbucketPullRequest{}
 	err := utils.JSONRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
 	if err != nil {
 		return false

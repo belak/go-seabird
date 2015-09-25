@@ -9,20 +9,20 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
+	"github.com/belak/irc"
 	"github.com/belak/seabird-plugins"
 	"github.com/belak/seabird/bot"
-	"github.com/belak/irc"
 )
 
 func init() {
 	bot.RegisterPlugin("url/github", NewGithubProvider)
 }
 
-type GithubConfig struct {
+type githubConfig struct {
 	Token string
 }
 
-type GithubProvider struct {
+type githubProvider struct {
 	api *github.Client
 }
 
@@ -38,9 +38,9 @@ func NewGithubProvider(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)
 
-	t := &GithubProvider{}
+	t := &githubProvider{}
 
-	gc := &GithubConfig{}
+	gc := &githubConfig{}
 	err := b.Config("github", gc)
 	if err != nil {
 		return nil, err
@@ -55,13 +55,13 @@ func NewGithubProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Create a github client from the oauth2 client
 	t.api = github.NewClient(tc)
 
-	p.RegisterProvider("github.com", t.HandleGithub)
-	p.RegisterProvider("gist.github.com", t.HandleGist)
+	p.RegisterProvider("github.com", t.githubCallback)
+	p.RegisterProvider("gist.github.com", t.gistCallback)
 
 	return nil, nil
 }
 
-func (t *GithubProvider) HandleGithub(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func (t *githubProvider) githubCallback(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	if githubUserRegex.MatchString(url.Path) {
 		return t.getUser(b, m, url.Path)
 	} else if githubRepoRegex.MatchString(url.Path) {
@@ -75,7 +75,7 @@ func (t *GithubProvider) HandleGithub(b *bot.Bot, m *irc.Message, url *url.URL) 
 	return false
 }
 
-func (t *GithubProvider) HandleGist(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func (t *githubProvider) gistCallback(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	if githubGistRegex.MatchString(url.Path) {
 		return t.getGist(b, m, url.Path)
 	}
@@ -83,7 +83,7 @@ func (t *GithubProvider) HandleGist(b *bot.Bot, m *irc.Message, url *url.URL) bo
 	return false
 }
 
-func (t *GithubProvider) getUser(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getUser(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := githubUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -122,7 +122,7 @@ func (t *GithubProvider) getUser(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func (t *GithubProvider) getRepo(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getRepo(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := githubRepoRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -165,7 +165,7 @@ func (t *GithubProvider) getRepo(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func (t *GithubProvider) getIssue(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getIssue(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := githubIssueRegex.FindStringSubmatch(url)
 	if len(matches) != 4 {
 		return false
@@ -200,7 +200,7 @@ func (t *GithubProvider) getIssue(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func (t *GithubProvider) getPull(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getPull(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := githubPullRegex.FindStringSubmatch(url)
 	if len(matches) != 4 {
 		return false
@@ -244,7 +244,7 @@ func (t *GithubProvider) getPull(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func (t *GithubProvider) getGist(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getGist(b *bot.Bot, m *irc.Message, url string) bool {
 	matches := githubGistRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
