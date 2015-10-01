@@ -1,4 +1,6 @@
-# seabird Plugins
+# Seabird Plugins
+
+[![Build Status](https://travis-ci.org/belak/seabird-plugins.svg?branch=master)](https://travis-ci.org/belak/seabird-plugins)
 
 The plugins are a set of plugins maintained by the authors of seabird
 which are decent general use plugins.
