@@ -108,6 +108,8 @@ func (p *PhrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
+
+	b.MentionReply(m, "Forgot %s", name)
 }
 
 func (p *PhrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
