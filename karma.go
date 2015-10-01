@@ -24,7 +24,7 @@ type KarmaPlugin struct {
 	db *sqlx.DB
 }
 
-var regex = regexp.MustCompile(`((?:\w+[\+-]?)*\w)(\+\+|--)(?:\s|$)`)
+var regex = regexp.MustCompile(`([^\s]+)(\+\+|--)(?:\s|$)`)
 
 func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
