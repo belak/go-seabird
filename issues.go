@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"net/http"
+	"strings"
 
 	"github.com/belak/irc"
 	"github.com/belak/seabird/bot"
@@ -35,19 +36,35 @@ func NewIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
 
 func (p *issuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 	go func() {
+		// This will be what we eventually send to the server
+		params := map[string]string{
+			"body": "Filed by " + m.Prefix.Name + " in " + m.Params[0],
+		}
+
+		// If the first character is an @, we assume it's a
+		// user so we grab it and update what we're setting
+		// the title to.
 		title := m.Trailing()
+		if strings.HasPrefix(title, "@") {
+			index := strings.Index(title, " ")
+			if index == -1 {
+				b.MentionReply(m, "Issue title required")
+				return
+			}
+
+			params["assignee"] = title[1:index]
+			title = title[index+1:]
+		}
+
 		if title == "" {
 			b.MentionReply(m, "Issue title required")
 			return
 		}
 
-		url := "https://api.github.com/repos/belak/seabird-plugins/issues"
+		params["title"] = title
 
+		url := "https://api.github.com/repos/belak/seabird-plugins/issues"
 		hc := &http.Client{}
-		params := map[string]string{
-			"title": title,
-			"body":  "Filed by " + m.Prefix.Name + " in " + m.Params[0],
-		}
 		body, err := json.Marshal(params)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
