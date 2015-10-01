@@ -69,7 +69,7 @@ func (p *PhrasesPlugin) getKey(key string) (*phrase, error) {
 		return row, errors.New("No key provided")
 	}
 
-	err := p.db.Get(row, "SELECT * FROM phrases WHERE key=? ORDER BY id DESC LIMIT 1", key)
+	err := p.db.Get(row, "SELECT * FROM phrases WHERE key=$1 ORDER BY id DESC LIMIT 1", key)
 	if err == sql.ErrNoRows {
 		return row, errors.New("No results for given key")
 	} else if err != nil {
@@ -140,7 +140,7 @@ func (p *PhrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
 
 func (p *PhrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
 	rows := []phrase{}
-	err := p.db.Select(&rows, "SELECT * FROM phrases WHERE key=? ORDER BY id DESC LIMIT 5", p.cleanedName(m.Trailing()))
+	err := p.db.Select(&rows, "SELECT * FROM phrases WHERE key=$1 ORDER BY id DESC LIMIT 5", p.cleanedName(m.Trailing()))
 	if err == sql.ErrNoRows {
 		b.MentionReply(m, "No results for given key")
 		return
