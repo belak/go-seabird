@@ -1,126 +1,184 @@
-// +build ignore
-
-package seabird
+package plugins
 
 import (
-	"labix.org/v2/mgo"
-	"labix.org/v2/mgo/bson"
-
-	irc "github.com/thoj/go-ircevent"
-
-	"encoding/json"
+	"database/sql"
 	"errors"
-	"log"
 	"strings"
+	"unicode"
+
+	"github.com/belak/irc"
+	"github.com/belak/seabird/bot"
+	"github.com/jmoiron/sqlx"
 )
 
-// TODO: Replace any special characters with nothing when inserting and querying
-// TODO: Add way to remove old entries
-// TODO: Add way to list old entries
-
-// TODO: Write ForgetCallback
-// TODO: Write ListCallback
-
 func init() {
-	seabird.RegisterPlugin("phrases", NewPhrasesPlugin)
-}
-
-type Phrase struct {
-	Active  bool   `bson:"active"`
-	Name    string `bson:"name"`
-	Data    string `bson:"data"`
-	Version int    `bson:"version"`
+	bot.RegisterPlugin("phrases", NewPhrasesPlugin)
 }
 
 type PhrasesPlugin struct {
-	Bot *seabird.Bot
-	C   *mgo.Collection
+	db *sqlx.DB
 }
 
-func NewPhrasesPlugin(b *seabird.Bot, d json.RawMessage) {
-	p := &PhrasesPlugin{b, b.DB.C("phrases")}
-	b.RegisterFunction("give", p.GiveCallback)
-	b.RegisterFunction("get", p.GetCallback)
-	b.RegisterFunction("rem", p.RememberCallback)
-
-	//b.RegisterFunction("forget", p.ForgetCallback)
-	//b.RegisterFunction("list", p.ListCallback)
+type phrase struct {
+	ID        int
+	Key       string
+	Value     string
+	Submitter string
+	Deleted   bool
 }
 
-func (p *PhrasesPlugin) FetchNewest(name string) *Phrase {
-	name = strings.ToLower(name)
-	phrase := &Phrase{}
-	err := p.C.Find(bson.M{"name": name, "active": true}).Sort("-version").One(phrase)
+func NewPhrasesPlugin(b *bot.Bot) (bot.Plugin, error) {
+	b.LoadPlugin("db")
+	p := &PhrasesPlugin{b.Plugins["db"].(*sqlx.DB)}
+
+	b.CommandMux.Event("forget", p.forgetCallback, &bot.HelpInfo{
+		Usage:       "<key>",
+		Description: "Look up a phrase",
+	})
+
+	b.CommandMux.Event("get", p.getCallback, &bot.HelpInfo{
+		Usage:       "<key>",
+		Description: "Look up a phrase",
+	})
+
+	b.CommandMux.Event("give", p.giveCallback, &bot.HelpInfo{
+		Usage:       "<key> <user>",
+		Description: "Mentions a user with a given phrase",
+	})
+
+	b.CommandMux.Event("history", p.historyCallback, &bot.HelpInfo{
+		Usage:       "<key>",
+		Description: "Look up history for a key",
+	})
+
+	b.CommandMux.Event("set", p.setCallback, &bot.HelpInfo{
+		Usage:       "<key> <phrase>",
+		Description: "Remembers a phrase",
+	})
+
+	return nil, nil
+}
+
+func (p *PhrasesPlugin) cleanedName(name string) string {
+	return strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
+}
+
+func (p *PhrasesPlugin) getKey(key string) (*phrase, error) {
+	row := &phrase{}
+	if len(key) == 0 {
+		return row, errors.New("No key provided")
+	}
+
+	err := p.db.Get(row, "SELECT * FROM phrases WHERE key=? ORDER BY id DESC LIMIT 1", key)
+	if err == sql.ErrNoRows {
+		return row, errors.New("No results for given key")
+	} else if err != nil {
+		return row, err
+	} else if row.Deleted {
+		return row, errors.New("Phrase was previously deleted")
+	}
+
+	return row, nil
+}
+
+func (p *PhrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
+	// Ensure there is already a key for this. Note that this
+	// introduces a potential race condition, but it's not super
+	// important.
+	name := p.cleanedName(m.Trailing())
+	_, err := p.getKey(name)
 	if err != nil {
-		return &Phrase{Name: name, Data: "", Version: -1}
-	}
-	return phrase
-}
-
-func (p *PhrasesPlugin) Update(name string, data string) error {
-	// Grab the original phrase
-	phrase := p.FetchNewest(name)
-	if data == phrase.Data {
-		return errors.New("Phrase already exists with that data")
-	}
-
-	// Update it and reinsert
-	phrase.Version++
-	phrase.Data = data
-	phrase.Active = true
-
-	err := p.C.Insert(phrase)
-	if err != nil {
-		log.Printf("phrases: insert error: %v\n", err)
-		return errors.New("Error while inserting")
-	}
-
-	return nil
-}
-
-func (p *PhrasesPlugin) GiveCallback(e *irc.Event) {
-	args := strings.Fields(e.Message())
-	if len(args) != 2 {
-		return
-	}
-	phrase := p.FetchNewest(args[1])
-	if phrase.Version == -1 {
-		p.Bot.Reply(e, "Phrase does not exits")
-	} else {
-		p.Bot.Reply(e, "%s: %s", args[0], phrase.Data)
-	}
-}
-
-func (p *PhrasesPlugin) GetCallback(e *irc.Event) {
-	args := strings.Fields(e.Message())
-	if len(args) != 1 {
-		return
-	}
-
-	phrase := p.FetchNewest(args[0])
-	if phrase.Version == -1 {
-		p.Bot.Reply(e, "Phrase does not exits")
-	} else {
-		p.Bot.Reply(e, "%s", phrase.Data)
-	}
-}
-
-func (p *PhrasesPlugin) RememberCallback(e *irc.Event) {
-	// NOTE: This uses SplitN because there is no FieldsN
-	args := strings.SplitN(e.Message(), " ", 2)
-	if len(args) != 2 {
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	// Clean up the args just in case
-	for k := range args {
-		args[k] = strings.TrimSpace(args[k])
+	row := phrase{
+		Key:       name,
+		Submitter: m.Prefix.Name,
+		Deleted:   true,
 	}
 
-	err := p.Update(args[0], args[1])
-	if err != nil {
-		p.Bot.Reply(e, "%s", err.Error())
-	} else {
-		p.Bot.Reply(e, "phrase updated")
+	if len(row.Key) == 0 {
+		b.MentionReply(m, "No key supplied")
+		return
 	}
+
+	_, err = p.db.Exec("INSERT INTO phrases (key, submitter, deleted) VALUES ($1, $2, $3)", row.Key, row.Submitter, row.Deleted)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+}
+
+func (p *PhrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
+	row, err := p.getKey(m.Trailing())
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	b.MentionReply(m, "%s", row.Value)
+}
+
+func (p *PhrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
+	split := strings.SplitN(m.Trailing(), " ", 2)
+	if len(split) < 2 {
+		b.MentionReply(m, "Not enough args")
+		return
+	}
+
+	row, err := p.getKey(split[1])
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	b.Reply(m, "%s: %s", split[0], row.Value)
+}
+
+func (p *PhrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
+	rows := []phrase{}
+	err := p.db.Select(&rows, "SELECT * FROM phrases WHERE key=? ORDER BY id DESC LIMIT 5", p.cleanedName(m.Trailing()))
+	if err == sql.ErrNoRows {
+		b.MentionReply(m, "No results for given key")
+		return
+	} else if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	for _, row := range rows {
+		if row.Deleted {
+			b.MentionReply(m, "%s deleted by %s", row.Key, row.Submitter)
+		} else {
+			b.MentionReply(m, "%s set by %s to %s", row.Key, row.Submitter, row.Value)
+		}
+	}
+}
+
+func (p *PhrasesPlugin) setCallback(b *bot.Bot, m *irc.Message) {
+	split := strings.SplitN(m.Trailing(), " ", 2)
+	if len(split) < 2 {
+		b.MentionReply(m, "Not enough args")
+		return
+	}
+
+	row := phrase{
+		Key:       p.cleanedName(split[0]),
+		Submitter: m.Prefix.Name,
+		Value:     split[1],
+	}
+
+	if len(row.Key) == 0 {
+		b.MentionReply(m, "No key supplied")
+		return
+	}
+
+	_, err := p.db.Exec("INSERT INTO phrases (key, submitter, value) VALUES ($1, $2, $3)", row.Key, row.Submitter, row.Value)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	b.MentionReply(m, "%s set to %s", row.Key, row.Value)
 }

@@ -59,6 +59,14 @@ CREATE TABLE IF NOT EXISTS forecast_location (
 	lon FLOAT,
 	UNIQUE(nick)
 );
+
+CREATE TABLE IF NOT EXISTS phrases (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(512) NOT NULL,
+    value VARCHAR(512) DEFAULT '',
+    submitter VARCHAR(512) NOT NULL,
+    deleted BOOLEAN DEFAULT false
+);
 ```
 
 This should work for both sqlite or postgres.
