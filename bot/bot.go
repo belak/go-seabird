@@ -30,6 +30,8 @@ type coreConfig struct {
 	Prefix string
 
 	Plugins []string
+
+	Quiet bool
 }
 
 // A Bot is our wrapper around the irc.Client. It could be used for a
@@ -222,8 +224,6 @@ func (b *Bot) mainLoop() error {
 			b.conn.Writef("NICK %s", b.currentNick)
 		}
 
-		log.Println(m)
-
 		b.BasicMux.HandleEvent(b, m)
 
 		// TODO: Make this work better
@@ -347,7 +347,9 @@ func (b *Bot) Run() error {
 	b.conn = irc.NewConn(c)
 
 	b.conn.DebugCallback = func(line string) {
-		log.Println(line)
+		if !b.config.Quiet {
+			log.Println(line)
+		}
 	}
 
 	// Start the main loop
