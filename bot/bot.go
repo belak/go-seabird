@@ -7,6 +7,7 @@ import (
 	"io"
 	"log"
 	"net"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/nightlyone/lockfile"
@@ -52,11 +53,14 @@ type Bot struct {
 	md         toml.MetaData
 
 	// Internal things
-	conn           *irc.Conn
-	currentNick    string
-	config         *coreConfig
-	err            error
-	loadingPlugins map[string]bool
+	conn                *irc.Conn
+	connected           bool
+	currentNick         string
+	config              *coreConfig
+	err                 error
+	initialCapList      map[string]bool // This is a map so we avoid dupes
+	initialCapResponses int
+	loadingPlugins      map[string]bool
 }
 
 // NewBot will return a new Bot given the name of a toml config file.
@@ -70,9 +74,12 @@ func NewBot(conf string) (*Bot, error) {
 		make(map[string]toml.Primitive),
 		toml.MetaData{},
 		nil,
+		false,
 		"",
 		&coreConfig{},
 		nil,
+		make(map[string]bool),
+		0,
 		make(map[string]bool),
 	}
 
@@ -96,15 +103,28 @@ func NewBot(conf string) (*Bot, error) {
 	b.BasicMux.Event("PRIVMSG", b.CommandMux.HandleEvent)
 	b.BasicMux.Event("PRIVMSG", b.MentionMux.HandleEvent)
 
-	// Run commands on startup
-	b.BasicMux.Event("001", func(b *Bot, m *irc.Message) {
-		log.Println("Connected")
-		for _, v := range b.config.Cmds {
-			b.Write(v)
-		}
-	})
-
 	return b, nil
+}
+
+func (b *Bot) CapReq(caps ...string) {
+	if b.connected {
+		// If we're already connected, we don't care about
+		// negotiation. We just want to ask for it.
+		b.Send(&irc.Message{
+			Prefix:  &irc.Prefix{},
+			Command: "CAP",
+			Params: []string{
+				"REQ",
+				strings.Join(caps, " "),
+			},
+		})
+	} else {
+		// TODO: This is not technically correct. We should be
+		// handling requests which start with a -
+		for _, cap := range caps {
+			b.initialCapList[cap] = true
+		}
+	}
 }
 
 // CurrentNick returns the current nick of the bot.
@@ -189,8 +209,13 @@ func (b *Bot) HasPerm(m *irc.Message, perm string) bool {
 	return user.HasPerm(b, perm)
 }
 
+func (b *Bot) handshake() {
+	b.conn.Writef("CAP END")
+	b.conn.Writef("NICK %s", b.config.Nick)
+	b.conn.Writef("USER %s 0.0.0.0 0.0.0.0 :%s", b.config.User, b.config.Name)
+}
+
 func (b *Bot) mainLoop() error {
-	//, b.config.Nick, b.config.User, b.config.Name, b.config.Pass)
 	// Send the initial connection info
 	if len(b.config.Pass) > 0 {
 		b.conn.Writef("PASS %s", b.config.Pass)
@@ -199,8 +224,24 @@ func (b *Bot) mainLoop() error {
 	// Set the nick setting as the current nick
 	b.currentNick = b.config.Nick
 
-	b.conn.Writef("NICK %s", b.config.Nick)
-	b.conn.Writef("USER %s 0.0.0.0 0.0.0.0 :%s", b.config.User, b.config.Name)
+	// If we have any capabilities, we need to send requests for
+	// them. Note that we send multiple requests because it makes
+	// parsing the ACK and NAK commands a lot simpler.
+	if len(b.initialCapList) > 0 {
+		var caps []string
+		for cap := range b.initialCapList {
+			caps = append(caps, cap)
+			b.Send(&irc.Message{
+				Prefix:  &irc.Prefix{},
+				Command: "CAP",
+				Params:  []string{"REQ", cap},
+			})
+		}
+	} else {
+		// We can only handshake now if we didn't have any
+		// caps we wanted responses to.
+		b.handshake()
+	}
 
 	var m *irc.Message
 	for {
@@ -211,7 +252,34 @@ func (b *Bot) mainLoop() error {
 
 		// Internal handlers to make sure we track the
 		// currentNick correctly and send PONGs
-		if m.Command == "NICK" {
+		if m.Command == "001" {
+			log.Println("Connected")
+			b.connected = true
+
+			for _, v := range b.config.Cmds {
+				b.Write(v)
+			}
+
+		} else if m.Command == "CAP" {
+			if len(m.Params) > 0 {
+				if m.Params[0] == "ACK" {
+					// Because we send each CAP
+					// individually, we shouldn't
+					// need to do anything here.
+
+					b.initialCapResponses++
+				} else if m.Params[0] == "NAK" {
+					return fmt.Errorf("Got CAP NAK for %s", m.Params[1])
+				}
+			}
+
+			if b.initialCapResponses >= len(b.initialCapList) {
+				// Now that we've got all the
+				// responses back that we needed, we
+				// can continue the initial dance.
+				b.handshake()
+			}
+		} else if m.Command == "NICK" {
 			if m.Prefix.Name == b.currentNick && len(m.Params) > 0 {
 				b.currentNick = m.Params[0]
 			}
