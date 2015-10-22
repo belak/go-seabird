@@ -261,14 +261,15 @@ func (b *Bot) mainLoop() error {
 			}
 
 		} else if m.Command == "CAP" {
-			if len(m.Params) > 0 {
-				if m.Params[0] == "ACK" {
+			if len(m.Params) > 1 {
+				numParams := len(m.Params)
+				if m.Params[numParams-2] == "ACK" {
 					// Because we send each CAP
 					// individually, we shouldn't
 					// need to do anything here.
 
 					b.initialCapResponses++
-				} else if m.Params[0] == "NAK" {
+				} else if m.Params[numParams-2] == "NAK" {
 					return fmt.Errorf("Got CAP NAK for %s", m.Params[1])
 				}
 			}
