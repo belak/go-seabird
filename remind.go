@@ -151,5 +151,7 @@ func (p *ReminderPlugin) RemindCommand(b *bot.Bot, m *irc.Message) {
 		return
 	}
 
+	b.MentionReply(m, "Event stored")
+
 	go p.dispatch(b, r)
 }
