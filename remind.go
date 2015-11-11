@@ -1,7 +1,7 @@
 package plugins
 
 import (
-	"errors"
+	"database/sql"
 	"fmt"
 	"strings"
 	"time"
@@ -30,10 +30,6 @@ type reminder struct {
 func NewReminderPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
 	p := &ReminderPlugin{b.Plugins["db"].(*sqlx.DB)}
-
-	if p.db.DriverName() != "postgres" {
-		return nil, errors.New("The reminder plugin must be used with postgres")
-	}
 
 	b.BasicMux.Event("001", p.InitialDispatch)
 	b.BasicMux.Event("JOIN", p.JoinDispatch)
@@ -131,17 +127,29 @@ func (p *ReminderPlugin) RemindCommand(b *bot.Bot, m *irc.Message) {
 		r.Content = m.Prefix.Name + ": " + r.Content
 	}
 
-	// pq doesn't support .LastInsertId so we need to do this
-	var rowID int64
-	err = p.db.QueryRow(
-		"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4) RETURNING id",
-		r.Target, r.TargetType, r.Content, r.ReminderTime).Scan(&rowID)
+	// pq doesn't support sql.Result.LastInsertId so we hack around it by
+	// doing this. Don't do this at home, kids!
+	if p.db.DriverName() == "postgres" {
+		var rowID int64
+		err = p.db.QueryRow(
+			"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4) RETURNING id",
+			r.Target, r.TargetType, r.Content, r.ReminderTime).Scan(&rowID)
+		r.ID = rowID
+	} else {
+		var result sql.Result
+		result, err = p.db.Exec(
+			"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4)",
+			r.Target, r.TargetType, r.Content, r.ReminderTime)
+
+		if err == nil {
+			r.ID, err = result.LastInsertId()
+		}
+	}
+
 	if err != nil {
 		b.MentionReply(m, "Failed to store reminder: %s", err)
 		return
 	}
-
-	r.ID = rowID
 
 	go p.dispatch(b, r)
 }
