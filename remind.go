@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -30,6 +31,10 @@ func NewReminderPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
 	p := &ReminderPlugin{b.Plugins["db"].(*sqlx.DB)}
 
+	if p.db.DriverName() != "postgres" {
+		return nil, errors.New("The reminder plugin must be used with postgres")
+	}
+
 	b.BasicMux.Event("001", p.InitialDispatch)
 	b.BasicMux.Event("JOIN", p.JoinDispatch)
 	b.CommandMux.Event("remind", p.RemindCommand, &bot.HelpInfo{
@@ -51,6 +56,7 @@ func (p *ReminderPlugin) dispatch(b *bot.Bot, r *reminder) {
 
 	// Send the message
 	b.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
 		Command: "PRIVMSG",
 		Params:  []string{r.Target, r.Content},
 	})
@@ -67,7 +73,7 @@ func (p *ReminderPlugin) dispatch(b *bot.Bot, r *reminder) {
 // can't queue up the channels yet because we haven't joined them.
 func (p *ReminderPlugin) InitialDispatch(b *bot.Bot, m *irc.Message) {
 	reminders := []*reminder{}
-	err := p.db.Select(reminders, "SELECT * FROM reminders WHERE target_type=$1", "private")
+	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1", "private")
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -87,7 +93,7 @@ func (p *ReminderPlugin) JoinDispatch(b *bot.Bot, m *irc.Message) {
 	}
 
 	reminders := []*reminder{}
-	err := p.db.Select(reminders, "SELECT * FROM reminders WHERE target_type=$1 AND target=$2", "public", m.Params[0])
+	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1 AND target=$2", "public", m.Params[0])
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -125,18 +131,17 @@ func (p *ReminderPlugin) RemindCommand(b *bot.Bot, m *irc.Message) {
 		r.Content = m.Prefix.Name + ": " + r.Content
 	}
 
-	result, err := p.db.Exec(
-		"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4)",
-		r.Target, r.TargetType, r.Content, r.ReminderTime)
+	// pq doesn't support .LastInsertId so we need to do this
+	var rowID int64
+	err = p.db.QueryRow(
+		"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4) RETURNING id",
+		r.Target, r.TargetType, r.Content, r.ReminderTime).Scan(&rowID)
 	if err != nil {
 		b.MentionReply(m, "Failed to store reminder: %s", err)
 		return
 	}
 
-	r.ID, err = result.LastInsertId()
-	if err != nil {
-		b.MentionReply(m, "Failed to get ID of stored reminder. This event may be fired a second time after the bot is restarted: %s", err)
-	}
+	r.ID = rowID
 
 	go p.dispatch(b, r)
 }
