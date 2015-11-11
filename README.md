@@ -67,6 +67,14 @@ CREATE TABLE IF NOT EXISTS phrases (
     submitter VARCHAR(512) NOT NULL,
     deleted BOOLEAN DEFAULT false
 );
+
+CREATE TABLE IF NOT EXISTS reminders (
+    id SERIAL PRIMARY KEY,
+    target VARCHAR(100) NOT NULL,
+    target_type VARCHAR(10) NOT NULL,
+    content VARCHAR(512) NOT NULL,
+    reminder_time TIMESTAMP NOT NULL
+);
 ```
 
 This should work for both sqlite or postgres.
