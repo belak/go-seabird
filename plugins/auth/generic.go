@@ -14,7 +14,7 @@ import (
 	"labix.org/v2/mgo"
 	"labix.org/v2/mgo/bson"
 
-	"github.com/belak/seabird/bot"
+	"github.com/belak/go-seabird/bot"
 	"github.com/belak/irc"
 )
 

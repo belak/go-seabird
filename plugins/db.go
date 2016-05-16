@@ -3,7 +3,7 @@ package plugins
 import (
 	"github.com/jmoiron/sqlx"
 
-	"github.com/belak/seabird/bot"
+	"github.com/belak/go-seabird/bot"
 )
 
 func init() {

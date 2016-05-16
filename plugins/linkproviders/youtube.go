@@ -10,8 +10,8 @@ import (
 	duration "github.com/ChannelMeter/iso8601duration"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/plugins"
+	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/plugins"
 )
 
 func init() {
