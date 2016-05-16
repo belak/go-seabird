@@ -1,6 +1,6 @@
-package bot
+package internal
 
-func prepend(v []interface{}, e interface{}) []interface{} {
+func Prepend(v []interface{}, e interface{}) []interface{} {
 	var vc []interface{}
 
 	vc = append(vc, e)
