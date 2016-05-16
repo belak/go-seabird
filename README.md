@@ -1,42 +1,23 @@
-# seabird
+# Seabird
 
-seabird is a golang library written as a wrapper around [belak/irc](https://github.com/belak/irc) to make making IRC bots more convenient. Note that currently there is no stability guarantee and interfaces may change at any time.
+[![Build Status](https://travis-ci.org/belak/seabird.svg?branch=master)](https://travis-ci.org/belak/seabird)
 
 ## Requirements
 
- * Go 1.4
- * Mercurial
- * gcc
- * sqlite3 or postgresql
+* Go 1.4
+* gcc
+* sqlite3 or postgresql
 
 ```
-apt-get install golang mercurial gcc sqlite3
+apt-get install golang gcc sqlite3
 ```
-
-## Building
-
-Once you have go installed, set your GOPATH. For example
-
-```
-mkdir $HOME/go
-export GOPATH=$HOME/go
-
-export PATH=$PATH:$GOPATH/bin
-```
-
-Run the following to download and build seabird:
-
-```
-go get github.com/belak/seabird
-```
-
-This will build the seabird binary and place it in your `$GOPATH/bin`.
 
 ## Configuring
 
-A sample config file is provided [here](./config.toml)
+A sample config file is provided [here](./config.toml). Note that this
+config file only has values specified for plugins. Some may not be needed.
 
-Config is pulled from the environment variable SEABIRD_CONFIG. Set with
+Config is pulled from the environment variable `SEABIRD_CONFIG`. Set with
 
 ```
 export SEABIRD_CONFIG=$HOME/config.toml
@@ -44,23 +25,53 @@ export SEABIRD_CONFIG=$HOME/config.toml
 
 ## Running
 
-Once the config file is set, create the sqlite database by running
+Once the config file is set, create the database with the
+following schema:
 
 ```
-cat $GOPATH/src/github.com/belak/seabird/schema.sql | sqlite3 dev.db
+CREATE TABLE IF NOT EXISTS karma (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(512) UNIQUE,
+    score INTEGER
+);
+
+CREATE TABLE IF NOT EXISTS lastseen (
+    name VARCHAR(512),
+    channel VARCHAR(100),
+    lastseen INTEGER,
+    UNIQUE(name, channel)
+);
+
+CREATE TABLE IF NOT EXISTS nicks (
+    nick VARCHAR(512),
+    channel VARCHAR(100),
+    flags VARCHAR(50),
+    UNIQUE(nick, channel)
+);
+
+CREATE TABLE IF NOT EXISTS forecast_location (
+    nick VARCHAR(512),
+    address VARCHAR(200),
+    lat FLOAT,
+    lon FLOAT,
+    UNIQUE(nick)
+);
+
+CREATE TABLE IF NOT EXISTS phrases (
+    id SERIAL PRIMARY KEY,
+    key VARCHAR(512) NOT NULL,
+    value VARCHAR(512) DEFAULT '',
+    submitter VARCHAR(512) NOT NULL,
+    deleted BOOLEAN DEFAULT false
+);
+
+CREATE TABLE IF NOT EXISTS reminders (
+    id SERIAL PRIMARY KEY,
+    target VARCHAR(100) NOT NULL,
+    target_type VARCHAR(10) NOT NULL,
+    content VARCHAR(512) NOT NULL,
+    reminder_time TIMESTAMP NOT NULL
+);
 ```
 
-Start the bot by simply runnning
-
-```
-seabird
-```
-Note you can append `&` to the end of the seabird command to fork it to the background.
-
-## Muxes
-
-Muxes are the building blocks of seabird. Three muxes are provided on top of belak/irc's BasicMux.
-
-* CommandMux - Separates PRIVMSG events out into commands with a configurable prefix.
-* CTCPMux - Separates CTCP events out of PRIVMSG events.
-* MentionMux - Tracks the bot's current name and filters PRIVMSG events which start with the bot's username.
+This should work for both sqlite or postgres.
