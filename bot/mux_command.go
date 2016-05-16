@@ -131,8 +131,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 	}
 
 	// Copy it into a new Event
-	newEvent := &irc.Message{}
-	*newEvent = *msg
+	newEvent := msg.Copy()
 
 	// Chop off the command itself
 	msgParts := strings.SplitN(lastArg, " ", 2)
