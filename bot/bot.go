@@ -106,6 +106,8 @@ func NewBot(conf string) (*Bot, error) {
 	return b, nil
 }
 
+// CapReq allows for plugins to request capabilities from the server. Note that
+// we only support requiring the caps if the request is made before connection.
 func (b *Bot) CapReq(caps ...string) {
 	if b.connected {
 		// If we're already connected, we don't care about
@@ -275,8 +277,7 @@ func (b *Bot) mainLoop() error {
 			}
 
 			if b.initialCapResponses >= len(b.initialCapList) {
-				// Now that we've got all the
-				// responses back that we needed, we
+				// Now that we've got all the responses back that we needed, we
 				// can continue the initial dance.
 				b.handshake()
 			}
