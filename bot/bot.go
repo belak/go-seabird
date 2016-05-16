@@ -35,9 +35,9 @@ type coreConfig struct {
 	Quiet bool
 }
 
-// A Bot is our wrapper around the irc.Client. It could be used for a
-// general client, but the provided convenience functions are designed
-// around using this package to write a bot.
+// A Bot is our wrapper around the irc.Client. It could be used for a general
+// client, but the provided convenience functions are designed around using this
+// package to write a bot.
 type Bot struct {
 	// Everything needed for plugins
 	BasicMux   *BasicMux
@@ -83,8 +83,8 @@ func NewBot(conf string) (*Bot, error) {
 		make(map[string]bool),
 	}
 
-	// Decode the file, but leave all the config sections intact
-	// so we can decode those later.
+	// Decode the file, but leave all the config sections intact so we can
+	// decode those later.
 	b.md, b.err = toml.DecodeFile(conf, b.confValues)
 	if b.err != nil {
 		return nil, b.err
@@ -110,8 +110,8 @@ func NewBot(conf string) (*Bot, error) {
 // we only support requiring the caps if the request is made before connection.
 func (b *Bot) CapReq(caps ...string) {
 	if b.connected {
-		// If we're already connected, we don't care about
-		// negotiation. We just want to ask for it.
+		// If we're already connected, we don't care about negotiation. We just
+		// want to ask for it.
 		b.Send(&irc.Message{
 			Prefix:  &irc.Prefix{},
 			Command: "CAP",
@@ -121,8 +121,8 @@ func (b *Bot) CapReq(caps ...string) {
 			},
 		})
 	} else {
-		// TODO: This is not technically correct. We should be
-		// handling requests which start with a -
+		// TODO: This is not technically correct. We should be handling requests
+		// which start with a -
 		for _, cap := range caps {
 			b.initialCapList[cap] = true
 		}
@@ -134,8 +134,8 @@ func (b *Bot) CurrentNick() string {
 	return b.currentNick
 }
 
-// Config will decode the config section for the given name into the
-// given interface{}
+// Config will decode the config section for the given name into the given
+// interface{}
 func (b *Bot) Config(name string, c interface{}) error {
 	if v, ok := b.confValues[name]; ok {
 		return b.md.PrimitiveDecode(v, c)
@@ -152,8 +152,7 @@ func (b *Bot) Send(m *irc.Message) {
 	b.conn.WriteMessage(m)
 }
 
-// Reply to an irc.Message with a convenience wrapper around
-// fmt.Sprintf
+// Reply to an irc.Message with a convenience wrapper around fmt.Sprintf
 func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
 		return errors.New("Invalid IRC message")
@@ -176,8 +175,8 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 	return nil
 }
 
-// MentionReply acts the same as Bot.Reply but it will prefix it with
-// the user's nick if we are in a channel.
+// MentionReply acts the same as Bot.Reply but it will prefix it with the user's
+// nick if we are in a channel.
 func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) error {
 	if m.FromChannel() {
 		format = "%s: " + format
@@ -226,9 +225,9 @@ func (b *Bot) mainLoop() error {
 	// Set the nick setting as the current nick
 	b.currentNick = b.config.Nick
 
-	// If we have any capabilities, we need to send requests for
-	// them. Note that we send multiple requests because it makes
-	// parsing the ACK and NAK commands a lot simpler.
+	// If we have any capabilities, we need to send requests for them. Note that
+	// we send multiple requests because it makes parsing the ACK and NAK
+	// commands a lot simpler.
 	if len(b.initialCapList) > 0 {
 		var caps []string
 		for cap := range b.initialCapList {
@@ -252,8 +251,8 @@ func (b *Bot) mainLoop() error {
 			break
 		}
 
-		// Internal handlers to make sure we track the
-		// currentNick correctly and send PONGs
+		// Internal handlers to make sure we track the currentNick correctly and
+		// send PONGs
 		if m.Command == "001" {
 			log.Println("Connected")
 			b.connected = true
@@ -266,10 +265,8 @@ func (b *Bot) mainLoop() error {
 			if len(m.Params) > 1 {
 				numParams := len(m.Params)
 				if m.Params[numParams-2] == "ACK" {
-					// Because we send each CAP
-					// individually, we shouldn't
-					// need to do anything here.
-
+					// Because we send each CAP individually, we shouldn't need
+					// to do anything here.
 					b.initialCapResponses++
 				} else if m.Params[numParams-2] == "NAK" {
 					return fmt.Errorf("Got CAP NAK for %s", m.Params[1])
@@ -321,9 +318,9 @@ func (b *Bot) PluginLoaded(name string) bool {
 	return ok
 }
 
-// LoadPlugin will ensure a plugin is loaded. It is designed to be
-// usable in other plugins, so they can ensure plugins they depend on
-// are loaded before using them.
+// LoadPlugin will ensure a plugin is loaded. It is designed to be usable in
+// other plugins, so they can ensure plugins they depend on are loaded before
+// using them.
 func (b *Bot) LoadPlugin(name string) error {
 	// We don't need to load the plugin if it's already loaded
 	if b.PluginLoaded(name) {
@@ -336,8 +333,8 @@ func (b *Bot) LoadPlugin(name string) error {
 		return fmt.Errorf("Plugin %s does not exist", name)
 	}
 
-	// If we're trying to load this plugin already, this is a
-	// circular load and we should bail.
+	// If we're trying to load this plugin already, this is a circular load and
+	// we should bail.
 	if v := b.loadingPlugins[name]; v {
 		return fmt.Errorf("Plugin %s getting loaded circularly", name)
 	}
@@ -363,9 +360,8 @@ func (b *Bot) LoadPlugin(name string) error {
 // Run starts the bot and loops until it dies
 func (b *Bot) Run() error {
 	var err error
-	// Load all the plugins we need. If there were plugins
-	// specified in the config, just load those. Otherwise load
-	// ALL of them.
+	// Load all the plugins we need. If there were plugins specified in the
+	// config, just load those. Otherwise load ALL of them.
 	if len(b.config.Plugins) != 0 {
 		for _, name := range b.config.Plugins {
 			err = b.LoadPlugin(name)

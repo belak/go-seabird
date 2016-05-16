@@ -6,8 +6,8 @@ import (
 	"github.com/belak/irc"
 )
 
-// BasicMux is a simple IRC event multiplexer.
-// It matches the command against registered Handlers and calls the correct set.
+// BasicMux is a simple IRC event multiplexer. It matches the command against
+// registered Handlers and calls the correct set.
 //
 // Handlers will be processed in the order in which they were added.
 // Registering a handler with a "*" command will cause it to receive all events.
@@ -42,14 +42,13 @@ func (mux *BasicMux) HandleEvent(b *Bot, msg *irc.Message) {
 	mux.mu.Lock()
 	defer mux.mu.Unlock()
 
-	// Star means ALL THE THINGS
-	// Really, this is only useful for logging
+	// Star means ALL THE THINGS. Really, this is only useful for logging.
 	for _, h := range mux.m["*"] {
 		h(b, msg)
 	}
 
-	// Now that we've done the global handlers, we can run
-	// the ones specific to this command
+	// Now that we've done the global handlers, we can run the ones specific to
+	// this command.
 	for _, h := range mux.m[msg.Command] {
 		h(b, msg)
 	}
