@@ -10,14 +10,11 @@ import (
 	"strings"
 
 	"github.com/BurntSushi/toml"
-	"github.com/nightlyone/lockfile"
 
 	"github.com/belak/irc"
 )
 
 type coreConfig struct {
-	PidFile string
-
 	Nick string
 	User string
 	Name string
@@ -376,21 +373,6 @@ func (b *Bot) Run() error {
 				return err
 			}
 		}
-	}
-
-	// If we have a pidfile configured, create it and write the PID
-	if b.config.PidFile != "" {
-		l, err := lockfile.New(b.config.PidFile)
-		if err != nil {
-			return err
-		}
-
-		err = l.TryLock()
-		if err != nil {
-			return err
-		}
-
-		defer l.Unlock()
 	}
 
 	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
