@@ -12,6 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/belak/irc"
+	"github.com/belak/seabird/internal"
 )
 
 type coreConfig struct {
@@ -177,7 +178,7 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) error {
 	if m.FromChannel() {
 		format = "%s: " + format
-		v = prepend(v, m.Prefix.Name)
+		v = internal.Prepend(v, m.Prefix.Name)
 	}
 
 	return b.Reply(m, format, v...)
