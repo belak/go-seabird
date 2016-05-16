@@ -23,7 +23,7 @@ type PluginFactory func(b *Bot) (Plugin, error)
 // RegisterPlugin registers a PluginFactory for a given name.
 func RegisterPlugin(name string, factory PluginFactory) error {
 	if _, ok := plugins[name]; ok {
-		log.Fatalln(fmt.Sprintf("Plugin %s is already registered", name))
+		log.Fatalln(fmt.Sprintf("Plugin with name %q is already registered", name))
 	}
 
 	plugins[name] = factory
