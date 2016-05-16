@@ -8,7 +8,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
+	"github.com/belak/go-seabird/bot"
 )
 
 func init() {
@@ -101,7 +101,7 @@ func (p *issuesPlugin) IssueSearch(b *bot.Bot, m *irc.Message) {
 
 	split = append(split, []string{
 		"repo:belak/irc",
-		"repo:belak/seabird",
+		"repo:belak/go-seabird",
 	}...)
 
 	if !hasState {
@@ -133,7 +133,7 @@ func (p *issuesPlugin) IssueSearch(b *bot.Bot, m *irc.Message) {
 		user := urlparts[len(urlparts)-4]
 		repo := urlparts[len(urlparts)-3]
 
-		// Issue #42 on belak/seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
+		// Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
 		out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
 		if issue.Assignee != nil {
 			out += " (assigned to " + *issue.Assignee.Login + ")"

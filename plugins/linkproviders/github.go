@@ -10,8 +10,8 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/plugins"
+	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/plugins"
 )
 
 func init() {
@@ -183,7 +183,7 @@ func (t *githubProvider) getIssue(b *bot.Bot, m *irc.Message, url string) bool {
 		return false
 	}
 
-	// Issue #42 on belak/seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
+	// Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
 	out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
 	if issue.Assignee != nil {
 		out += " (assigned to " + *issue.Assignee.Login + ")"
@@ -218,7 +218,7 @@ func (t *githubProvider) getPull(b *bot.Bot, m *irc.Message, url string) bool {
 		return false
 	}
 
-	// Pull request #59 on belak/seabird [open] - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
+	// Pull request #59 on belak/go-seabird [open] - Title title title [created 3 Jan 2015], 1 commit, 4 comments, 2 changed files
 	out := fmt.Sprintf("Pull request #%d on %s/%s [%s]", *pull.Number, user, repo, *pull.State)
 	if pull.User != nil {
 		out += " created by " + *pull.User.Login

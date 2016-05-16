@@ -12,7 +12,7 @@ import (
 	"github.com/BurntSushi/toml"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/internal"
+	"github.com/belak/go-seabird/internal"
 )
 
 type coreConfig struct {

@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
+	"github.com/belak/go-seabird/bot"
 )
 
 type CTCPPlugin struct {
@@ -48,10 +48,10 @@ func (p *CTCPPlugin) Version(c *irc.Client, e *irc.Event) {
 			return
 		}
 
-		c.CTCPReply(e, "VERSION belak/seabird [%s %s %s] %s",
+		c.CTCPReply(e, "VERSION belak/go-seabird [%s %s %s] %s",
 			runtime.GOOS, runtime.GOARCH, runtime.Version(), string(bytes.TrimSpace(out)))
 	} else {
-		c.CTCPReply(e, "VERSION belak/seabird [%s %s %s]",
+		c.CTCPReply(e, "VERSION belak/go-seabird [%s %s %s]",
 			runtime.GOOS, runtime.GOARCH, runtime.Version())
 	}
 }

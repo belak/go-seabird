@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
+	"github.com/belak/go-seabird/bot"
 	"github.com/jmoiron/sqlx"
 )
 

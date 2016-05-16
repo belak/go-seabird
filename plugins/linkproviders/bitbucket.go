@@ -8,9 +8,9 @@ import (
 	"time"
 
 	"github.com/belak/irc"
-	"github.com/belak/seabird/bot"
-	"github.com/belak/seabird/internal"
-	"github.com/belak/seabird/plugins"
+	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/internal"
+	"github.com/belak/go-seabird/plugins"
 )
 
 func init() {
@@ -150,7 +150,7 @@ func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 		bi.ReportedBy.Username = "Anonymous"
 	}
 
-	// Issue #51 on belak/seabird [open] - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
+	// Issue #51 on belak/go-seabird [open] - Expand issues plugin with more of Bitbucket [created 3 Jan 2015]
 	out := fmt.Sprintf("Issue #%s on %s/%s [%s]", issueNum, user, repo, bi.Status)
 	if bi.Priority != "" && bi.Metadata.Kind != "" {
 		out += " [" + bi.Priority + " - " + bi.Metadata.Kind + "]"
@@ -185,7 +185,7 @@ func bitbucketGetPull(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 		return false
 	}
 
-	// Pull request #59 on belak/seabird created by jsvana [open] - Add stuff to links [created 4 Jan 2015]
+	// Pull request #59 on belak/go-seabird created by jsvana [open] - Add stuff to links [created 4 Jan 2015]
 	out := fmt.Sprintf("Pull request #%s on %s/%s created by %s [%s]", pullNum, user, repo, bpr.Author.Username, strings.ToLower(bpr.State))
 	if bpr.Title != "" {
 		out += " - " + bpr.Title

@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
-	"github.com/belak/seabird/bot"
+	"github.com/belak/go-seabird/bot"
 
 	// Load plugins
-	//_ "github.com/belak/seabird/plugins/auth"
-	_ "github.com/belak/seabird/plugins"
-	_ "github.com/belak/seabird/plugins/linkproviders"
+	//_ "github.com/belak/go-seabird/plugins/auth"
+	_ "github.com/belak/go-seabird/plugins"
+	_ "github.com/belak/go-seabird/plugins/linkproviders"
 
 	// Load DB drivers
 	_ "github.com/lib/pq"
