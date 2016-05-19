@@ -1,10 +1,12 @@
 package plugins
 
-//go:generate go tool yacc -o expr_y.go expr.y
-
 import (
-	"github.com/belak/irc"
+	"strings"
+
+	"github.com/soudy/mathcat"
+
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -21,11 +23,16 @@ func NewMathPlugin(b *bot.Bot) (bot.Plugin, error) {
 }
 
 func exprCallback(b *bot.Bot, m *irc.Message) {
-	val, err := parseExpr(m.Trailing())
-	if err != nil {
-		b.Reply(m, "%s", err.Error())
-		return
+	var err error
+	var res float64
+
+	mc := mathcat.New()
+	for _, expr := range strings.Split(m.Trailing(), ";") {
+		res, err = mc.Run(expr)
+		if err != nil {
+			b.MentionReply(m, "%s", err)
+		}
 	}
 
-	b.Reply(m, "%s=%g", m.Trailing(), val)
+	b.MentionReply(m, "%g", res)
 }
