@@ -19,7 +19,13 @@ import (
 func main() {
 	conf := os.Getenv("SEABIRD_CONFIG")
 	if conf == "" {
-		log.Fatalln("$SEABIRD_CONFIG is not defined")
+		conf = "config.toml"
+		_, err := os.Stat(conf)
+		if os.IsNotExist(err) {
+			log.Fatalln("$SEABIRD_CONFIG is not defined and config.toml doesn't exist")
+		} else if err != nil {
+			log.Fatalln(err)
+		}
 	}
 
 	// Create the bot
