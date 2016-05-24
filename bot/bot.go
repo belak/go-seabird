@@ -11,8 +11,8 @@ import (
 
 	"github.com/BurntSushi/toml"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/internal"
+	"github.com/belak/irc"
 )
 
 type coreConfig struct {
@@ -83,7 +83,7 @@ func NewBot(conf string) (*Bot, error) {
 
 	// Decode the file, but leave all the config sections intact so we can
 	// decode those later.
-	b.md, b.err = toml.DecodeFile(conf, b.confValues)
+	b.md, b.err = toml.DecodeFile(conf, &b.confValues)
 	if b.err != nil {
 		return nil, b.err
 	}
