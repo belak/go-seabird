@@ -9,9 +9,9 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -33,6 +33,8 @@ var githubPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull/([^/]+)$`)
 var githubGistRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 var githubPrefix = "[Github]"
 
+// NewGithubProvider will create a link provider for github URLs and register it
+// with the main link provider plugin.
 func NewGithubProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")

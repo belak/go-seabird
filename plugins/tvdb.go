@@ -10,8 +10,8 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -141,7 +141,7 @@ func (p *tvdbPlugin) Series(b *bot.Bot, m *irc.Message) {
 		}
 
 		// Create zipfile from stream
-		zipfile, err := zip.NewReader(bytes.NewReader([]byte(body)), int64(len([]byte(body))))
+		zipfile, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return

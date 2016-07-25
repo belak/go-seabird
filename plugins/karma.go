@@ -6,8 +6,8 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -102,26 +102,22 @@ func (p *KarmaPlugin) karmaCallback(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
-func (p *KarmaPlugin) topKarmaCallback(b *bot.Bot, m *irc.Message) {
+func (p *KarmaPlugin) karmaCheck(b *bot.Bot, m *irc.Message, msg string, sort string) {
 	user := &karmaUser{}
-	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score DESC LIMIT 1")
+	err := p.db.Get(user, fmt.Sprintf("SELECT name, score FROM karma ORDER BY score %s LIMIT 1", sort))
 	if err != nil {
 		b.MentionReply(m, "Error fetching scores")
 		return
 	}
 
-	b.MentionReply(m, "%s has the top karma with %d", user.Name, user.Score)
+	b.MentionReply(m, "%s has the %s karma with %d", user.Name, msg, user.Score)
+}
+func (p *KarmaPlugin) topKarmaCallback(b *bot.Bot, m *irc.Message) {
+	p.karmaCheck(b, m, "top", "DESC")
 }
 
 func (p *KarmaPlugin) bottomKarmaCallback(b *bot.Bot, m *irc.Message) {
-	user := &karmaUser{}
-	err := p.db.Get(user, "SELECT name, score FROM karma ORDER BY score ASC LIMIT 1")
-	if err != nil {
-		b.MentionReply(m, "Error fetching scores")
-		return
-	}
-
-	b.MentionReply(m, "%s has the bottom karma with %d", user.Name, user.Score)
+	p.karmaCheck(b, m, "bottom", "ASC")
 }
 
 func (p *KarmaPlugin) callback(b *bot.Bot, m *irc.Message) {

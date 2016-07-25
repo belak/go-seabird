@@ -2,15 +2,16 @@ package linkproviders
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
-	"github.com/belak/go-seabird/internal"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -50,11 +51,19 @@ type bitbucketPullRequest struct {
 	CreatedOn    string        `json:"created_on"`
 }
 
-var bitbucketUserRegex = regexp.MustCompile(`^/([^/]+)$`)
-var bitbucketRepoRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
-var bitbucketIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issue/([^/]+)/[^/]+$`)
-var bitbucketPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
-var bitbucketPrefix = "[Bitbucket]"
+var (
+	bitbucketUserRegex  = regexp.MustCompile(`^/([^/]+)$`)
+	bitbucketRepoRegex  = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
+	bitbucketIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issue/([^/]+)/[^/]+$`)
+	bitbucketPullRegex  = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull-request/([^/]+)/.*$`)
+
+	bitbucketPrefix = "[Bitbucket]"
+
+	userURL             = "https://bitbucket.org/api/2.0/users/%s"
+	repoURL             = "https://bitbucket.org/api/2.0/repositories/%s/%s"
+	repoIssuesURL       = "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s"
+	repoPullRequestsURL = "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s"
+)
 
 func NewBitbucketProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
@@ -88,7 +97,7 @@ func bitbucketGetUser(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	user := matches[1]
 
 	bu := &bitbucketUser{}
-	err := internal.JSONRequest(bu, "https://bitbucket.org/api/2.0/users/%s", user)
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(userURL, user), bu)
 	if err != nil {
 		return false
 	}
@@ -109,7 +118,7 @@ func bitbucketGetRepo(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	repo := matches[2]
 
 	br := &bitbucketRepo{}
-	err := internal.JSONRequest(br, "https://bitbucket.org/api/2.0/repositories/%s/%s", user, repo)
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(repoURL, user, repo), br)
 	if err != nil {
 		return false
 	}
@@ -140,7 +149,7 @@ func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	issueNum := matches[3]
 
 	bi := &bitbucketIssue{}
-	err := internal.JSONRequest(bi, "https://bitbucket.org/api/1.0/repositories/%s/%s/issues/%s", user, repo, issueNum)
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi)
 	if err != nil {
 		return false
 	}
@@ -180,7 +189,7 @@ func bitbucketGetPull(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	pullNum := matches[3]
 
 	bpr := &bitbucketPullRequest{}
-	err := internal.JSONRequest(bpr, "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s", user, repo, pullNum)
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr)
 	if err != nil {
 		return false
 	}

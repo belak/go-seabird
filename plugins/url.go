@@ -13,8 +13,8 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -24,7 +24,6 @@ func init() {
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
 // and I don't know if it's worth the time to make it better.
 var urlRegex = regexp.MustCompile(`https?://[^ ]+`)
-var titleRegex = regexp.MustCompile(`(?:\s*[\r\n]+\s*)+`)
 
 // NOTE: This nasty work is done so we ignore invalid ssl certs
 var client = &http.Client{

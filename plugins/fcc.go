@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -25,8 +25,8 @@ type fccLicense struct {
 	Service    string `json:"serviceDesc"`
 	Status     string `json:"statusDesc"`
 	ExpireDate string `json:"expiredDate"`
-	LicenseId  string `json:"licenseID"`
-	LicenseUrl string `json:"licDetailURL"`
+	LicenseID  string `json:"licenseID"`
+	LicenseURL string `json:"licDetailURL"`
 }
 
 type fccLicenses struct {

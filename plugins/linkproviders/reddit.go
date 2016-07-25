@@ -1,13 +1,15 @@
 package linkproviders
 
 import (
+	"fmt"
+	"net/http"
 	"net/url"
 	"regexp"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
-	"github.com/belak/go-seabird/internal"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -51,6 +53,8 @@ var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
 var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
+// NewRedditProvider will create a link provider for reddit URLs and register is
+// with the main link provider plugin.
 func NewRedditProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
@@ -79,7 +83,7 @@ func redditGetUser(b *bot.Bot, m *irc.Message, url string) bool {
 	}
 
 	ru := &redditUser{}
-	err := internal.JSONRequest(ru, "https://www.reddit.com/user/%s/about.json", matches[2])
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/user/%s/about.json", matches[2]), ru)
 	if err != nil {
 		return false
 	}
@@ -102,7 +106,7 @@ func redditGetComment(b *bot.Bot, m *irc.Message, url string) bool {
 	}
 
 	rc := []redditComment{}
-	err := internal.JSONRequest(&rc, "https://www.reddit.com/comments/%s.json", matches[1])
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/comments/%s.json", matches[1]), rc)
 	if err != nil || len(rc) < 1 {
 		return false
 	}
@@ -122,7 +126,7 @@ func redditGetSub(b *bot.Bot, m *irc.Message, url string) bool {
 	}
 
 	rs := &redditSub{}
-	err := internal.JSONRequest(rs, "https://www.reddit.com/r/%s/about.json", matches[1])
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/user/%s/about.json", matches[2]), rs)
 	if err != nil {
 		return false
 	}
