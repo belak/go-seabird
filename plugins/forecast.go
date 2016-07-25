@@ -1,13 +1,13 @@
 package plugins
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -113,16 +113,8 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error)
 		loc.Lat,
 		loc.Lon)
 
-	r, err := http.Get(link)
-	if err != nil {
-		return nil, err
-	}
-
 	f := forecastResponse{}
-	dec := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	err = dec.Decode(&f)
+	err := com.HttpGetJSON(&http.Client{}, link, f)
 	if err != nil {
 		return nil, err
 	}

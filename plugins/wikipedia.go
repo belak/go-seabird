@@ -1,15 +1,15 @@
 package plugins
 
 import (
-	"encoding/json"
 	"net/http"
 	"strings"
 
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/yhat/scrape"
 )
 
@@ -46,15 +46,12 @@ func wikiCallback(b *bot.Bot, m *irc.Message) {
 			return
 		}
 
-		resp, err := http.Get("http://en.wikipedia.org/w/api.php?format=json&action=parse&page=" + transformQuery(m.Trailing()))
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-		defer resp.Body.Close()
-
 		wr := &wikiResponse{}
-		err = json.NewDecoder(resp.Body).Decode(wr)
+		err := com.HttpGetJSON(
+			&http.Client{},
+			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(m.Trailing()),
+			wr,
+		)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return

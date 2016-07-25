@@ -1,17 +1,17 @@
 package linkproviders
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/url"
 	"strings"
 
 	duration "github.com/ChannelMeter/iso8601duration"
+	"github.com/Unknwon/com"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -121,14 +121,8 @@ func getVideo(id string, key string) (time string, title string) {
 	// Build the API call
 	api := fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?part=contentDetails%%2Csnippet&id=%s&fields=items(contentDetails%%2Csnippet)&key=%s", id, key)
 
-	// Get the YouTube JSON
-	r, _ := http.Get(api)
-	defer r.Body.Close()
-
-	// Decode JSON into the Videos struct
 	var videos Videos
-	dec := json.NewDecoder(r.Body)
-	err := dec.Decode(&videos)
+	err := com.HttpGetJSON(&http.Client{}, api, &videos)
 	if err != nil {
 		return "", ""
 	}

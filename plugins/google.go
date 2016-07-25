@@ -1,13 +1,13 @@
 package plugins
 
 import (
-	"encoding/json"
 	"html"
 	"net/http"
 	"net/url"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -52,21 +52,19 @@ func googleSearch(b *bot.Bot, m *irc.Message, service, query string) {
 			return
 		}
 
-		resp, err := http.Get("https://ajax.googleapis.com/ajax/services/search/" + service + "?v=1.0&q=" + url.QueryEscape(m.Trailing()))
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-		defer resp.Body.Close()
-
 		gr := &googleResponse{}
-		err = json.NewDecoder(resp.Body).Decode(gr)
+		err := com.HttpGetJSON(
+			&http.Client{},
+			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(m.Trailing()),
+			gr,
+		)
+
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return
 		}
 
-		if gr.ResponseStatus != 200 || len(gr.ResponseData.Results) == 0 {
+		if len(gr.ResponseData.Results) == 0 {
 			b.MentionReply(m, "Error fetching search results")
 			return
 		}

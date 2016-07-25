@@ -1,10 +1,10 @@
 package plugins
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/url"
 
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
 	"github.com/belak/irc"
 )
@@ -61,16 +61,11 @@ func (p *fccPlugin) Search(b *bot.Bot, m *irc.Message) {
 			b.MentionReply(m, "Callsign required")
 			return
 		}
+
 		url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(m.Trailing())
-		resp, err := http.Get(url)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-		defer resp.Body.Close()
 
 		fr := &fccResponse{}
-		err = json.NewDecoder(resp.Body).Decode(fr)
+		err := com.HttpGetJSON(&http.Client{}, url, fr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return

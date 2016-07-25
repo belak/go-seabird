@@ -1,10 +1,11 @@
 package plugins
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/url"
+
+	"github.com/Unknwon/com"
 )
 
 type locationResponse struct {
@@ -42,17 +43,11 @@ func FetchLocation(where string) (*Location, error) {
 	u, _ := url.Parse("http://maps.googleapis.com/maps/api/geocode/json")
 	u.RawQuery = v.Encode()
 
-	r, err := http.Get(u.String())
+	loc := locationResponse{}
+	err := com.HttpGetJSON(&http.Client{}, u.String(), loc)
 	if err != nil {
 		return nil, err
-	}
-
-	loc := locationResponse{}
-	dec := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-	dec.Decode(&loc)
-
-	if len(loc.Results) == 0 {
+	} else if len(loc.Results) == 0 {
 		return nil, errors.New("No location results found")
 	} else if len(loc.Results) > 1 {
 		// TODO: display results
@@ -62,7 +57,8 @@ func FetchLocation(where string) (*Location, error) {
 	ret := Location{
 		Address: loc.Results[0].Address,
 		Lat:     loc.Results[0].Geometry.Location.Lat,
-		Lon:     loc.Results[0].Geometry.Location.Lon}
+		Lon:     loc.Results[0].Geometry.Location.Lon,
+	}
 
 	return &ret, nil
 }

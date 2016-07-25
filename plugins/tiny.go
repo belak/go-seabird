@@ -1,12 +1,11 @@
 package plugins
 
 import (
-	"bytes"
-	"encoding/json"
 	"net/http"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
@@ -38,23 +37,10 @@ func shorten(b *bot.Bot, m *irc.Message) {
 		url := "https://www.googleapis.com/urlshortener/v1/url"
 
 		data := map[string]string{"longUrl": m.Trailing()}
-		out, err := json.Marshal(data)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-
-		resp, err := http.Post(url, "application/json", bytes.NewBuffer(out))
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-		defer resp.Body.Close()
-
 		sr := &shortenResult{}
-		err = json.NewDecoder(resp.Body).Decode(sr)
+		err := com.HttpPostJSON(&http.Client{}, url, data, sr)
 		if err != nil {
-			b.MentionReply(m, "Error reading server response")
+			b.MentionReply(m, "%s", err)
 			return
 		}
 
