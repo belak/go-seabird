@@ -8,19 +8,19 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("nettools", NewNetToolsPlugin)
+	bot.RegisterPlugin("nettools", newNetToolsPlugin)
 }
 
 type netToolsPlugin struct {
 	Key string
 }
 
-func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &netToolsPlugin{}
 
 	b.Config("net_tools", p)
@@ -131,72 +131,52 @@ func (p *netToolsPlugin) Ping(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
+func (p *netToolsPlugin) pasteData(data string) (string, error) {
+	resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
+		"api_dev_key":    {p.Key},
+		"api_option":     {"paste"},
+		"api_paste_code": {data},
+	})
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	body, err := ioutil.ReadAll(resp.Body)
+	return string(body), err
+}
+
+func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) {
+	out, err := exec.Command(cmd, args...).Output()
+	if err != nil {
+		return "", err
+	}
+
+	return p.pasteData(string(out))
+}
+
+func (p *netToolsPlugin) handleCommand(b *bot.Bot, m *irc.Message, command string, emptyMsg string) {
+	if m.Trailing() == "" {
+		b.MentionReply(m, "Host required")
+		return
+	}
+
+	url, err := p.runCommand("traceroute", m.Trailing())
+	if err != nil {
+		b.MentionReply(m, "%s", err)
+		return
+	}
+
+	b.MentionReply(m, "%s", url)
+
+}
+
 func (p *netToolsPlugin) Traceroute(b *bot.Bot, m *irc.Message) {
-	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Host required")
-			return
-		}
-
-		out, err := exec.Command("traceroute", m.Trailing()).Output()
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-
-		resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
-			"api_dev_key":    {p.Key},
-			"api_option":     {"paste"},
-			"api_paste_code": {string(out)},
-		})
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-
-		b.MentionReply(m, "%s", body)
-	}()
+	go p.handleCommand(b, m, "traceroute", "Host required")
 }
 
 func (p *netToolsPlugin) Whois(b *bot.Bot, m *irc.Message) {
-	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Domain required")
-			return
-		}
-
-		out, err := exec.Command("whois", m.Trailing()).Output()
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-
-		resp, err := http.PostForm("http://pastebin.com/api/api_post.php", url.Values{
-			"api_dev_key":    {p.Key},
-			"api_option":     {"paste"},
-			"api_paste_code": {string(out)},
-		})
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-		defer resp.Body.Close()
-
-		body, err := ioutil.ReadAll(resp.Body)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
-
-		b.MentionReply(m, "%s", body)
-	}()
+	go p.handleCommand(b, m, "whois", "Domain required")
 }
 
 func (p *netToolsPlugin) DNSCheck(b *bot.Bot, m *irc.Message) {

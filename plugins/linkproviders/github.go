@@ -9,13 +9,13 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url/github", NewGithubProvider)
+	bot.RegisterPlugin("url/github", newGithubProvider)
 }
 
 type githubConfig struct {
@@ -26,14 +26,17 @@ type githubProvider struct {
 	api *github.Client
 }
 
-var githubUserRegex = regexp.MustCompile(`^/([^/]+)$`)
-var githubRepoRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
-var githubIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issues/([^/]+)$`)
-var githubPullRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull/([^/]+)$`)
-var githubGistRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
-var githubPrefix = "[Github]"
+var (
+	githubUserRegex  = regexp.MustCompile(`^/([^/]+)$`)
+	githubRepoRegex  = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
+	githubIssueRegex = regexp.MustCompile(`^/([^/]+)/([^/]+)/issues/([^/]+)$`)
+	githubPullRegex  = regexp.MustCompile(`^/([^/]+)/([^/]+)/pull/([^/]+)$`)
+	githubGistRegex  = regexp.MustCompile(`^/([^/]+)/([^/]+)$`)
 
-func NewGithubProvider(b *bot.Bot) (bot.Plugin, error) {
+	githubPrefix = "[Github]"
+)
+
+func newGithubProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)

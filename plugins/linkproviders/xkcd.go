@@ -10,32 +10,32 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url/xkcd", NewXKCDProvider)
+	bot.RegisterPlugin("url/xkcd", newXKCDProvider)
 }
 
 var xkcdRegex = regexp.MustCompile(`^/([^/]+)$`)
 var xkcdPrefix = "[XKCD]"
 
-type XKCDProvider struct{}
+type xkcdProvider struct{}
 
-func NewXKCDProvider(b *bot.Bot) (bot.Plugin, error) {
+func newXKCDProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)
 
-	t := &XKCDProvider{}
+	t := &xkcdProvider{}
 	p.RegisterProvider("xkcd.com", t.Handle)
 
 	return nil, nil
 }
 
-func (p *XKCDProvider) Handle(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func (p *xkcdProvider) Handle(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	if url.Path != "" && !xkcdRegex.MatchString(url.Path) {
 		return false
 	}

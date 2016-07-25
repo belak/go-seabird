@@ -7,7 +7,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("db", NewDBPlugin)
+	bot.RegisterPlugin("db", newDBPlugin)
 }
 
 type dbConfig struct {
@@ -15,7 +15,7 @@ type dbConfig struct {
 	DataSource string
 }
 
-func NewDBPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newDBPlugin(b *bot.Bot) (bot.Plugin, error) {
 	dbc := &dbConfig{}
 	err := b.Config("db", dbc)
 	if err != nil {

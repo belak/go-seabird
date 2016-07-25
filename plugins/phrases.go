@@ -6,16 +6,16 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("phrases", NewPhrasesPlugin)
+	bot.RegisterPlugin("phrases", newPhrasesPlugin)
 }
 
-type PhrasesPlugin struct {
+type phrasesPlugin struct {
 	db *sqlx.DB
 }
 
@@ -27,9 +27,9 @@ type phrase struct {
 	Deleted   bool
 }
 
-func NewPhrasesPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newPhrasesPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
-	p := &PhrasesPlugin{b.Plugins["db"].(*sqlx.DB)}
+	p := &phrasesPlugin{b.Plugins["db"].(*sqlx.DB)}
 
 	b.CommandMux.Event("forget", p.forgetCallback, &bot.HelpInfo{
 		Usage:       "<key>",
@@ -59,11 +59,11 @@ func NewPhrasesPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return nil, nil
 }
 
-func (p *PhrasesPlugin) cleanedName(name string) string {
+func (p *phrasesPlugin) cleanedName(name string) string {
 	return strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
 }
 
-func (p *PhrasesPlugin) getKey(key string) (*phrase, error) {
+func (p *phrasesPlugin) getKey(key string) (*phrase, error) {
 	row := &phrase{}
 	if len(key) == 0 {
 		return row, errors.New("No key provided")
@@ -81,7 +81,7 @@ func (p *PhrasesPlugin) getKey(key string) (*phrase, error) {
 	return row, nil
 }
 
-func (p *PhrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
 	// Ensure there is already a key for this. Note that this
 	// introduces a potential race condition, but it's not super
 	// important.
@@ -112,7 +112,7 @@ func (p *PhrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "Forgot %s", name)
 }
 
-func (p *PhrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
 	row, err := p.getKey(m.Trailing())
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
@@ -122,7 +122,7 @@ func (p *PhrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s", row.Value)
 }
 
-func (p *PhrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
 	split := strings.SplitN(m.Trailing(), " ", 2)
 	if len(split) < 2 {
 		b.MentionReply(m, "Not enough args")
@@ -138,7 +138,7 @@ func (p *PhrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
 	b.Reply(m, "%s: %s", split[0], row.Value)
 }
 
-func (p *PhrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
 	rows := []phrase{}
 	err := p.db.Select(&rows, "SELECT * FROM phrases WHERE key=$1 ORDER BY id DESC LIMIT 5", p.cleanedName(m.Trailing()))
 	if err == sql.ErrNoRows {
@@ -158,7 +158,7 @@ func (p *PhrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
 	}
 }
 
-func (p *PhrasesPlugin) setCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) setCallback(b *bot.Bot, m *irc.Message) {
 	split := strings.SplitN(m.Trailing(), " ", 2)
 	if len(split) < 2 {
 		b.MentionReply(m, "Not enough args")

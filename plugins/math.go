@@ -10,10 +10,10 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("math", NewMathPlugin)
+	bot.RegisterPlugin("math", newMathPlugin)
 }
 
-func NewMathPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newMathPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.CommandMux.Event("math", exprCallback, &bot.HelpInfo{
 		Usage:       "<expr>",
 		Description: "Math. Like calculators and stuff. Bug somebody if you don't know how to math.",

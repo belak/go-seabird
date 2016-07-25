@@ -2,9 +2,9 @@ language: go
 go: 1.6
 
 before_install:
-  - go get github.com/golang/lint/golint
+  - go get github.com/alecthomas/gometalinter
+  - gometalinter --install
 
 script:
-  - go vet -x ./...
-  - $HOME/gopath/bin/golint ./...
+  - gometalinter ./... --fast -D gocyclo
   - go test -v ./...

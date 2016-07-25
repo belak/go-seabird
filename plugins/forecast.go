@@ -1,18 +1,18 @@
 package plugins
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
 
-	"github.com/belak/irc"
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("forecast", NewForecastPlugin)
+	bot.RegisterPlugin("forecast", newForecastPlugin)
 }
 
 // DataPoint represents a point at a specific point in time,
@@ -89,7 +89,7 @@ type forecastPlugin struct {
 	// CacheDuration string
 }
 
-func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
 	p := &forecastPlugin{db: b.Plugins["db"].(*sqlx.DB)}
 
@@ -113,16 +113,8 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error)
 		loc.Lat,
 		loc.Lon)
 
-	r, err := http.Get(link)
-	if err != nil {
-		return nil, err
-	}
-
 	f := forecastResponse{}
-	dec := json.NewDecoder(r.Body)
-	defer r.Body.Close()
-
-	err = dec.Decode(&f)
+	err := com.HttpGetJSON(&http.Client{}, link, f)
 	if err != nil {
 		return nil, err
 	}
