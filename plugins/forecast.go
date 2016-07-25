@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("forecast", NewForecastPlugin)
+	bot.RegisterPlugin("forecast", newForecastPlugin)
 }
 
 // DataPoint represents a point at a specific point in time,
@@ -89,7 +89,7 @@ type forecastPlugin struct {
 	// CacheDuration string
 }
 
-func NewForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
 	p := &forecastPlugin{db: b.Plugins["db"].(*sqlx.DB)}
 

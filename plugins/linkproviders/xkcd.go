@@ -16,7 +16,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("url/xkcd", NewXKCDProvider)
+	bot.RegisterPlugin("url/xkcd", newXKCDProvider)
 }
 
 var xkcdRegex = regexp.MustCompile(`^/([^/]+)$`)
@@ -24,8 +24,7 @@ var xkcdPrefix = "[XKCD]"
 
 type xkcdProvider struct{}
 
-// NewXKCDProvider will create a new link provider for grabbing XKCD alt text.
-func NewXKCDProvider(b *bot.Bot) (bot.Plugin, error) {
+func newXKCDProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)

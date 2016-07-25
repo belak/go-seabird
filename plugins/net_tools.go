@@ -13,14 +13,14 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("nettools", NewNetToolsPlugin)
+	bot.RegisterPlugin("nettools", newNetToolsPlugin)
 }
 
 type netToolsPlugin struct {
 	Key string
 }
 
-func NewNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &netToolsPlugin{}
 
 	b.Config("net_tools", p)

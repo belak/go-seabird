@@ -14,7 +14,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("wiki", NewWikiPlugin)
+	bot.RegisterPlugin("wiki", newWikiPlugin)
 }
 
 type wikiResponse struct {
@@ -26,7 +26,7 @@ type wikiResponse struct {
 	} `json:"parse"`
 }
 
-func NewWikiPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newWikiPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.CommandMux.Event("wiki", wikiCallback, &bot.HelpInfo{
 		Usage:       "<topic>",
 		Description: "Retrieves first section from most relevant Wikipedia article to given topic",

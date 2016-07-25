@@ -10,7 +10,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("fcc", NewFccPlugin)
+	bot.RegisterPlugin("fcc", newFccPlugin)
 }
 
 type fccPlugin struct {
@@ -42,7 +42,7 @@ type fccResponse struct {
 	LicenseData fccLicenses `json:"Licenses"`
 }
 
-func NewFccPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newFccPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &fccPlugin{}
 
 	b.Config("fcc", p)

@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("tvdb", NewTVDBPlugin)
+	bot.RegisterPlugin("tvdb", newTVDBPlugin)
 }
 
 type tvdbPlugin struct {
@@ -48,7 +48,7 @@ type tvdbZipResponse struct {
 	} `xml:"Series"`
 }
 
-func NewTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &tvdbPlugin{}
 
 	b.Config("tvdb", p)

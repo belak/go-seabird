@@ -15,7 +15,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("url/bitbucket", NewBitbucketProvider)
+	bot.RegisterPlugin("url/bitbucket", newBitbucketProvider)
 }
 
 type bitbucketUser struct {
@@ -65,7 +65,7 @@ var (
 	repoPullRequestsURL = "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s"
 )
 
-func NewBitbucketProvider(b *bot.Bot) (bot.Plugin, error) {
+func newBitbucketProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)

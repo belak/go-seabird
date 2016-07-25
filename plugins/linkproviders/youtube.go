@@ -15,17 +15,17 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("url/youtube", NewYoutubeProvider)
+	bot.RegisterPlugin("url/youtube", newYoutubeProvider)
 }
 
 var youtubePrefix = "[YouTube]"
 
-type YoutubeConfig struct {
+type youtubeConfig struct {
 	Key string
 }
 
-// Videos was converted using https://github.com/ChimeraCoder/gojson
-type Videos struct {
+// videos was converted using https://github.com/ChimeraCoder/gojson
+type ytVideos struct {
 	Items []struct {
 		ContentDetails struct {
 			Caption         string `json:"caption"`
@@ -67,21 +67,21 @@ type Videos struct {
 	} `json:"items"`
 }
 
-func NewYoutubeProvider(b *bot.Bot) (bot.Plugin, error) {
+func newYoutubeProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)
 
 	// Listen for youtube.com and youtu.be URLs
-	p.RegisterProvider("youtube.com", HandleYoutube)
-	p.RegisterProvider("youtu.be", HandleYoutube)
+	p.RegisterProvider("youtube.com", handleYoutube)
+	p.RegisterProvider("youtu.be", handleYoutube)
 
 	return nil, nil
 }
 
-func HandleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
+func handleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
 	// Get API key from seabird config
-	tc := &YoutubeConfig{}
+	tc := &youtubeConfig{}
 	err := b.Config("youtube", tc)
 	if err != nil {
 		return false
@@ -121,7 +121,7 @@ func getVideo(id string, key string) (time string, title string) {
 	// Build the API call
 	api := fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?part=contentDetails%%2Csnippet&id=%s&fields=items(contentDetails%%2Csnippet)&key=%s", id, key)
 
-	var videos Videos
+	var videos ytVideos
 	err := com.HttpGetJSON(&http.Client{}, api, &videos)
 	if err != nil {
 		return "", ""

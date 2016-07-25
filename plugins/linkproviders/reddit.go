@@ -13,7 +13,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("url/reddit", NewRedditProvider)
+	bot.RegisterPlugin("url/reddit", newRedditProvider)
 }
 
 type redditUser struct {
@@ -53,9 +53,7 @@ var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
 var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
-// NewRedditProvider will create a link provider for reddit URLs and register is
-// with the main link provider plugin.
-func NewRedditProvider(b *bot.Bot) (bot.Plugin, error) {
+func newRedditProvider(b *bot.Bot) (bot.Plugin, error) {
 	// Ensure that the url plugin is loaded
 	b.LoadPlugin("url")
 	p := b.Plugins["url"].(*plugins.URLPlugin)

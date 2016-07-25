@@ -1,15 +1,15 @@
 package plugins
 
 import (
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("mentions", NewMentionsPlugin)
+	bot.RegisterPlugin("mentions", newMentionsPlugin)
 }
 
-func NewMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.MentionMux.Event(mentionsCallback)
 	return nil, nil
 }

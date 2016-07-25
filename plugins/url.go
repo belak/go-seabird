@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("url", NewURLPlugin)
+	bot.RegisterPlugin("url", newURLPlugin)
 }
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
@@ -44,7 +44,7 @@ type URLPlugin struct {
 	providers map[string][]LinkProvider
 }
 
-func NewURLPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newURLPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &URLPlugin{
 		providers: make(map[string][]LinkProvider),
 	}

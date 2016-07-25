@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("tiny", NewTinyPlugin)
+	bot.RegisterPlugin("tiny", newTinyPlugin)
 }
 
 type shortenResult struct {
@@ -18,7 +18,7 @@ type shortenResult struct {
 	LongURL string `json:"longUrl"`
 }
 
-func NewTinyPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newTinyPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.CommandMux.Event("tiny", shorten, &bot.HelpInfo{
 		Usage:       "<url>",
 		Description: "Shortens given URL",

@@ -4,12 +4,12 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("chance", NewChancePlugin)
+	bot.RegisterPlugin("chance", newChancePlugin)
 }
 
 var coinNames = []string{
@@ -22,7 +22,7 @@ type chancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func NewChancePlugin(b *bot.Bot) (bot.Plugin, error) {
+func newChancePlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &chancePlugin{
 		6,
 		make(map[string]int),

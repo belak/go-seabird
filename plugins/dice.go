@@ -7,17 +7,17 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("dice", NewDicePlugin)
+	bot.RegisterPlugin("dice", newDicePlugin)
 }
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-func NewDicePlugin(b *bot.Bot) (bot.Plugin, error) {
+func newDicePlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.MentionMux.Event(diceCallback)
 	return nil, nil
 }

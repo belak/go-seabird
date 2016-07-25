@@ -7,12 +7,12 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("issues", NewIssuesPlugin)
+	bot.RegisterPlugin("issues", newIssuesPlugin)
 }
 
 type issuesPlugin struct {
@@ -21,7 +21,7 @@ type issuesPlugin struct {
 	api *github.Client
 }
 
-func NewIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
 	p := &issuesPlugin{}
 	b.Config("github", p)
 

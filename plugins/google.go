@@ -11,7 +11,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("google", NewGooglePlugin)
+	bot.RegisterPlugin("google", newGooglePlugin)
 }
 
 type googleResponse struct {
@@ -24,7 +24,7 @@ type googleResponse struct {
 	ResponseStatus int `json:"responseStatus"`
 }
 
-func NewGooglePlugin(b *bot.Bot) (bot.Plugin, error) {
+func newGooglePlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.CommandMux.Event("g", googleWebCallback, &bot.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google web search result for given query",

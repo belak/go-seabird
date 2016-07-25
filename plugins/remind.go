@@ -6,16 +6,16 @@ import (
 	"strings"
 	"time"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("remind", NewReminderPlugin)
+	bot.RegisterPlugin("remind", newreminderPlugin)
 }
 
-type ReminderPlugin struct {
+type reminderPlugin struct {
 	db *sqlx.DB
 }
 
@@ -27,9 +27,9 @@ type reminder struct {
 	ReminderTime time.Time `db:"reminder_time"`
 }
 
-func NewReminderPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newreminderPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
-	p := &ReminderPlugin{b.Plugins["db"].(*sqlx.DB)}
+	p := &reminderPlugin{b.Plugins["db"].(*sqlx.DB)}
 
 	b.BasicMux.Event("001", p.InitialDispatch)
 	b.BasicMux.Event("JOIN", p.JoinDispatch)
@@ -41,7 +41,7 @@ func NewReminderPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return nil, nil
 }
 
-func (p *ReminderPlugin) dispatch(b *bot.Bot, r *reminder) {
+func (p *reminderPlugin) dispatch(b *bot.Bot, r *reminder) {
 	// Because time.Sleep handles negative values (and 0) by simply
 	// returning, this will be handled correctly even with negative
 	// durations.
@@ -67,7 +67,7 @@ func (p *ReminderPlugin) dispatch(b *bot.Bot, r *reminder) {
 
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
-func (p *ReminderPlugin) InitialDispatch(b *bot.Bot, m *irc.Message) {
+func (p *reminderPlugin) InitialDispatch(b *bot.Bot, m *irc.Message) {
 	reminders := []*reminder{}
 	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1", "private")
 	if err != nil {
@@ -82,7 +82,7 @@ func (p *ReminderPlugin) InitialDispatch(b *bot.Bot, m *irc.Message) {
 
 // When we join a channel, we need to see if there are any reminders to be
 // queued up.
-func (p *ReminderPlugin) JoinDispatch(b *bot.Bot, m *irc.Message) {
+func (p *reminderPlugin) JoinDispatch(b *bot.Bot, m *irc.Message) {
 	// If it's not the bot, we ignore it.
 	if m.Prefix.Name != b.CurrentNick() || len(m.Params) < 1 {
 		return
@@ -100,7 +100,7 @@ func (p *ReminderPlugin) JoinDispatch(b *bot.Bot, m *irc.Message) {
 	}
 }
 
-func (p *ReminderPlugin) RemindCommand(b *bot.Bot, m *irc.Message) {
+func (p *reminderPlugin) RemindCommand(b *bot.Bot, m *irc.Message) {
 	split := strings.SplitN(m.Trailing(), " ", 2)
 	if len(split) != 2 {
 		b.MentionReply(m, "Not enough args")

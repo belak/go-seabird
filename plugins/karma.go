@@ -12,7 +12,7 @@ import (
 )
 
 func init() {
-	bot.RegisterPlugin("karma", NewKarmaPlugin)
+	bot.RegisterPlugin("karma", newKarmaPlugin)
 }
 
 type karmaUser struct {
@@ -20,15 +20,15 @@ type karmaUser struct {
 	Score int
 }
 
-type KarmaPlugin struct {
+type karmaPlugin struct {
 	db *sqlx.DB
 }
 
 var regex = regexp.MustCompile(`([^\s]+)(\+\+|--)(?:\s|$)`)
 
-func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
-	p := &KarmaPlugin{b.Plugins["db"].(*sqlx.DB)}
+	p := &karmaPlugin{b.Plugins["db"].(*sqlx.DB)}
 
 	b.CommandMux.Event("karma", p.karmaCallback, &bot.HelpInfo{
 		Usage:       "<nick>",
@@ -45,12 +45,12 @@ func NewKarmaPlugin(b *bot.Bot) (bot.Plugin, error) {
 	return p, nil
 }
 
-func (p *KarmaPlugin) cleanedName(name string) string {
+func (p *karmaPlugin) cleanedName(name string) string {
 	return strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
 }
 
 // GetKarmaFor returns the karma for the given name.
-func (p *KarmaPlugin) GetKarmaFor(name string) int {
+func (p *karmaPlugin) GetKarmaFor(name string) int {
 	var score int
 	err := p.db.Get(&score, "SELECT score FROM karma WHERE name=$1", p.cleanedName(name))
 	if err != nil {
@@ -61,7 +61,7 @@ func (p *KarmaPlugin) GetKarmaFor(name string) int {
 }
 
 // UpdateKarma will update the karma for a given name and return the new karma value.
-func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
+func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
 	_, err := p.db.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.cleanedName(name), diff)
 	// If it was a nil error, we got the insert
 	if err == nil {
@@ -91,7 +91,7 @@ func (p *KarmaPlugin) UpdateKarma(name string, diff int) int {
 	return score
 }
 
-func (p *KarmaPlugin) karmaCallback(b *bot.Bot, m *irc.Message) {
+func (p *karmaPlugin) karmaCallback(b *bot.Bot, m *irc.Message) {
 	term := strings.TrimSpace(m.Trailing())
 
 	// If we don't provide a term, search for the current nick
@@ -102,7 +102,7 @@ func (p *KarmaPlugin) karmaCallback(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
-func (p *KarmaPlugin) karmaCheck(b *bot.Bot, m *irc.Message, msg string, sort string) {
+func (p *karmaPlugin) karmaCheck(b *bot.Bot, m *irc.Message, msg string, sort string) {
 	user := &karmaUser{}
 	err := p.db.Get(user, fmt.Sprintf("SELECT name, score FROM karma ORDER BY score %s LIMIT 1", sort))
 	if err != nil {
@@ -112,15 +112,15 @@ func (p *KarmaPlugin) karmaCheck(b *bot.Bot, m *irc.Message, msg string, sort st
 
 	b.MentionReply(m, "%s has the %s karma with %d", user.Name, msg, user.Score)
 }
-func (p *KarmaPlugin) topKarmaCallback(b *bot.Bot, m *irc.Message) {
+func (p *karmaPlugin) topKarmaCallback(b *bot.Bot, m *irc.Message) {
 	p.karmaCheck(b, m, "top", "DESC")
 }
 
-func (p *KarmaPlugin) bottomKarmaCallback(b *bot.Bot, m *irc.Message) {
+func (p *karmaPlugin) bottomKarmaCallback(b *bot.Bot, m *irc.Message) {
 	p.karmaCheck(b, m, "bottom", "ASC")
 }
 
-func (p *KarmaPlugin) callback(b *bot.Bot, m *irc.Message) {
+func (p *karmaPlugin) callback(b *bot.Bot, m *irc.Message) {
 	if len(m.Params) < 2 || !m.FromChannel() {
 		return
 	}

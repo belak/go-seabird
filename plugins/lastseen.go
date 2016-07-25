@@ -5,20 +5,20 @@ import (
 	"strings"
 	"time"
 
-	"github.com/belak/irc"
 	"github.com/belak/go-seabird/bot"
+	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("lastseen", NewLastSeenPlugin)
+	bot.RegisterPlugin("lastseen", newLastSeenPlugin)
 }
 
 type lastSeenPlugin struct {
 	db *sqlx.DB
 }
 
-func NewLastSeenPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newLastSeenPlugin(b *bot.Bot) (bot.Plugin, error) {
 	b.LoadPlugin("db")
 	p := &lastSeenPlugin{b.Plugins["db"].(*sqlx.DB)}
 
