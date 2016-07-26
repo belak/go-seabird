@@ -5,33 +5,31 @@ import (
 	"strings"
 	"time"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("lastseen", newLastSeenPlugin)
+	seabird.RegisterPlugin("lastseen", newLastSeenPlugin)
 }
 
 type lastSeenPlugin struct {
 	db *sqlx.DB
 }
 
-func newLastSeenPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.LoadPlugin("db")
-	p := &lastSeenPlugin{b.Plugins["db"].(*sqlx.DB)}
+func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB) {
+	p := &lastSeenPlugin{db: db}
 
-	b.CommandMux.Event("active", p.activeCallback, &bot.HelpInfo{
+	cm.Event("active", p.activeCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
 		Description: "Reports the last time user was seen",
 	})
-	b.BasicMux.Event("PRIVMSG", p.msgCallback)
 
-	return p, nil
+	m.Event("PRIVMSG", p.msgCallback)
 }
 
-func (p *lastSeenPlugin) activeCallback(b *bot.Bot, m *irc.Message) {
+func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, m *irc.Message) {
 	nick := m.Trailing()
 	if nick == "" {
 		b.MentionReply(m, "Nick required")
@@ -85,7 +83,7 @@ func (p *lastSeenPlugin) isActive(nick, channel string) bool {
 	return isActiveTime(lastseen)
 }
 
-func (p *lastSeenPlugin) msgCallback(b *bot.Bot, m *irc.Message) {
+func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
 	if len(m.Params) < 2 || !m.FromChannel() || m.Prefix.Name == "" {
 		return
 	}

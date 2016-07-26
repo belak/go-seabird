@@ -6,13 +6,13 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("phrases", newPhrasesPlugin)
+	seabird.RegisterPlugin("phrases", newPhrasesPlugin)
 }
 
 type phrasesPlugin struct {
@@ -27,36 +27,33 @@ type phrase struct {
 	Deleted   bool
 }
 
-func newPhrasesPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.LoadPlugin("db")
-	p := &phrasesPlugin{b.Plugins["db"].(*sqlx.DB)}
+func newPhrasesPlugin(cm *seabird.CommandMux, db *sqlx.DB) {
+	p := &phrasesPlugin{db: db}
 
-	b.CommandMux.Event("forget", p.forgetCallback, &bot.HelpInfo{
+	cm.Event("forget", p.forgetCallback, &seabird.HelpInfo{
 		Usage:       "<key>",
 		Description: "Look up a phrase",
 	})
 
-	b.CommandMux.Event("get", p.getCallback, &bot.HelpInfo{
+	cm.Event("get", p.getCallback, &seabird.HelpInfo{
 		Usage:       "<key>",
 		Description: "Look up a phrase",
 	})
 
-	b.CommandMux.Event("give", p.giveCallback, &bot.HelpInfo{
+	cm.Event("give", p.giveCallback, &seabird.HelpInfo{
 		Usage:       "<key> <user>",
 		Description: "Mentions a user with a given phrase",
 	})
 
-	b.CommandMux.Event("history", p.historyCallback, &bot.HelpInfo{
+	cm.Event("history", p.historyCallback, &seabird.HelpInfo{
 		Usage:       "<key>",
 		Description: "Look up history for a key",
 	})
 
-	b.CommandMux.Event("set", p.setCallback, &bot.HelpInfo{
+	cm.Event("set", p.setCallback, &seabird.HelpInfo{
 		Usage:       "<key> <phrase>",
 		Description: "Remembers a phrase",
 	})
-
-	return nil, nil
 }
 
 func (p *phrasesPlugin) cleanedName(name string) string {
@@ -81,7 +78,7 @@ func (p *phrasesPlugin) getKey(key string) (*phrase, error) {
 	return row, nil
 }
 
-func (p *phrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, m *irc.Message) {
 	// Ensure there is already a key for this. Note that this
 	// introduces a potential race condition, but it's not super
 	// important.
@@ -112,7 +109,7 @@ func (p *phrasesPlugin) forgetCallback(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "Forgot %s", name)
 }
 
-func (p *phrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) getCallback(b *seabird.Bot, m *irc.Message) {
 	row, err := p.getKey(m.Trailing())
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
@@ -122,7 +119,7 @@ func (p *phrasesPlugin) getCallback(b *bot.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s", row.Value)
 }
 
-func (p *phrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) giveCallback(b *seabird.Bot, m *irc.Message) {
 	split := strings.SplitN(m.Trailing(), " ", 2)
 	if len(split) < 2 {
 		b.MentionReply(m, "Not enough args")
@@ -138,7 +135,7 @@ func (p *phrasesPlugin) giveCallback(b *bot.Bot, m *irc.Message) {
 	b.Reply(m, "%s: %s", split[0], row.Value)
 }
 
-func (p *phrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) historyCallback(b *seabird.Bot, m *irc.Message) {
 	rows := []phrase{}
 	err := p.db.Select(&rows, "SELECT * FROM phrases WHERE key=$1 ORDER BY id DESC LIMIT 5", p.cleanedName(m.Trailing()))
 	if err == sql.ErrNoRows {
@@ -158,7 +155,7 @@ func (p *phrasesPlugin) historyCallback(b *bot.Bot, m *irc.Message) {
 	}
 }
 
-func (p *phrasesPlugin) setCallback(b *bot.Bot, m *irc.Message) {
+func (p *phrasesPlugin) setCallback(b *seabird.Bot, m *irc.Message) {
 	split := strings.SplitN(m.Trailing(), " ", 2)
 	if len(split) < 2 {
 		b.MentionReply(m, "Not enough args")

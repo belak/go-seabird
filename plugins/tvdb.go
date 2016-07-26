@@ -10,12 +10,12 @@ import (
 	"net/url"
 	"strings"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("tvdb", newTVDBPlugin)
+	seabird.RegisterPlugin("tvdb", newTVDBPlugin)
 }
 
 type tvdbPlugin struct {
@@ -48,24 +48,27 @@ type tvdbZipResponse struct {
 	} `xml:"Series"`
 }
 
-func newTVDBPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newTVDBPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &tvdbPlugin{}
+	err := b.Config("tvdb", p)
+	if err != nil {
+		return err
+	}
 
-	b.Config("tvdb", p)
-
-	b.CommandMux.Event("tvdb", p.Search, &bot.HelpInfo{
+	cm.Event("tvdb", p.Search, &seabird.HelpInfo{
 		Usage:       "<series>",
 		Description: "Gives info on TVDB series, including TVDB ID",
 	})
-	b.CommandMux.Event("series", p.Series, &bot.HelpInfo{
+
+	cm.Event("series", p.Series, &seabird.HelpInfo{
 		Usage:       "<series_id>",
 		Description: "Gives expanded info on TVDB series using TVDB ID",
 	})
 
-	return p, nil
+	return nil
 }
 
-func (p *tvdbPlugin) Search(b *bot.Bot, m *irc.Message) {
+func (p *tvdbPlugin) Search(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Series required")
@@ -117,7 +120,7 @@ func (p *tvdbPlugin) Search(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *tvdbPlugin) Series(b *bot.Bot, m *irc.Message) {
+func (p *tvdbPlugin) Series(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Series required")

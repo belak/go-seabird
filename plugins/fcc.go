@@ -5,12 +5,12 @@ import (
 	"net/url"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("fcc", newFccPlugin)
+	seabird.RegisterPlugin("fcc", newFccPlugin)
 }
 
 type fccPlugin struct {
@@ -42,20 +42,22 @@ type fccResponse struct {
 	LicenseData fccLicenses `json:"Licenses"`
 }
 
-func newFccPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &fccPlugin{}
+	err := b.Config("fcc", p)
+	if err != nil {
+		return err
+	}
 
-	b.Config("fcc", p)
-
-	b.CommandMux.Event("call", p.Search, &bot.HelpInfo{
+	cm.Event("call", p.Search, &seabird.HelpInfo{
 		Usage:       "<callsign>",
 		Description: "Finds information about given FCC callsign",
 	})
 
-	return p, nil
+	return nil
 }
 
-func (p *fccPlugin) Search(b *bot.Bot, m *irc.Message) {
+func (p *fccPlugin) Search(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Callsign required")

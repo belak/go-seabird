@@ -5,24 +5,22 @@ import (
 
 	"github.com/soudy/mathcat"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("math", newMathPlugin)
+	seabird.RegisterPlugin("math", newMathPlugin)
 }
 
-func newMathPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.CommandMux.Event("math", exprCallback, &bot.HelpInfo{
+func newMathPlugin(cm *seabird.CommandMux) {
+	cm.Event("math", exprCallback, &seabird.HelpInfo{
 		Usage:       "<expr>",
 		Description: "Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
-
-	return nil, nil
 }
 
-func exprCallback(b *bot.Bot, m *irc.Message) {
+func exprCallback(b *seabird.Bot, m *irc.Message) {
 	var err error
 	var res float64
 

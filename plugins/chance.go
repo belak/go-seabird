@@ -4,12 +4,12 @@ import (
 	"math/rand"
 	"strings"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("chance", newChancePlugin)
+	seabird.RegisterPlugin("chance", newChancePlugin)
 }
 
 var coinNames = []string{
@@ -22,24 +22,23 @@ type chancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func newChancePlugin(b *bot.Bot) (bot.Plugin, error) {
+func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
 	p := &chancePlugin{
 		6,
 		make(map[string]int),
 	}
 
-	b.CommandMux.Event("roulette", p.rouletteCallback, &bot.HelpInfo{
+	cm.Event("roulette", p.rouletteCallback, &seabird.HelpInfo{
 		Description: "Click... click... BANG!",
 	})
-	b.CommandMux.Event("coin", p.coinCallback, &bot.HelpInfo{
+
+	cm.Event("coin", p.coinCallback, &seabird.HelpInfo{
 		Usage:       "[heads|tails]",
 		Description: "Guess the coin flip. If you guess wrong, you're out!",
 	})
-
-	return nil, nil
 }
 
-func (p *chancePlugin) rouletteCallback(b *bot.Bot, m *irc.Message) {
+func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
 	if !m.FromChannel() {
 		return
 	}
@@ -68,7 +67,7 @@ func (p *chancePlugin) rouletteCallback(b *bot.Bot, m *irc.Message) {
 	p.rouletteShotsLeft[m.Params[0]] = shotsLeft
 }
 
-func (p *chancePlugin) coinCallback(b *bot.Bot, m *irc.Message) {
+func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 	if !m.FromChannel() {
 		return
 	}

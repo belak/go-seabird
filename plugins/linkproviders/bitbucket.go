@@ -9,13 +9,13 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url/bitbucket", newBitbucketProvider)
+	seabird.RegisterPlugin("url/bitbucket", newBitbucketProvider)
 }
 
 type bitbucketUser struct {
@@ -65,16 +65,11 @@ var (
 	repoPullRequestsURL = "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s"
 )
 
-func newBitbucketProvider(b *bot.Bot) (bot.Plugin, error) {
-	// Ensure that the url plugin is loaded
-	b.LoadPlugin("url")
-	p := b.Plugins["url"].(*plugins.URLPlugin)
-
-	p.RegisterProvider("bitbucket.org", bitbucketCallback)
-	return nil, nil
+func newBitbucketProvider(urlPlugin *plugins.URLPlugin) {
+	urlPlugin.RegisterProvider("bitbucket.org", bitbucketCallback)
 }
 
-func bitbucketCallback(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	if bitbucketUserRegex.MatchString(url.Path) {
 		return bitbucketGetUser(b, m, url)
 	} else if bitbucketRepoRegex.MatchString(url.Path) {
@@ -88,7 +83,7 @@ func bitbucketCallback(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	return false
 }
 
-func bitbucketGetUser(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	matches := bitbucketUserRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 2 {
 		return false
@@ -108,7 +103,7 @@ func bitbucketGetUser(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetRepo(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	matches := bitbucketRepoRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 3 {
 		return false
@@ -138,7 +133,7 @@ func bitbucketGetRepo(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	matches := bitbucketIssueRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
@@ -178,7 +173,7 @@ func bitbucketGetIssue(b *bot.Bot, m *irc.Message, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetPull(b *bot.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	matches := bitbucketPullRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false

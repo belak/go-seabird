@@ -7,13 +7,14 @@ import (
 	"regexp"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
+
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url/reddit", newRedditProvider)
+	seabird.RegisterPlugin("url/reddit", newRedditProvider)
 }
 
 type redditUser struct {
@@ -53,16 +54,11 @@ var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
 var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
-func newRedditProvider(b *bot.Bot) (bot.Plugin, error) {
-	// Ensure that the url plugin is loaded
-	b.LoadPlugin("url")
-	p := b.Plugins["url"].(*plugins.URLPlugin)
-
-	p.RegisterProvider("reddit.com", redditCallback)
-	return nil, nil
+func newRedditProvider(urlPlugin *plugins.URLPlugin) {
+	urlPlugin.RegisterProvider("reddit.com", redditCallback)
 }
 
-func redditCallback(b *bot.Bot, m *irc.Message, u *url.URL) bool {
+func redditCallback(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
 	if redditUserRegex.MatchString(u.Path) {
 		return redditGetUser(b, m, u.Path)
 	} else if redditCommentRegex.MatchString(u.Path) {
@@ -74,7 +70,7 @@ func redditCallback(b *bot.Bot, m *irc.Message, u *url.URL) bool {
 	return false
 }
 
-func redditGetUser(b *bot.Bot, m *irc.Message, url string) bool {
+func redditGetUser(b *seabird.Bot, m *irc.Message, url string) bool {
 	matches := redditUserRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -97,7 +93,7 @@ func redditGetUser(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func redditGetComment(b *bot.Bot, m *irc.Message, url string) bool {
+func redditGetComment(b *seabird.Bot, m *irc.Message, url string) bool {
 	matches := redditCommentRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -117,7 +113,7 @@ func redditGetComment(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func redditGetSub(b *bot.Bot, m *irc.Message, url string) bool {
+func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
 	matches := redditSubRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false

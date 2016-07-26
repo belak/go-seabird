@@ -7,13 +7,13 @@ import (
 
 	"github.com/ChimeraCoder/anaconda"
 
-	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url/twitter", newtwitterProvider)
+	seabird.RegisterPlugin("url/twitter", newtwitterProvider)
 }
 
 type twitterConfig struct {
@@ -31,29 +31,25 @@ var twitterStatusRegex = regexp.MustCompile(`^/.*?/status/(.+)$`)
 var twitterUserRegex = regexp.MustCompile(`^/([^/]+)$`)
 var twitterPrefix = "[Twitter]"
 
-func newtwitterProvider(b *bot.Bot) (bot.Plugin, error) {
-	// Ensure that the url plugin is loaded
-	b.LoadPlugin("url")
-	p := b.Plugins["url"].(*plugins.URLPlugin)
-
+func newtwitterProvider(b *seabird.Bot, urlPlugin *plugins.URLPlugin) error {
 	t := &twitterProvider{}
 
 	tc := &twitterConfig{}
 	err := b.Config("twitter", tc)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	anaconda.SetConsumerKey(tc.ConsumerKey)
 	anaconda.SetConsumerSecret(tc.ConsumerSecret)
 	t.api = anaconda.NewTwitterApi(tc.AccessToken, tc.AccessTokenSecret)
 
-	p.RegisterProvider("twitter.com", t.Handle)
+	urlPlugin.RegisterProvider("twitter.com", t.Handle)
 
-	return nil, nil
+	return nil
 }
 
-func (t *twitterProvider) Handle(b *bot.Bot, m *irc.Message, u *url.URL) bool {
+func (t *twitterProvider) Handle(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
 	if twitterUserRegex.MatchString(u.Path) {
 		return t.getUser(b, m, u.Path)
 	} else if twitterStatusRegex.MatchString(u.Path) {
@@ -63,7 +59,7 @@ func (t *twitterProvider) Handle(b *bot.Bot, m *irc.Message, u *url.URL) bool {
 	return false
 }
 
-func (t *twitterProvider) getUser(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *twitterProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bool {
 	matches := twitterUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -80,7 +76,7 @@ func (t *twitterProvider) getUser(b *bot.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func (t *twitterProvider) getTweet(b *bot.Bot, m *irc.Message, url string) bool {
+func (t *twitterProvider) getTweet(b *seabird.Bot, m *irc.Message, url string) bool {
 	matches := twitterStatusRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false

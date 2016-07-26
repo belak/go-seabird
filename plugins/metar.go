@@ -8,24 +8,22 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("metar", newMetarPlugin)
+	seabird.RegisterPlugin("metar", newMetarPlugin)
 }
 
-func newMetarPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.CommandMux.Event("metar", metarCallback, &bot.HelpInfo{
+func newMetarPlugin(cm *seabird.CommandMux) {
+	cm.Event("metar", metarCallback, &seabird.HelpInfo{
 		Usage:       "<station>",
 		Description: "Gives METAR report for given airport code",
 	})
-
-	return nil, nil
 }
 
-func metarCallback(b *bot.Bot, m *irc.Message) {
+func metarCallback(b *seabird.Bot, m *irc.Message) {
 	if !m.FromChannel() {
 		return
 	}

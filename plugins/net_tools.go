@@ -8,52 +8,55 @@ import (
 	"os/exec"
 	"strings"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("nettools", newNetToolsPlugin)
+	seabird.RegisterPlugin("nettools", newNetToolsPlugin)
 }
 
 type netToolsPlugin struct {
 	Key string
 }
 
-func newNetToolsPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &netToolsPlugin{}
 
-	b.Config("net_tools", p)
+	err := b.Config("net_tools", p)
+	if err != nil {
+		return err
+	}
 
-	b.CommandMux.Event("rdns", p.RDNS, &bot.HelpInfo{
+	cm.Event("rdns", p.RDNS, &seabird.HelpInfo{
 		Usage:       "<ip>",
 		Description: "Does a reverse DNS lookup on the given IP",
 	})
-	b.CommandMux.Event("dig", p.Dig, &bot.HelpInfo{
+	cm.Event("dig", p.Dig, &seabird.HelpInfo{
 		Usage:       "<domain>",
 		Description: "Retrieves IP records for given domain",
 	})
-	b.CommandMux.Event("ping", p.Ping, &bot.HelpInfo{
+	cm.Event("ping", p.Ping, &seabird.HelpInfo{
 		Usage:       "<host>",
 		Description: "Pings given host once",
 	})
-	b.CommandMux.Event("traceroute", p.Traceroute, &bot.HelpInfo{
+	cm.Event("traceroute", p.Traceroute, &seabird.HelpInfo{
 		Usage:       "<host>",
 		Description: "Runs traceroute on given host and returns pastebin URL for results",
 	})
-	b.CommandMux.Event("whois", p.Whois, &bot.HelpInfo{
+	cm.Event("whois", p.Whois, &seabird.HelpInfo{
 		Usage:       "<domain>",
 		Description: "Runs whois on given domain and returns pastebin URL for results",
 	})
-	b.CommandMux.Event("dnscheck", p.DNSCheck, &bot.HelpInfo{
+	cm.Event("dnscheck", p.DNSCheck, &seabird.HelpInfo{
 		Usage:       "<domain>",
 		Description: "Returns DNSCheck URL for domain",
 	})
 
-	return p, nil
+	return nil
 }
 
-func (p *netToolsPlugin) RDNS(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) RDNS(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Argument required")
@@ -80,7 +83,7 @@ func (p *netToolsPlugin) RDNS(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *netToolsPlugin) Dig(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Dig(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Domain required")
@@ -108,7 +111,7 @@ func (p *netToolsPlugin) Dig(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *netToolsPlugin) Ping(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Ping(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Host required")
@@ -155,7 +158,7 @@ func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) 
 	return p.pasteData(string(out))
 }
 
-func (p *netToolsPlugin) handleCommand(b *bot.Bot, m *irc.Message, command string, emptyMsg string) {
+func (p *netToolsPlugin) handleCommand(b *seabird.Bot, m *irc.Message, command string, emptyMsg string) {
 	if m.Trailing() == "" {
 		b.MentionReply(m, "Host required")
 		return
@@ -171,22 +174,19 @@ func (p *netToolsPlugin) handleCommand(b *bot.Bot, m *irc.Message, command strin
 
 }
 
-func (p *netToolsPlugin) Traceroute(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Traceroute(b *seabird.Bot, m *irc.Message) {
 	go p.handleCommand(b, m, "traceroute", "Host required")
 }
 
-func (p *netToolsPlugin) Whois(b *bot.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Whois(b *seabird.Bot, m *irc.Message) {
 	go p.handleCommand(b, m, "whois", "Domain required")
 }
 
-func (p *netToolsPlugin) DNSCheck(b *bot.Bot, m *irc.Message) {
-	// Just for Kaleb
-	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Domain required")
-			return
-		}
+func (p *netToolsPlugin) DNSCheck(b *seabird.Bot, m *irc.Message) {
+	if m.Trailing() == "" {
+		b.MentionReply(m, "Domain required")
+		return
+	}
 
-		b.MentionReply(m, "https://www.whatsmydns.net/#A/"+m.Trailing())
-	}()
+	b.MentionReply(m, "https://www.whatsmydns.net/#A/"+m.Trailing())
 }

@@ -8,13 +8,14 @@ import (
 	"golang.org/x/net/html/atom"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
-	"github.com/belak/irc"
 	"github.com/yhat/scrape"
+
+	"github.com/belak/go-seabird/seabird"
+	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("wiki", newWikiPlugin)
+	seabird.RegisterPlugin("wiki", newWikiPlugin)
 }
 
 type wikiResponse struct {
@@ -26,20 +27,18 @@ type wikiResponse struct {
 	} `json:"parse"`
 }
 
-func newWikiPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.CommandMux.Event("wiki", wikiCallback, &bot.HelpInfo{
+func newWikiPlugin(cm *seabird.CommandMux) {
+	cm.Event("wiki", wikiCallback, &seabird.HelpInfo{
 		Usage:       "<topic>",
 		Description: "Retrieves first section from most relevant Wikipedia article to given topic",
 	})
-
-	return nil, nil
 }
 
 func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func wikiCallback(b *bot.Bot, m *irc.Message) {
+func wikiCallback(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "Query required")

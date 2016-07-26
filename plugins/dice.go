@@ -7,22 +7,21 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("dice", newDicePlugin)
+	seabird.RegisterPlugin("dice", newDicePlugin)
 }
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-func newDicePlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.MentionMux.Event(diceCallback)
-	return nil, nil
+func newDicePlugin(b *seabird.Bot, mm *seabird.MentionMux) {
+	mm.Event(diceCallback)
 }
 
-func diceCallback(b *bot.Bot, m *irc.Message) {
+func diceCallback(b *seabird.Bot, m *irc.Message) {
 	var rolls []string
 	totalCount := 0
 
