@@ -4,12 +4,10 @@ import (
 	"log"
 	"os"
 
-	"github.com/belak/go-seabird/bot"
-
 	// Load plugins
-	//_ "github.com/belak/go-seabird/plugins/auth"
 	_ "github.com/belak/go-seabird/plugins"
 	_ "github.com/belak/go-seabird/plugins/linkproviders"
+	"github.com/belak/go-seabird/seabird"
 
 	// Load DB drivers
 	_ "github.com/lib/pq"
@@ -28,8 +26,13 @@ func main() {
 		}
 	}
 
+	confReader, err := os.Open(conf)
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	// Create the bot
-	b, err := bot.NewBot(conf)
+	b, err := seabird.NewBot(confReader)
 	if err != nil {
 		log.Fatalln(err)
 	}
