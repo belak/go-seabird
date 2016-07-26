@@ -5,10 +5,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"log"
 	"net"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Sirupsen/logrus"
 
 	"github.com/belak/go-plugin"
 	"github.com/belak/go-seabird/internal"
@@ -47,6 +47,7 @@ type Bot struct {
 	// Internal things
 	client   *irc.Client
 	registry *plugin.Registry
+	log      *logrus.Entry
 }
 
 // NewBot will return a new Bot given the name of a toml config file.
@@ -60,6 +61,7 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		coreConfig{},
 		nil,
 		plugins.Copy(),
+		nil,
 	}
 
 	// Decode the file, but leave all the config sections intact so we can
@@ -69,10 +71,17 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		return nil, err
 	}
 
+	b.log = logrus.NewEntry(logrus.New())
+	b.log.Logger.Level = logrus.DebugLevel
+
 	// Load up the core config
 	err = b.Config("core", &b.config)
 	if err != nil {
 		return nil, err
+	}
+
+	if b.config.Quiet {
+		b.log.Logger.Level = logrus.InfoLevel
 	}
 
 	commandMux := NewCommandMux(b.config.Prefix)
@@ -87,6 +96,11 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	})
 
 	return b, nil
+}
+
+// GetLogger grabs the underlying logger for this bot.
+func (b *Bot) GetLogger() *logrus.Entry {
+	return b.log
 }
 
 // CurrentNick returns the current nick of the bot.
@@ -179,7 +193,7 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	if m.Command == "001" {
-		log.Println("Connected")
+		b.log.Info("Connected")
 
 		for _, v := range b.config.Cmds {
 			b.Write(v)
@@ -225,10 +239,8 @@ func (b *Bot) Run() error {
 	}
 	b.client = irc.NewClient(c, rc)
 
-	b.client.DebugCallback = func(line string) {
-		if !b.config.Quiet {
-			log.Println(line)
-		}
+	b.client.DebugCallback = func(operation, line string) {
+		b.log.WithField("op", operation).Debug(line)
 	}
 
 	// Start the main loop
