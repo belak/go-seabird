@@ -2,7 +2,6 @@ package plugins
 
 import (
 	"database/sql"
-	"fmt"
 	"strings"
 	"time"
 
@@ -40,6 +39,8 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB)
 }
 
 func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
+	logger := b.GetLogger().WithField("reminder", r)
+
 	// Because time.Sleep handles negative values (and 0) by simply
 	// returning, this will be handled correctly even with negative
 	// durations.
@@ -58,18 +59,22 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	// Nuke the reminder now that it's been sent
 	_, err := p.db.Exec("DELETE FROM reminders WHERE id=$1", r.ID)
 	if err != nil {
-		fmt.Println(err)
+		logger.WithError(err).Error("Failed to remove reminder")
 		return
 	}
+
+	logger.Info("Dispatched reminder")
 }
 
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
 func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
+	logger := b.GetLogger()
+
 	reminders := []*reminder{}
 	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1", "private")
 	if err != nil {
-		fmt.Println(err)
+		logger.WithError(err).Error("Failed to look up private reminders for dispatch")
 		return
 	}
 
@@ -86,10 +91,12 @@ func (p *reminderPlugin) JoinDispatch(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
+	logger := b.GetLogger().WithField("reminder", r)
+
 	reminders := []*reminder{}
 	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1 AND target=$2", "public", m.Params[0])
 	if err != nil {
-		fmt.Println(err)
+		logger.WithError(err).Error("Failed to look up public reminders for channel")
 		return
 	}
 

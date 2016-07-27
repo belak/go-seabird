@@ -116,13 +116,13 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error)
 		loc.Lat,
 		loc.Lon)
 
-	f := forecastResponse{}
+	f := &forecastResponse{}
 	err := com.HttpGetJSON(&http.Client{}, link, f)
 	if err != nil {
 		return nil, err
 	}
 
-	return &f, nil
+	return f, nil
 }
 
 func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
