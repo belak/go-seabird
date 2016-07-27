@@ -19,6 +19,7 @@ type karmaPlugin struct {
 	db *gorm.DB
 }
 
+// KarmaTarget represents an item with a karma count
 type KarmaTarget struct {
 	gorm.Model
 	Name  string `gorm:"unique_index"`
