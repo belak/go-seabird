@@ -6,9 +6,10 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
+	"github.com/jinzhu/gorm"
+
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
-	"github.com/jmoiron/sqlx"
 )
 
 func init() {
@@ -85,12 +86,35 @@ type forecastResponse struct {
 
 type forecastPlugin struct {
 	Key string
-	db  *sqlx.DB
+	db  *gorm.DB
 	// CacheDuration string
 }
 
-func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *sqlx.DB) error {
+// ForecastLocation is a simple cache which will store the lat and lon of a
+// geocoded location, along with the user who requested this be their home
+// location.
+type ForecastLocation struct {
+	gorm.Model
+	Nick    string `gorm:"unique_index"`
+	Address string
+	Lat     float64
+	Lon     float64
+}
+
+// ToLocation converts a ForecastLocation to a generic location
+func (fl *ForecastLocation) ToLocation() *Location {
+	return &Location{
+		Address: fl.Address,
+		Lat:     fl.Lat,
+		Lon:     fl.Lon,
+	}
+}
+
+func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *gorm.DB) error {
 	p := &forecastPlugin{db: db}
+
+	// Ensure the table is created if it doesn't exist
+	p.db.AutoMigrate(&ForecastLocation{})
 
 	err := b.Config("forecast", p)
 	if err != nil {
@@ -126,36 +150,42 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error)
 }
 
 func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
-	var err error
-
 	l := m.Trailing()
-	loc := &Location{}
+
+	target := &ForecastLocation{Nick: m.Prefix.Name}
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		err = p.db.Get(loc, "SELECT address, lat, lon FROM forecast_location WHERE nick=$1", m.Prefix.Name)
+		res := &ForecastLocation{}
+		err := p.db.Where(target).First(res).Error
 		if err != nil {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
-	} else {
-		loc, err = FetchLocation(l)
-		if err != nil {
-			return nil, err
-		}
+		return res.ToLocation(), nil
+	}
 
-		_, err = p.db.Exec("INSERT INTO forecast_location (nick, address, lat, lon) VALUES ($1, $2, $3, $4)",
-			m.Prefix.Name, loc.Address, loc.Lat, loc.Lon,
-		)
-		if err == nil {
-			return loc, nil
-		}
+	// If it's not an empty string, we have to look up the location and store
+	// it.
+	loc, err := FetchLocation(l)
+	if err != nil {
+		return nil, err
+	}
 
-		_, err = p.db.Exec("UPDATE forecast_location SET address=$1, lat=$2, lon=$3 WHERE nick=$4",
-			loc.Address, loc.Lat, loc.Lon, m.Prefix.Name,
-		)
-		if err != nil {
-			return nil, err
-		}
+	newLocation := &ForecastLocation{
+		Nick:    m.Prefix.Name,
+		Address: loc.Address,
+		Lat:     loc.Lat,
+		Lon:     loc.Lon,
+	}
+
+	err = p.db.Create(newLocation).Error
+	if err == nil {
+		return loc, nil
+	}
+
+	err = p.db.Model(target).Updates(newLocation).Error
+	if err != nil {
+		return nil, err
 	}
 
 	return loc, nil

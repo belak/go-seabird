@@ -1,12 +1,11 @@
 package plugins
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
 
-	"github.com/jmoiron/sqlx"
+	"github.com/jinzhu/gorm"
 
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
@@ -16,19 +15,22 @@ func init() {
 	seabird.RegisterPlugin("karma", newKarmaPlugin)
 }
 
-type karmaUser struct {
-	Name  string
-	Score int
+type karmaPlugin struct {
+	db *gorm.DB
 }
 
-type karmaPlugin struct {
-	db *sqlx.DB
+type KarmaTarget struct {
+	gorm.Model
+	Name  string `gorm:"unique_index"`
+	Score int
 }
 
 var regex = regexp.MustCompile(`([^\s]+)(\+\+|--)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB) {
+func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *gorm.DB) {
 	p := &karmaPlugin{db: db}
+
+	p.db.AutoMigrate(&KarmaTarget{})
 
 	cm.Event("karma", p.karmaCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
@@ -52,44 +54,25 @@ func (p *karmaPlugin) cleanedName(name string) string {
 
 // GetKarmaFor returns the karma for the given name.
 func (p *karmaPlugin) GetKarmaFor(name string) int {
-	var score int
-	err := p.db.Get(&score, "SELECT score FROM karma WHERE name=$1", p.cleanedName(name))
-	if err != nil {
-		return 0
-	}
-
-	return score
+	out := &KarmaTarget{}
+	p.db.Where(&KarmaTarget{Name: p.cleanedName(name)}).First(&out)
+	return out.Score
 }
 
 // UpdateKarma will update the karma for a given name and return the new karma value.
 func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
-	_, err := p.db.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.cleanedName(name), diff)
-	// If it was a nil error, we got the insert
-	if err == nil {
-		return diff
-	}
+	target := &KarmaTarget{Name: p.cleanedName(name)}
 
-	// Grab a transaction, just in case
-	tx, err := p.db.Beginx()
+	tx := p.db.Begin()
 	defer tx.Commit()
 
-	if err != nil {
-		fmt.Println("TX:", err)
-	}
+	p.db.FirstOrCreate(target, target)
 
-	// If there was an error, we try an update.
-	_, err = tx.Exec("UPDATE karma SET score=score+$1 WHERE name=$2", diff, p.cleanedName(name))
-	if err != nil {
-		fmt.Println("UPDATE:", err)
-	}
+	target.Score += diff
 
-	var score int
-	err = tx.Get(&score, "SELECT score FROM karma WHERE name=$1", p.cleanedName(name))
-	if err != nil {
-		fmt.Println("SELECT:", err)
-	}
+	p.db.Save(target)
 
-	return score
+	return target.Score
 }
 
 func (p *karmaPlugin) karmaCallback(b *seabird.Bot, m *irc.Message) {
@@ -104,14 +87,9 @@ func (p *karmaPlugin) karmaCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *karmaPlugin) karmaCheck(b *seabird.Bot, m *irc.Message, msg string, sort string) {
-	user := &karmaUser{}
-	err := p.db.Get(user, fmt.Sprintf("SELECT name, score FROM karma ORDER BY score %s LIMIT 1", sort))
-	if err != nil {
-		b.MentionReply(m, "Error fetching scores")
-		return
-	}
-
-	b.MentionReply(m, "%s has the %s karma with %d", user.Name, msg, user.Score)
+	res := &KarmaTarget{}
+	p.db.Order("score " + sort).First(res)
+	b.MentionReply(m, "%s has the %s karma with %d", res.Name, msg, res.Score)
 }
 func (p *karmaPlugin) topKarmaCallback(b *seabird.Bot, m *irc.Message) {
 	p.karmaCheck(b, m, "top", "DESC")
