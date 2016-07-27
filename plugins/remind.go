@@ -91,7 +91,7 @@ func (p *reminderPlugin) JoinDispatch(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	logger := b.GetLogger().WithField("reminder", r)
+	logger := b.GetLogger()
 
 	reminders := []*reminder{}
 	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1 AND target=$2", "public", m.Params[0])
