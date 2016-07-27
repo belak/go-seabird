@@ -131,28 +131,30 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 		b.MentionReply(m, "There were %d results.", total)
 	}
 
-	for i := 0; i < len(issues.Issues) && i < 3; i++ {
-		issue := issues.Issues[i]
-		urlparts := strings.Split(*issue.HTMLURL, "/")
-		user := urlparts[len(urlparts)-4]
-		repo := urlparts[len(urlparts)-3]
+	for _, issue := range issues.Issues[:3] {
+		b.MentionReply(m, "%s", encodeIssue(issue))
+	}
+}
 
-		// Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
-		out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
-		if issue.Assignee != nil {
-			out += " (assigned to " + *issue.Assignee.Login + ")"
-		}
-		if issue.Title != nil && *issue.Title != "" {
-			out += " - " + *issue.Title
-		}
-		if issue.CreatedAt != nil {
-			out += " [created " + (*issue.CreatedAt).Format("2 Jan 2006") + "]"
-		}
-		if issue.HTMLURL != nil {
-			out += " - " + *issue.HTMLURL
-		}
+func encodeIssue(issue github.Issue) string {
+	// Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
+	urlparts := strings.Split(*issue.HTMLURL, "/")
+	user := urlparts[len(urlparts)-4]
+	repo := urlparts[len(urlparts)-3]
 
-		b.MentionReply(m, "%s", out)
+	out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
+	if issue.Assignee != nil {
+		out += " (assigned to " + *issue.Assignee.Login + ")"
+	}
+	if issue.Title != nil && *issue.Title != "" {
+		out += " - " + *issue.Title
+	}
+	if issue.CreatedAt != nil {
+		out += " [created " + (*issue.CreatedAt).Format("2 Jan 2006") + "]"
+	}
+	if issue.HTMLURL != nil {
+		out += " - " + *issue.HTMLURL
 	}
 
+	return out
 }
