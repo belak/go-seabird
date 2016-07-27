@@ -1,7 +1,7 @@
 package linkproviders
 
 import (
-	"fmt"
+	"errors"
 	"net/url"
 	"regexp"
 	"strconv"
@@ -35,6 +35,19 @@ var (
 
 	githubPrefix = "[Github]"
 )
+
+func parseUserRepoNum(matches []string) (string, string, int, error) {
+	if len(matches) != 4 {
+		return "", "", 0, errors.New("Incorrect number of matches")
+	}
+
+	retInt, err := strconv.ParseInt(matches[3], 10, 32)
+	if err != nil {
+		return "", "", 0, err
+	}
+
+	return matches[1], matches[2], int(retInt), nil
+}
 
 func newGithubProvider(b *seabird.Bot, urlPlugin *plugins.URLPlugin) error {
 	t := &githubProvider{}
@@ -95,6 +108,8 @@ var userTemplate = TemplateMustCompile("githubUser", `
 `)
 
 func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bool {
+	logger := b.GetLogger()
+
 	matches := githubUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -102,19 +117,16 @@ func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) boo
 
 	user, _, err := t.api.Users.Get(matches[1])
 	if err != nil {
+		logger.WithError(err).Error("Failed to get user from github")
 		return false
 	}
 
-	out, err := RenderTemplate(userTemplate, map[string]interface{}{
-		"user": user,
-	})
-	if err != nil {
-		return false
-	}
-
-	b.Reply(m, "%s %s", githubPrefix, out)
-
-	return true
+	return RenderRespond(
+		b, m, logger, userTemplate, githubPrefix,
+		map[string]interface{}{
+			"user": user,
+		},
+	)
 }
 
 // jsvana/alfred [PHP] (forked from belak/alfred) Last pushed to 2 Jan 2015 - Description, 1 fork, 2 open issues, 4 stars
@@ -154,17 +166,12 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	out, err := RenderTemplate(repoTemplate, map[string]interface{}{
-		"repo": repo,
-	})
-	if err != nil {
-		logger.WithError(err).Error("Failed to render repo template")
-		return false
-	}
-
-	b.Reply(m, "%s %s", githubPrefix, out)
-
-	return true
+	return RenderRespond(
+		b, m, logger, repoTemplate, githubPrefix,
+		map[string]interface{}{
+			"repo": repo,
+		},
+	)
 }
 
 // Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
@@ -179,37 +186,26 @@ func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bo
 	logger := b.GetLogger()
 
 	matches := githubIssueRegex.FindStringSubmatch(url)
-	if len(matches) != 4 {
-		return false
-	}
-
-	user := matches[1]
-	repo := matches[2]
-	issueNum, err := strconv.ParseInt(matches[3], 10, 32)
+	user, repo, issueNum, err := parseUserRepoNum(matches)
 	if err != nil {
-		logger.Error("Failed to parse int from issue url")
+		logger.WithError(err).Error("Failed to parse URL")
 		return false
 	}
 
-	issue, _, err := t.api.Issues.Get(user, repo, int(issueNum))
+	issue, _, err := t.api.Issues.Get(user, repo, issueNum)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get issue from github")
 		return false
 	}
 
-	out, err := RenderTemplate(issueTemplate, map[string]interface{}{
-		"issue": issue,
-		"user":  user,
-		"repo":  repo,
-	})
-	if err != nil {
-		logger.WithError(err).Error("Failed to render issue template")
-		return false
-	}
-
-	b.Reply(m, "%s %s", githubPrefix, out)
-
-	return true
+	return RenderRespond(
+		b, m, logger, issueTemplate, githubPrefix,
+		map[string]interface{}{
+			"issue": issue,
+			"user":  user,
+			"repo":  repo,
+		},
+	)
 }
 
 // Pull request #59 on belak/go-seabird [open] - Title title title [created 4 Jan 2015], 1 commit, 4 comments, 2 changed files
@@ -227,15 +223,9 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 	logger := b.GetLogger()
 
 	matches := githubPullRegex.FindStringSubmatch(url)
-	if len(matches) != 4 {
-		return false
-	}
-
-	user := matches[1]
-	repo := matches[2]
-	pullNum, err := strconv.ParseInt(matches[3], 10, 32)
+	user, repo, pullNum, err := parseUserRepoNum(matches)
 	if err != nil {
-		logger.Error("Failed to parse int from pr url")
+		logger.WithError(err).Error("Failed to parse URL")
 		return false
 	}
 
@@ -245,19 +235,14 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	out, err := RenderTemplate(prTemplate, map[string]interface{}{
-		"user": user,
-		"repo": repo,
-		"pull": pull,
-	})
-	if err != nil {
-		logger.WithError(err).Error("Failed to render pr template")
-		return false
-	}
-
-	b.Reply(m, "%s %s", githubPrefix, out)
-
-	return true
+	return RenderRespond(
+		b, m, logger, prTemplate, githubPrefix,
+		map[string]interface{}{
+			"user": user,
+			"repo": repo,
+			"pull": pull,
+		},
+	)
 }
 
 // Created 3 Jan 2015 by belak - Description description, 1 file, 3 comments
@@ -283,23 +268,10 @@ func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	out, err := RenderTemplate(gistTemplate, map[string]interface{}{
-		"gist": gist,
-	})
-	if err != nil {
-		logger.WithError(err).Error("Failed to render pr template")
-		return false
-	}
-
-	b.Reply(m, "%s %s", githubPrefix, out)
-
-	return true
-}
-
-func lazyPluralize(count int, word string) string {
-	if count != 1 {
-		return fmt.Sprintf("%d %s", count, word+"s")
-	}
-
-	return fmt.Sprintf("%d %s", count, word)
+	return RenderRespond(
+		b, m, logger, gistTemplate, githubPrefix,
+		map[string]interface{}{
+			"gist": gist,
+		},
+	)
 }

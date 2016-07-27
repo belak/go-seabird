@@ -2,10 +2,14 @@ package linkproviders
 
 import (
 	"bytes"
+	"fmt"
 	"strings"
 	"text/template"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/belak/go-seabird/seabird"
+	"github.com/belak/irc"
 	"github.com/bep/inflect"
 	"github.com/google/go-github/github"
 	"github.com/spf13/cast"
@@ -43,6 +47,21 @@ func RenderTemplate(t *template.Template, vars map[string]interface{}) (string, 
 	return b.String(), nil
 }
 
+// RenderRespond is a wrapper around RenderTemplate which will render a template
+// and respond to the given message. It will return true on success and false on
+// failure.
+func RenderRespond(b *seabird.Bot, m *irc.Message, logger *logrus.Entry, t *template.Template, prefix string, vars map[string]interface{}) bool {
+	out, err := RenderTemplate(t, vars)
+	if err != nil {
+		logger.WithError(err).Error("Failed to render template")
+		return false
+	}
+
+	b.Reply(m, "%s %s", prefix, out)
+
+	return true
+}
+
 func dateFormat(layout string, v interface{}) (string, error) {
 	var t time.Time
 	var err error
@@ -69,4 +88,12 @@ func pluralize(count int, in interface{}) (string, error) {
 	}
 
 	return inflect.Pluralize(word), nil
+}
+
+func lazyPluralize(count int, word string) string {
+	if count != 1 {
+		return fmt.Sprintf("%d %s", count, word+"s")
+	}
+
+	return fmt.Sprintf("%d %s", count, word)
 }
