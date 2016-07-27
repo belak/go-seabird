@@ -6,5 +6,5 @@ before_install:
   - gometalinter --install
 
 script:
-  - gometalinter ./... --fast -D gocyclo
+  - gometalinter ./... --fast
   - go test -v ./...

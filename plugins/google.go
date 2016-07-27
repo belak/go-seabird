@@ -6,12 +6,13 @@ import (
 	"net/url"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
+
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("google", newGooglePlugin)
+	seabird.RegisterPlugin("google", newGooglePlugin)
 }
 
 type googleResponse struct {
@@ -24,28 +25,27 @@ type googleResponse struct {
 	ResponseStatus int `json:"responseStatus"`
 }
 
-func newGooglePlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.CommandMux.Event("g", googleWebCallback, &bot.HelpInfo{
+func newGooglePlugin(cm *seabird.CommandMux) {
+	cm.Event("g", googleWebCallback, &seabird.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google web search result for given query",
 	})
-	b.CommandMux.Event("gi", googleImageCallback, &bot.HelpInfo{
+
+	cm.Event("gi", googleImageCallback, &seabird.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google images search result for given query",
 	})
-
-	return nil, nil
 }
 
-func googleWebCallback(b *bot.Bot, m *irc.Message) {
+func googleWebCallback(b *seabird.Bot, m *irc.Message) {
 	googleSearch(b, m, "web", m.Trailing())
 }
 
-func googleImageCallback(b *bot.Bot, m *irc.Message) {
+func googleImageCallback(b *seabird.Bot, m *irc.Message) {
 	googleSearch(b, m, "images", m.Trailing())
 }
 
-func googleSearch(b *bot.Bot, m *irc.Message, service, query string) {
+func googleSearch(b *seabird.Bot, m *irc.Message, service, query string) {
 	go func() {
 		if query == "" {
 			b.MentionReply(m, "Query required")

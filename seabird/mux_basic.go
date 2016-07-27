@@ -1,4 +1,4 @@
-package bot
+package seabird
 
 import (
 	"sync"
@@ -33,7 +33,7 @@ func (mux *BasicMux) Event(c string, h HandlerFunc) {
 	mux.m[c] = append(mux.m[c], h)
 }
 
-// HandleEvent allows us to be a Handler so we can nest BasicMuxes
+// HandleEvent allows us to be a Handler so we can nest Handlers
 //
 // The BasicMux simply dispatches all the Handler commands as needed
 func (mux *BasicMux) HandleEvent(b *Bot, msg *irc.Message) {

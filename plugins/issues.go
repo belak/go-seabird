@@ -7,12 +7,12 @@ import (
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("issues", newIssuesPlugin)
+	seabird.RegisterPlugin("issues", newIssuesPlugin)
 }
 
 type issuesPlugin struct {
@@ -21,9 +21,12 @@ type issuesPlugin struct {
 	api *github.Client
 }
 
-func newIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &issuesPlugin{}
-	b.Config("github", p)
+	err := b.Config("github", p)
+	if err != nil {
+		return err
+	}
 
 	// Create an oauth2 client
 	ts := oauth2.StaticTokenSource(
@@ -34,19 +37,20 @@ func newIssuesPlugin(b *bot.Bot) (bot.Plugin, error) {
 	// Create a github client from the oauth2 client
 	p.api = github.NewClient(tc)
 
-	b.CommandMux.Event("issue", p.CreateIssue, &bot.HelpInfo{
+	cm.Event("issue", p.CreateIssue, &seabird.HelpInfo{
 		Usage:       "<issue title>",
 		Description: "Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
 	})
-	b.CommandMux.Event("isearch", p.IssueSearch, &bot.HelpInfo{
+
+	cm.Event("isearch", p.IssueSearch, &seabird.HelpInfo{
 		Usage:       "<query string>",
 		Description: "Search the seabird repo for issues.",
 	})
 
-	return p, nil
+	return nil
 }
 
-func (p *issuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
+func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		r := &github.IssueRequest{}
 
@@ -88,7 +92,7 @@ func (p *issuesPlugin) CreateIssue(b *bot.Bot, m *irc.Message) {
 	}()
 }
 
-func (p *issuesPlugin) IssueSearch(b *bot.Bot, m *irc.Message) {
+func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	hasState := false
 	split := strings.Split(m.Trailing(), " ")
 	for i := 0; i < len(split); i++ {
@@ -127,28 +131,30 @@ func (p *issuesPlugin) IssueSearch(b *bot.Bot, m *irc.Message) {
 		b.MentionReply(m, "There were %d results.", total)
 	}
 
-	for i := 0; i < len(issues.Issues) && i < 3; i++ {
-		issue := issues.Issues[i]
-		urlparts := strings.Split(*issue.HTMLURL, "/")
-		user := urlparts[len(urlparts)-4]
-		repo := urlparts[len(urlparts)-3]
+	for _, issue := range issues.Issues[:3] {
+		b.MentionReply(m, "%s", encodeIssue(issue))
+	}
+}
 
-		// Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
-		out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
-		if issue.Assignee != nil {
-			out += " (assigned to " + *issue.Assignee.Login + ")"
-		}
-		if issue.Title != nil && *issue.Title != "" {
-			out += " - " + *issue.Title
-		}
-		if issue.CreatedAt != nil {
-			out += " [created " + (*issue.CreatedAt).Format("2 Jan 2006") + "]"
-		}
-		if issue.HTMLURL != nil {
-			out += " - " + *issue.HTMLURL
-		}
+func encodeIssue(issue github.Issue) string {
+	// Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
+	urlparts := strings.Split(*issue.HTMLURL, "/")
+	user := urlparts[len(urlparts)-4]
+	repo := urlparts[len(urlparts)-3]
 
-		b.MentionReply(m, "%s", out)
+	out := fmt.Sprintf("Issue #%d on %s/%s [%s]", *issue.Number, user, repo, *issue.State)
+	if issue.Assignee != nil {
+		out += " (assigned to " + *issue.Assignee.Login + ")"
+	}
+	if issue.Title != nil && *issue.Title != "" {
+		out += " - " + *issue.Title
+	}
+	if issue.CreatedAt != nil {
+		out += " [created " + (*issue.CreatedAt).Format("2 Jan 2006") + "]"
+	}
+	if issue.HTMLURL != nil {
+		out += " - " + *issue.HTMLURL
 	}
 
+	return out
 }

@@ -1,4 +1,4 @@
-package bot
+package seabird
 
 import (
 	"sort"

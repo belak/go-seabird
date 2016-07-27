@@ -1,4 +1,4 @@
-package bot
+package seabird
 
 import "github.com/belak/irc"
 

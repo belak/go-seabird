@@ -1,20 +1,19 @@
 package plugins
 
 import (
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("mentions", newMentionsPlugin)
+	seabird.RegisterPlugin("mentions", newMentionsPlugin)
 }
 
-func newMentionsPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.MentionMux.Event(mentionsCallback)
-	return nil, nil
+func newMentionsPlugin(mm *seabird.MentionMux) {
+	mm.Event(mentionsCallback)
 }
 
-func mentionsCallback(b *bot.Bot, m *irc.Message) {
+func mentionsCallback(b *seabird.Bot, m *irc.Message) {
 	switch m.Trailing() {
 	case "ping":
 		b.MentionReply(m, "pong")

@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
+
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("tiny", newTinyPlugin)
+	seabird.RegisterPlugin("tiny", newTinyPlugin)
 }
 
 type shortenResult struct {
@@ -18,16 +19,14 @@ type shortenResult struct {
 	LongURL string `json:"longUrl"`
 }
 
-func newTinyPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.CommandMux.Event("tiny", shorten, &bot.HelpInfo{
+func newTinyPlugin(cm *seabird.CommandMux) {
+	cm.Event("tiny", shorten, &seabird.HelpInfo{
 		Usage:       "<url>",
 		Description: "Shortens given URL",
 	})
-
-	return nil, nil
 }
 
-func shorten(b *bot.Bot, m *irc.Message) {
+func shorten(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		if m.Trailing() == "" {
 			b.MentionReply(m, "URL required")

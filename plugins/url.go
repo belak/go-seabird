@@ -13,12 +13,12 @@ import (
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url", newURLPlugin)
+	seabird.RegisterPlugin("url", newURLPlugin)
 }
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
@@ -37,26 +37,26 @@ var client = &http.Client{
 // takes the same parameters as a normal IRC callback in addition to a
 // *url.URL representing the found url. It returns true if it was able
 // to handle that url and false otherwise.
-type LinkProvider func(b *bot.Bot, m *irc.Message, url *url.URL) bool
+type LinkProvider func(b *seabird.Bot, m *irc.Message, url *url.URL) bool
 
 // URLPlugin stores all registeres URL LinkProviders
 type URLPlugin struct {
 	providers map[string][]LinkProvider
 }
 
-func newURLPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newURLPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux) *URLPlugin {
 	p := &URLPlugin{
 		providers: make(map[string][]LinkProvider),
 	}
 
-	b.BasicMux.Event("PRIVMSG", p.callback)
+	m.Event("PRIVMSG", p.callback)
 
-	b.CommandMux.Event("down", isItDownCallback, &bot.HelpInfo{
+	cm.Event("down", isItDownCallback, &seabird.HelpInfo{
 		Usage:       "<website>",
 		Description: "Checks if given website is down",
 	})
 
-	return p, nil
+	return p
 }
 
 // RegisterProvider registers a LinkProvider for a specific domain.
@@ -66,7 +66,7 @@ func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
 	return nil
 }
 
-func (p *URLPlugin) callback(b *bot.Bot, m *irc.Message) {
+func (p *URLPlugin) callback(b *seabird.Bot, m *irc.Message) {
 	for _, rawurl := range urlRegex.FindAllString(m.Trailing(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)
@@ -101,7 +101,7 @@ func (p *URLPlugin) callback(b *bot.Bot, m *irc.Message) {
 	}
 }
 
-func defaultLinkProvider(url string, b *bot.Bot, m *irc.Message) bool {
+func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 	var client = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -136,7 +136,7 @@ func defaultLinkProvider(url string, b *bot.Bot, m *irc.Message) bool {
 	return ok
 }
 
-func isItDownCallback(b *bot.Bot, m *irc.Message) {
+func isItDownCallback(b *seabird.Bot, m *irc.Message) {
 	go func() {
 		url, err := url.Parse(m.Trailing())
 		if err != nil {

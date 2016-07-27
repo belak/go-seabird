@@ -9,18 +9,18 @@ import (
 	duration "github.com/ChannelMeter/iso8601duration"
 	"github.com/Unknwon/com"
 
-	"github.com/belak/go-seabird/bot"
 	"github.com/belak/go-seabird/plugins"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 )
 
 func init() {
-	bot.RegisterPlugin("url/youtube", newYoutubeProvider)
+	seabird.RegisterPlugin("url/youtube", newYoutubeProvider)
 }
 
 var youtubePrefix = "[YouTube]"
 
-type youtubeConfig struct {
+type youtubePlugin struct {
 	Key string
 }
 
@@ -67,26 +67,22 @@ type ytVideos struct {
 	} `json:"items"`
 }
 
-func newYoutubeProvider(b *bot.Bot) (bot.Plugin, error) {
-	// Ensure that the url plugin is loaded
-	b.LoadPlugin("url")
-	p := b.Plugins["url"].(*plugins.URLPlugin)
-
-	// Listen for youtube.com and youtu.be URLs
-	p.RegisterProvider("youtube.com", handleYoutube)
-	p.RegisterProvider("youtu.be", handleYoutube)
-
-	return nil, nil
-}
-
-func handleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
+func newYoutubeProvider(b *seabird.Bot, urlPlugin *plugins.URLPlugin) error {
 	// Get API key from seabird config
-	tc := &youtubeConfig{}
-	err := b.Config("youtube", tc)
+	yp := &youtubePlugin{}
+	err := b.Config("youtube", yp)
 	if err != nil {
-		return false
+		return err
 	}
 
+	// Listen for youtube.com and youtu.be URLs
+	urlPlugin.RegisterProvider("youtube.com", yp.Handle)
+	urlPlugin.RegisterProvider("youtu.be", yp.Handle)
+
+	return nil
+}
+
+func (yp *youtubePlugin) Handle(b *seabird.Bot, m *irc.Message, req *url.URL) bool {
 	// Get the Video ID from the URL
 	p, _ := url.ParseQuery(req.RawQuery)
 	var id string
@@ -103,7 +99,7 @@ func handleYoutube(b *bot.Bot, m *irc.Message, req *url.URL) bool {
 	}
 
 	// Get video duration and title
-	time, title := getVideo(id, tc.Key)
+	time, title := getVideo(id, yp.Key)
 
 	// Invalid video ID or no results
 	if time == "" && title == "" {

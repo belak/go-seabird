@@ -6,13 +6,13 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
 	"github.com/jmoiron/sqlx"
 )
 
 func init() {
-	bot.RegisterPlugin("forecast", newForecastPlugin)
+	seabird.RegisterPlugin("forecast", newForecastPlugin)
 }
 
 // DataPoint represents a point at a specific point in time,
@@ -89,22 +89,25 @@ type forecastPlugin struct {
 	// CacheDuration string
 }
 
-func newForecastPlugin(b *bot.Bot) (bot.Plugin, error) {
-	b.LoadPlugin("db")
-	p := &forecastPlugin{db: b.Plugins["db"].(*sqlx.DB)}
+func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *sqlx.DB) error {
+	p := &forecastPlugin{db: db}
 
-	b.Config("forecast", p)
+	err := b.Config("forecast", p)
+	if err != nil {
+		return err
+	}
 
-	b.CommandMux.Event("weather", p.weatherCallback, &bot.HelpInfo{
+	cm.Event("weather", p.weatherCallback, &seabird.HelpInfo{
 		Usage:       "<location>",
 		Description: "Retrieves current weather for given location",
 	})
-	b.CommandMux.Event("forecast", p.forecastCallback, &bot.HelpInfo{
+
+	cm.Event("forecast", p.forecastCallback, &seabird.HelpInfo{
 		Usage:       "<location>",
 		Description: "Retrieves three-day forecast for given location",
 	})
 
-	return nil, nil
+	return nil
 }
 
 func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error) {
@@ -113,13 +116,13 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error)
 		loc.Lat,
 		loc.Lon)
 
-	f := forecastResponse{}
+	f := &forecastResponse{}
 	err := com.HttpGetJSON(&http.Client{}, link, f)
 	if err != nil {
 		return nil, err
 	}
 
-	return &f, nil
+	return f, nil
 }
 
 func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
@@ -158,7 +161,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 	return loc, nil
 }
 
-func (p *forecastPlugin) forecastCallback(b *bot.Bot, m *irc.Message) {
+func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 	loc, err := p.getLocation(m)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
@@ -185,7 +188,7 @@ func (p *forecastPlugin) forecastCallback(b *bot.Bot, m *irc.Message) {
 	}
 }
 
-func (p *forecastPlugin) weatherCallback(b *bot.Bot, m *irc.Message) {
+func (p *forecastPlugin) weatherCallback(b *seabird.Bot, m *irc.Message) {
 	loc, err := p.getLocation(m)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())

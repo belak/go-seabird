@@ -43,7 +43,7 @@ func FetchLocation(where string) (*Location, error) {
 	u, _ := url.Parse("http://maps.googleapis.com/maps/api/geocode/json")
 	u.RawQuery = v.Encode()
 
-	loc := locationResponse{}
+	loc := &locationResponse{}
 	err := com.HttpGetJSON(&http.Client{}, u.String(), loc)
 	if err != nil {
 		return nil, err

@@ -3,11 +3,11 @@ package plugins
 import (
 	"github.com/jmoiron/sqlx"
 
-	"github.com/belak/go-seabird/bot"
+	"github.com/belak/go-seabird/seabird"
 )
 
 func init() {
-	bot.RegisterPlugin("db", newDBPlugin)
+	seabird.RegisterPlugin("db", newDBPlugin)
 }
 
 type dbConfig struct {
@@ -15,7 +15,7 @@ type dbConfig struct {
 	DataSource string
 }
 
-func newDBPlugin(b *bot.Bot) (bot.Plugin, error) {
+func newDBPlugin(b *seabird.Bot) (*sqlx.DB, error) {
 	dbc := &dbConfig{}
 	err := b.Config("db", dbc)
 	if err != nil {

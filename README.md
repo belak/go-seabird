@@ -4,7 +4,7 @@
 
 ## Requirements
 
-* Go 1.4
+* Go 1.6
 * gcc
 * sqlite3 or postgresql
 
