@@ -49,7 +49,7 @@ func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 		return err
 	}
 
-	cm.Event("call", p.Search, &seabird.HelpInfo{
+	cm.Event("callsign", p.Search, &seabird.HelpInfo{
 		Usage:       "<callsign>",
 		Description: "Finds information about given FCC callsign",
 	})
