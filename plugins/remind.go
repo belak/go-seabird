@@ -1,14 +1,12 @@
 package plugins
 
 import (
-	"database/sql"
 	"strings"
 	"time"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
+	"github.com/belak/nut"
 )
 
 func init() {
@@ -16,26 +14,41 @@ func init() {
 }
 
 type reminderPlugin struct {
-	db *sqlx.DB
+	db *nut.DB
 }
+
+type targetType int
+
+const (
+	channelTarget targetType = iota
+	privateTarget
+)
 
 type reminder struct {
-	ID           int64
+	Key          string
 	Target       string
-	TargetType   string `db:"target_type"`
+	TargetType   targetType
 	Content      string
-	ReminderTime time.Time `db:"reminder_time"`
+	ReminderTime time.Time
 }
 
-func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB) {
+func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &reminderPlugin{db: db}
+
+	err := p.db.EnsureBucket("remind_reminders")
+	if err != nil {
+		return err
+	}
 
 	m.Event("001", p.InitialDispatch)
 	m.Event("JOIN", p.JoinDispatch)
+
 	cm.Event("remind", p.RemindCommand, &seabird.HelpInfo{
 		Usage:       "<duration> <message>",
 		Description: "Remind yourself to do something.",
 	})
+
+	return nil
 }
 
 func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
@@ -57,7 +70,11 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	})
 
 	// Nuke the reminder now that it's been sent
-	_, err := p.db.Exec("DELETE FROM reminders WHERE id=$1", r.ID)
+	err := p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("remind_reminders")
+		return bucket.Delete(r.Key)
+	})
+
 	if err != nil {
 		logger.WithError(err).Error("Failed to remove reminder")
 		return
@@ -66,14 +83,37 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	logger.Info("Dispatched reminder")
 }
 
-// InitialDispatch is used to send private messages to users on connection. We
-// can't queue up the channels yet because we haven't joined them.
-func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
+func (p *reminderPlugin) dispatchReminders(b *seabird.Bot, tType targetType, target string) {
 	logger := b.GetLogger()
 
 	reminders := []*reminder{}
-	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1", "private")
-	if err != nil {
+
+	err := p.db.View(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("remind_reminders")
+		cursor := bucket.Cursor()
+
+		v := &reminder{}
+
+		for _, err := cursor.First(v); err == nil; _, err = cursor.Next(v) {
+			if v.TargetType != tType {
+				v = &reminder{}
+				continue
+			}
+
+			if target == "" || v.Target != target {
+				v = &reminder{}
+				continue
+			}
+
+			reminders = append(reminders, v)
+
+			v = &reminder{}
+		}
+
+		return nil
+	})
+
+	if err != nil && err != nut.ErrCursorEOF {
 		logger.WithError(err).Error("Failed to look up private reminders for dispatch")
 		return
 	}
@@ -83,26 +123,21 @@ func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
+// InitialDispatch is used to send private messages to users on connection. We
+// can't queue up the channels yet because we haven't joined them.
+func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
+	p.dispatchReminders(b, privateTarget, "")
+}
+
 // When we join a channel, we need to see if there are any reminders to be
 // queued up.
 func (p *reminderPlugin) JoinDispatch(b *seabird.Bot, m *irc.Message) {
-	// If it's not the bot, we ignore it.
+	// If it's not the bot or we got an invalid message, we ignore it.
 	if m.Prefix.Name != b.CurrentNick() || len(m.Params) < 1 {
 		return
 	}
 
-	logger := b.GetLogger()
-
-	reminders := []*reminder{}
-	err := p.db.Select(&reminders, "SELECT * FROM reminders WHERE target_type=$1 AND target=$2", "public", m.Params[0])
-	if err != nil {
-		logger.WithError(err).Error("Failed to look up public reminders for channel")
-		return
-	}
-
-	for _, r := range reminders {
-		go p.dispatch(b, r)
-	}
+	p.dispatchReminders(b, channelTarget, m.Params[0])
 }
 
 func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
@@ -120,7 +155,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 
 	r := &reminder{
 		Target:       m.Prefix.Name,
-		TargetType:   "private",
+		TargetType:   privateTarget,
 		Content:      split[1],
 		ReminderTime: time.Now().Add(dur),
 	}
@@ -128,28 +163,22 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 	if m.FromChannel() {
 		// If it was from a channel, we need to prepend the user's name.
 		r.Target = m.Params[0]
-		r.TargetType = "public"
+		r.TargetType = channelTarget
 		r.Content = m.Prefix.Name + ": " + r.Content
 	}
 
-	// pq doesn't support sql.Result.LastInsertId so we hack around it by
-	// doing this. Don't do this at home, kids!
-	if p.db.DriverName() == "postgres" {
-		var rowID int64
-		err = p.db.QueryRow(
-			"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4) RETURNING id",
-			r.Target, r.TargetType, r.Content, r.ReminderTime).Scan(&rowID)
-		r.ID = rowID
-	} else {
-		var result sql.Result
-		result, err = p.db.Exec(
-			"INSERT INTO reminders (target, target_type, content, reminder_time) VALUES ($1, $2, $3, $4)",
-			r.Target, r.TargetType, r.Content, r.ReminderTime)
+	err = p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("remind_reminders")
 
-		if err == nil {
-			r.ID, err = result.LastInsertId()
+		key, err := bucket.NextID()
+		if err != nil {
+			return err
 		}
-	}
+
+		r.Key = key
+
+		return bucket.Put(r.Key, r)
+	})
 
 	if err != nil {
 		b.MentionReply(m, "Failed to store reminder: %s", err)
