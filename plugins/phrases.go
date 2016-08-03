@@ -1,14 +1,13 @@
 package plugins
 
 import (
-	"database/sql"
 	"errors"
 	"strings"
 	"unicode"
 
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
-	"github.com/jmoiron/sqlx"
+	"github.com/belak/nut"
 )
 
 func init() {
@@ -16,19 +15,27 @@ func init() {
 }
 
 type phrasesPlugin struct {
-	db *sqlx.DB
+	db *nut.DB
+}
+
+type phraseBucket struct {
+	Key     string
+	Entries []phrase
 }
 
 type phrase struct {
-	ID        int
-	Key       string
 	Value     string
 	Submitter string
 	Deleted   bool
 }
 
-func newPhrasesPlugin(cm *seabird.CommandMux, db *sqlx.DB) {
+func newPhrasesPlugin(cm *seabird.CommandMux, db *nut.DB) error {
 	p := &phrasesPlugin{db: db}
+
+	err := p.db.EnsureBucket("phrases")
+	if err != nil {
+		return err
+	}
 
 	cm.Event("forget", p.forgetCallback, &seabird.HelpInfo{
 		Usage:       "<key>",
@@ -54,6 +61,8 @@ func newPhrasesPlugin(cm *seabird.CommandMux, db *sqlx.DB) {
 		Usage:       "<key> <phrase>",
 		Description: "Remembers a phrase",
 	})
+
+	return nil
 }
 
 func (p *phrasesPlugin) cleanedName(name string) string {
@@ -61,52 +70,59 @@ func (p *phrasesPlugin) cleanedName(name string) string {
 }
 
 func (p *phrasesPlugin) getKey(key string) (*phrase, error) {
-	row := &phrase{}
-	if len(key) == 0 {
-		return row, errors.New("No key provided")
+	row := &phraseBucket{Key: p.cleanedName(key)}
+	if len(row.Key) == 0 {
+		return nil, errors.New("No key provided")
 	}
 
-	err := p.db.Get(row, "SELECT * FROM phrases WHERE key=$1 ORDER BY id DESC LIMIT 1", key)
-	if err == sql.ErrNoRows {
-		return row, errors.New("No results for given key")
-	} else if err != nil {
-		return row, err
-	} else if row.Deleted {
-		return row, errors.New("Phrase was previously deleted")
+	err := p.db.View(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("phrases")
+		return bucket.Get(row.Key, row)
+	})
+
+	if err != nil {
+		return nil, err
+	} else if len(row.Entries) == 0 {
+		return nil, errors.New("No results for given key")
 	}
 
-	return row, nil
+	entry := row.Entries[len(row.Entries)-1]
+	if entry.Deleted {
+		return nil, errors.New("Phrase was previously deleted")
+	}
+
+	return &entry, nil
 }
 
 func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, m *irc.Message) {
-	// Ensure there is already a key for this. Note that this
-	// introduces a potential race condition, but it's not super
-	// important.
-	name := p.cleanedName(m.Trailing())
-	_, err := p.getKey(name)
-	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
-		return
+	row := &phraseBucket{Key: p.cleanedName(m.Trailing())}
+	if len(row.Key) == 0 {
+		b.MentionReply(m, "No key supplied")
 	}
 
-	row := phrase{
-		Key:       name,
+	entry := phrase{
 		Submitter: m.Prefix.Name,
 		Deleted:   true,
 	}
 
-	if len(row.Key) == 0 {
-		b.MentionReply(m, "No key supplied")
-		return
-	}
+	err := p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("phrases")
+		err := bucket.Get(row.Key, row)
+		if err != nil {
+			return errors.New("No results for given key")
+		}
 
-	_, err = p.db.Exec("INSERT INTO phrases (key, submitter, deleted) VALUES ($1, $2, $3)", row.Key, row.Submitter, row.Deleted)
+		row.Entries = append(row.Entries, entry)
+
+		return bucket.Put(row.Key, row)
+	})
+
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "Forgot %s", name)
+	b.MentionReply(m, "Forgot %s", row.Key)
 }
 
 func (p *phrasesPlugin) getCallback(b *seabird.Bot, m *irc.Message) {
@@ -136,21 +152,26 @@ func (p *phrasesPlugin) giveCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *phrasesPlugin) historyCallback(b *seabird.Bot, m *irc.Message) {
-	rows := []phrase{}
-	err := p.db.Select(&rows, "SELECT * FROM phrases WHERE key=$1 ORDER BY id DESC LIMIT 5", p.cleanedName(m.Trailing()))
-	if err == sql.ErrNoRows {
-		b.MentionReply(m, "No results for given key")
+	row := &phraseBucket{Key: p.cleanedName(m.Trailing())}
+	if len(row.Key) == 0 {
+		b.MentionReply(m, "No key provided")
 		return
-	} else if err != nil {
+	}
+
+	err := p.db.View(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("phrases")
+		return bucket.Get(row.Key, row)
+	})
+	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	for _, row := range rows {
-		if row.Deleted {
-			b.MentionReply(m, "%s deleted by %s", row.Key, row.Submitter)
+	for _, entry := range row.Entries {
+		if entry.Deleted {
+			b.MentionReply(m, "%s deleted by %s", row.Key, entry.Submitter)
 		} else {
-			b.MentionReply(m, "%s set by %s to %s", row.Key, row.Submitter, row.Value)
+			b.MentionReply(m, "%s set by %s to %s", row.Key, entry.Submitter, entry.Value)
 		}
 	}
 }
@@ -162,22 +183,30 @@ func (p *phrasesPlugin) setCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	row := phrase{
-		Key:       p.cleanedName(split[0]),
+	row := &phraseBucket{Key: p.cleanedName(split[0])}
+	if len(row.Key) == 0 {
+		b.MentionReply(m, "No key provided")
+		return
+	}
+
+	entry := phrase{
 		Submitter: m.Prefix.Name,
 		Value:     split[1],
 	}
 
-	if len(row.Key) == 0 {
-		b.MentionReply(m, "No key supplied")
-		return
-	}
+	err := p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("phrases")
+		bucket.Get(row.Key, row)
 
-	_, err := p.db.Exec("INSERT INTO phrases (key, submitter, value) VALUES ($1, $2, $3)", row.Key, row.Submitter, row.Value)
+		row.Entries = append(row.Entries, entry)
+
+		return bucket.Put(row.Key, row)
+	})
+
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "%s set to %s", row.Key, row.Value)
+	b.MentionReply(m, "%s set to %s", row.Key, entry.Value)
 }
