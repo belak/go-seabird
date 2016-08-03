@@ -6,10 +6,10 @@ import (
 	"time"
 
 	"github.com/Unknwon/com"
-	"github.com/jinzhu/gorm"
 
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
+	"github.com/belak/nut"
 )
 
 func init() {
@@ -86,7 +86,7 @@ type forecastResponse struct {
 
 type forecastPlugin struct {
 	Key string
-	db  *gorm.DB
+	db  *nut.DB
 	// CacheDuration string
 }
 
@@ -94,8 +94,7 @@ type forecastPlugin struct {
 // geocoded location, along with the user who requested this be their home
 // location.
 type ForecastLocation struct {
-	gorm.Model
-	Nick    string `gorm:"unique_index"`
+	Nick    string
 	Address string
 	Lat     float64
 	Lon     float64
@@ -110,13 +109,16 @@ func (fl *ForecastLocation) ToLocation() *Location {
 	}
 }
 
-func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *gorm.DB) error {
+func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &forecastPlugin{db: db}
 
 	// Ensure the table is created if it doesn't exist
-	p.db.AutoMigrate(&ForecastLocation{})
+	err := p.db.EnsureBucket("forecast_location")
+	if err != nil {
+		return err
+	}
 
-	err := b.Config("forecast", p)
+	err = b.Config("forecast", p)
 	if err != nil {
 		return err
 	}
@@ -157,7 +159,10 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 	// If it's an empty string, check the cache
 	if l == "" {
 		res := &ForecastLocation{}
-		err := p.db.Where(target).First(res).Error
+		err := p.db.View(func(tx *nut.Tx) error {
+			bucket := tx.Bucket("forecast_location")
+			return bucket.Get(target.Nick, target)
+		})
 		if err != nil {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
@@ -178,12 +183,11 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 		Lon:     loc.Lon,
 	}
 
-	err = p.db.Create(newLocation).Error
-	if err == nil {
-		return loc, nil
-	}
+	err = p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("forecast_location")
+		return bucket.Put(newLocation.Nick, newLocation)
+	})
 
-	err = p.db.Model(target).Updates(newLocation).Error
 	if err != nil {
 		return nil, err
 	}
