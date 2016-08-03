@@ -25,8 +25,7 @@ plugins = [
 ]
 
 [db]
-driver     = "sqlite3"
-datasource = "dev.db"
+filename = "dev.db"
 
 [ctcp]
 enablegit = false

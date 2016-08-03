@@ -3,15 +3,14 @@ package main
 import (
 	"os"
 
-	// Load plugins
 	"github.com/Sirupsen/logrus"
+
+	// Load plugins
 	_ "github.com/belak/go-seabird/plugins"
 	_ "github.com/belak/go-seabird/plugins/linkproviders"
-	"github.com/belak/go-seabird/seabird"
 
-	// Load DB drivers
-	_ "github.com/lib/pq"
-	_ "github.com/mattn/go-sqlite3"
+	// Load the core
+	"github.com/belak/go-seabird/seabird"
 )
 
 func failIfErr(err error, desc string) {
