@@ -170,9 +170,9 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 	err = p.db.Update(func(tx *nut.Tx) error {
 		bucket := tx.Bucket("remind_reminders")
 
-		key, err := bucket.NextID()
-		if err != nil {
-			return err
+		key, innerErr := bucket.NextID()
+		if innerErr != nil {
+			return innerErr
 		}
 
 		r.Key = key
