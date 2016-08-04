@@ -7,7 +7,7 @@ import (
 
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
-	"github.com/jmoiron/sqlx"
+	"github.com/belak/nut"
 )
 
 func init() {
@@ -15,11 +15,21 @@ func init() {
 }
 
 type lastSeenPlugin struct {
-	db *sqlx.DB
+	db *nut.DB
 }
 
-func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB) {
+type lastSeenChannelBucket struct {
+	Key   string
+	Nicks map[string]time.Time
+}
+
+func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &lastSeenPlugin{db: db}
+
+	err := p.db.EnsureBucket("lastseen")
+	if err != nil {
+		return err
+	}
 
 	cm.Event("active", p.activeCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
@@ -27,6 +37,8 @@ func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB)
 	})
 
 	m.Event("PRIVMSG", p.msgCallback)
+
+	return nil
 }
 
 func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, m *irc.Message) {
@@ -37,32 +49,32 @@ func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	channel := m.Params[0]
-	msg := p.getLastSeen(nick, channel)
 
-	b.MentionReply(m, "%s", msg)
+	b.MentionReply(m, "%s", p.getLastSeen(nick, channel))
 }
 
-func (p *lastSeenPlugin) getLastSeen(nick, channel string) string {
-	var lastseen int64
-	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
+func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
+	nick := strings.ToLower(rawNick)
+
+	channelBucket := &lastSeenChannelBucket{
+		Key: strings.ToLower(rawChannel),
+	}
+
+	err := p.db.View(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("lastseen")
+		return bucket.Get(channelBucket.Key, channelBucket)
+	})
 	if err != nil {
+		return "Unknown channel"
+	}
+
+	var tm time.Time
+	var ok bool
+	if tm, ok = channelBucket.Nicks[nick]; !ok {
 		return "Unknown user"
 	}
 
-	tm := time.Unix(lastseen, 0)
-
-	if isActiveTime(lastseen) {
-		return nick + " was last seen at " + formatTime(tm)
-	}
-
-	return nick + " was last seen on " + formatDate(tm) + " at " + formatTime(tm) + " (inactive)"
-}
-
-func isActiveTime(lastseen int64) bool {
-	tm := time.Unix(lastseen, 0)
-	now := time.Now()
-	now = now.Add(-5 * time.Minute)
-	return tm.After(now) || tm.Equal(now)
+	return rawNick + " was last active on " + formatDate(tm) + " at " + formatTime(tm)
 }
 
 func formatTime(t time.Time) string {
@@ -71,16 +83,6 @@ func formatTime(t time.Time) string {
 
 func formatDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), t.Month().String(), t.Year())
-}
-
-func (p *lastSeenPlugin) isActive(nick, channel string) bool {
-	var lastseen int64
-	err := p.db.Get(&lastseen, "SELECT lastseen FROM lastseen WHERE name=$1 AND channel=$2", strings.ToLower(nick), channel)
-	if err != nil {
-		return false
-	}
-
-	return isActiveTime(lastseen)
 }
 
 func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
@@ -95,24 +97,19 @@ func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 // Thanks to @belak for the comments
-func (p *lastSeenPlugin) updateLastSeen(nick, channel string) {
-	name := strings.ToLower(nick)
-	now := time.Now().Unix()
+func (p *lastSeenPlugin) updateLastSeen(rawNick, rawChannel string) {
+	nick := strings.ToLower(rawNick)
 
-	_, err := p.db.Exec("INSERT INTO lastseen VALUES ($1, $2, $3)", name, channel, now)
-	// If it was a nil error, we got the insert
-	if err == nil {
-		return
+	channelBucket := &lastSeenChannelBucket{
+		Key:   strings.ToLower(rawChannel),
+		Nicks: make(map[string]time.Time),
 	}
 
-	// Grab a transaction, just in case
-	tx, err := p.db.Beginx()
-	defer tx.Commit()
+	_ = p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("lastseen")
 
-	if err != nil {
-		return
-	}
-
-	// If there was an error, we try an update.
-	tx.Exec("UPDATE lastseen SET lastseen=$1 WHERE name=$2 AND channel=$3", now, name, channel)
+		bucket.Get(channelBucket.Key, channelBucket)
+		channelBucket.Nicks[nick] = time.Now()
+		return bucket.Put(channelBucket.Key, channelBucket)
+	})
 }

@@ -1,49 +1,57 @@
 package plugins
 
 import (
-	"fmt"
 	"regexp"
 	"strings"
 	"unicode"
 
-	"github.com/jmoiron/sqlx"
-
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
+	"github.com/belak/nut"
 )
 
 func init() {
 	seabird.RegisterPlugin("karma", newKarmaPlugin)
 }
 
-type karmaUser struct {
+type karmaPlugin struct {
+	db *nut.DB
+}
+
+// KarmaTarget represents an item with a karma count
+type KarmaTarget struct {
 	Name  string
 	Score int
 }
 
-type karmaPlugin struct {
-	db *sqlx.DB
-}
-
 var regex = regexp.MustCompile(`([^\s]+)(\+\+|--)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *sqlx.DB) {
+func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &karmaPlugin{db: db}
+
+	err := p.db.EnsureBucket("karma")
+	if err != nil {
+		return err
+	}
 
 	cm.Event("karma", p.karmaCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
 		Description: "Gives karma for given user",
 	})
 
-	cm.Event("topkarma", p.topKarmaCallback, &seabird.HelpInfo{
-		Description: "Reports the user with the most karma",
-	})
+	/*
+		cm.Event("topkarma", p.topKarmaCallback, &seabird.HelpInfo{
+			Description: "Reports the user with the most karma",
+		})
 
-	cm.Event("bottomkarma", p.bottomKarmaCallback, &seabird.HelpInfo{
-		Description: "Reports the user with the least karma",
-	})
+		cm.Event("bottomkarma", p.bottomKarmaCallback, &seabird.HelpInfo{
+			Description: "Reports the user with the least karma",
+		})
+	*/
 
 	m.Event("PRIVMSG", p.callback)
+
+	return nil
 }
 
 func (p *karmaPlugin) cleanedName(name string) string {
@@ -52,44 +60,28 @@ func (p *karmaPlugin) cleanedName(name string) string {
 
 // GetKarmaFor returns the karma for the given name.
 func (p *karmaPlugin) GetKarmaFor(name string) int {
-	var score int
-	err := p.db.Get(&score, "SELECT score FROM karma WHERE name=$1", p.cleanedName(name))
-	if err != nil {
-		return 0
-	}
+	out := &KarmaTarget{Name: p.cleanedName(name)}
 
-	return score
+	_ = p.db.View(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("karma")
+		return bucket.Get(out.Name, out)
+	})
+
+	return out.Score
 }
 
 // UpdateKarma will update the karma for a given name and return the new karma value.
 func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
-	_, err := p.db.Exec("INSERT INTO karma (name, score) VALUES ($1, $2)", p.cleanedName(name), diff)
-	// If it was a nil error, we got the insert
-	if err == nil {
-		return diff
-	}
+	out := &KarmaTarget{Name: p.cleanedName(name)}
 
-	// Grab a transaction, just in case
-	tx, err := p.db.Beginx()
-	defer tx.Commit()
+	_ = p.db.Update(func(tx *nut.Tx) error {
+		bucket := tx.Bucket("karma")
+		bucket.Get(out.Name, out)
+		out.Score += diff
+		return bucket.Put(out.Name, out)
+	})
 
-	if err != nil {
-		fmt.Println("TX:", err)
-	}
-
-	// If there was an error, we try an update.
-	_, err = tx.Exec("UPDATE karma SET score=score+$1 WHERE name=$2", diff, p.cleanedName(name))
-	if err != nil {
-		fmt.Println("UPDATE:", err)
-	}
-
-	var score int
-	err = tx.Get(&score, "SELECT score FROM karma WHERE name=$1", p.cleanedName(name))
-	if err != nil {
-		fmt.Println("SELECT:", err)
-	}
-
-	return score
+	return out.Score
 }
 
 func (p *karmaPlugin) karmaCallback(b *seabird.Bot, m *irc.Message) {
@@ -103,15 +95,11 @@ func (p *karmaPlugin) karmaCallback(b *seabird.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
+/*
 func (p *karmaPlugin) karmaCheck(b *seabird.Bot, m *irc.Message, msg string, sort string) {
-	user := &karmaUser{}
-	err := p.db.Get(user, fmt.Sprintf("SELECT name, score FROM karma ORDER BY score %s LIMIT 1", sort))
-	if err != nil {
-		b.MentionReply(m, "Error fetching scores")
-		return
-	}
-
-	b.MentionReply(m, "%s has the %s karma with %d", user.Name, msg, user.Score)
+	res := &KarmaTarget{}
+	p.db.Order("score " + sort).First(res)
+	b.MentionReply(m, "%s has the %s karma with %d", res.Name, msg, res.Score)
 }
 func (p *karmaPlugin) topKarmaCallback(b *seabird.Bot, m *irc.Message) {
 	p.karmaCheck(b, m, "top", "DESC")
@@ -120,6 +108,7 @@ func (p *karmaPlugin) topKarmaCallback(b *seabird.Bot, m *irc.Message) {
 func (p *karmaPlugin) bottomKarmaCallback(b *seabird.Bot, m *irc.Message) {
 	p.karmaCheck(b, m, "bottom", "ASC")
 }
+*/
 
 func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 	if len(m.Params) < 2 || !m.FromChannel() {

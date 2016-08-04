@@ -1,9 +1,8 @@
 package plugins
 
 import (
-	"github.com/jmoiron/sqlx"
-
 	"github.com/belak/go-seabird/seabird"
+	"github.com/belak/nut"
 )
 
 func init() {
@@ -11,21 +10,20 @@ func init() {
 }
 
 type dbConfig struct {
-	Driver     string
-	DataSource string
+	Filename string
 }
 
-func newDBPlugin(b *seabird.Bot) (*sqlx.DB, error) {
+func newDBPlugin(b *seabird.Bot) (*nut.DB, error) {
 	dbc := &dbConfig{}
 	err := b.Config("db", dbc)
 	if err != nil {
 		return nil, err
 	}
 
-	db, err := sqlx.Connect(dbc.Driver, dbc.DataSource)
+	ndb, err := nut.Open(dbc.Filename, 0700)
 	if err != nil {
 		return nil, err
 	}
 
-	return db, nil
+	return ndb, nil
 }
