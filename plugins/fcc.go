@@ -13,9 +13,7 @@ func init() {
 	seabird.RegisterPlugin("fcc", newFccPlugin)
 }
 
-type fccPlugin struct {
-	Key string
-}
+type fccPlugin struct{}
 
 type fccLicense struct {
 	Name       string `json:"licName"`
@@ -44,10 +42,6 @@ type fccResponse struct {
 
 func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &fccPlugin{}
-	err := b.Config("fcc", p)
-	if err != nil {
-		return err
-	}
 
 	cm.Event("callsign", p.Search, &seabird.HelpInfo{
 		Usage:       "<callsign>",
