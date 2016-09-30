@@ -158,7 +158,6 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		res := &ForecastLocation{}
 		err := p.db.View(func(tx *nut.Tx) error {
 			bucket := tx.Bucket("forecast_location")
 			return bucket.Get(target.Nick, target)
@@ -166,7 +165,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
-		return res.ToLocation(), nil
+		return target.ToLocation(), nil
 	}
 
 	// If it's not an empty string, we have to look up the location and store
