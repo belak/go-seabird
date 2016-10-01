@@ -1,7 +1,9 @@
 package plugins
 
 import (
+	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/belak/go-seabird/seabird"
@@ -15,6 +17,12 @@ func init() {
 
 type reminderPlugin struct {
 	db *nut.DB
+
+	roomLock *sync.Mutex
+	rooms    map[string]bool
+
+	// Singly buffered channel
+	updateChan chan struct{}
 }
 
 type targetType int
@@ -33,7 +41,12 @@ type reminder struct {
 }
 
 func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
-	p := &reminderPlugin{db: db}
+	p := &reminderPlugin{
+		db:         db,
+		roomLock:   &sync.Mutex{},
+		rooms:      make(map[string]bool),
+		updateChan: make(chan struct{}, 1),
+	}
 
 	err := p.db.EnsureBucket("remind_reminders")
 	if err != nil {
@@ -41,7 +54,9 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) 
 	}
 
 	m.Event("001", p.InitialDispatch)
-	m.Event("JOIN", p.JoinDispatch)
+	m.Event("JOIN", p.joinHandler)
+	m.Event("PART", p.partHandler)
+	m.Event("KICK", p.kickHandler)
 
 	cm.Event("remind", p.RemindCommand, &seabird.HelpInfo{
 		Usage:       "<duration> <message>",
@@ -51,16 +66,111 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) 
 	return nil
 }
 
+func (p *reminderPlugin) joinHandler(b *seabird.Bot, m *irc.Message) {
+	if m.Prefix.Name != b.CurrentNick() {
+		fmt.Println("WE DIDN'T JOIN")
+		return
+	}
+
+	p.roomLock.Lock()
+	defer p.roomLock.Unlock()
+	p.rooms[m.Params[0]] = true
+
+	p.updateChan <- struct{}{}
+}
+
+func (p *reminderPlugin) partHandler(b *seabird.Bot, m *irc.Message) {
+	if m.Prefix.Name != b.CurrentNick() {
+		return
+	}
+
+	p.roomLock.Lock()
+	defer p.roomLock.Unlock()
+	delete(p.rooms, m.Params[0])
+
+	p.updateChan <- struct{}{}
+}
+
+func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
+	if m.Params[1] != b.CurrentNick() {
+		return
+	}
+
+	p.roomLock.Lock()
+	defer p.roomLock.Unlock()
+	delete(p.rooms, m.Params[0])
+
+	p.updateChan <- struct{}{}
+}
+
+func (p reminderPlugin) nextReminder() (*reminder, error) {
+	// Find the next reminder we'll have to send
+	var r *reminder
+	err := p.db.View(func(tx *nut.Tx) error {
+		// Grab the room lock for this transaction
+		p.roomLock.Lock()
+		defer p.roomLock.Unlock()
+
+		bucket := tx.Bucket("remind_reminders")
+		cursor := bucket.Cursor()
+
+		v := &reminder{}
+
+		for _, err := cursor.First(v); err == nil; _, err = cursor.Next(v) {
+			// If it's a channel target and we're not in the room,
+			// we need to skip it
+			if v.TargetType == channelTarget && !p.rooms[v.Target] {
+				continue
+			}
+
+			// If we don't currently have a reminder or the new
+			// reminder should be sent before our current one, we
+			// update it.
+			if r == nil || v.ReminderTime.Before(r.ReminderTime) {
+				r = v
+			}
+		}
+
+		return nil
+	})
+
+	return r, err
+}
+
+func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
+	logger := b.GetLogger()
+
+	for {
+		r, err := p.nextReminder()
+		if err != nil {
+			logger.WithError(err).Error("Transaction failure. Exiting loop.")
+			return
+		}
+
+		var timer <-chan time.Time
+		if r != nil {
+			logger.WithField("reminder", r).Info("Got reminder")
+
+			waitDur := r.ReminderTime.Sub(time.Now())
+			if waitDur <= 0 {
+				p.dispatch(b, r)
+				continue
+			}
+
+			timer = time.After(waitDur)
+		}
+
+		select {
+		case <-timer:
+			p.dispatch(b, r)
+		case <-p.updateChan:
+			continue
+		}
+	}
+}
+
 func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	logger := b.GetLogger().WithField("reminder", r)
-
-	// Because time.Sleep handles negative values (and 0) by simply
-	// returning, this will be handled correctly even with negative
-	// durations.
-	waitDur := r.ReminderTime.Sub(time.Now())
-
-	// Try to sleep this goroutine until the message needs to be delivered
-	time.Sleep(waitDur)
 
 	// Send the message
 	b.Send(&irc.Message{
@@ -77,67 +187,15 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to remove reminder")
-		return
 	}
 
 	logger.Info("Dispatched reminder")
 }
 
-func (p *reminderPlugin) dispatchReminders(b *seabird.Bot, tType targetType, target string) {
-	logger := b.GetLogger()
-
-	reminders := []*reminder{}
-
-	err := p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("remind_reminders")
-		cursor := bucket.Cursor()
-
-		v := &reminder{}
-
-		for _, err := cursor.First(v); err == nil; _, err = cursor.Next(v) {
-			if v.TargetType != tType {
-				v = &reminder{}
-				continue
-			}
-
-			if target == "" || v.Target != target {
-				v = &reminder{}
-				continue
-			}
-
-			reminders = append(reminders, v)
-
-			v = &reminder{}
-		}
-
-		return nil
-	})
-
-	if err != nil && err != nut.ErrCursorEOF {
-		logger.WithError(err).Error("Failed to look up private reminders for dispatch")
-		return
-	}
-
-	for _, r := range reminders {
-		go p.dispatch(b, r)
-	}
-}
-
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
 func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
-	p.dispatchReminders(b, privateTarget, "")
-}
-
-// When we join a channel, we need to see if there are any reminders to be
-// queued up.
-func (p *reminderPlugin) JoinDispatch(b *seabird.Bot, m *irc.Message) {
-	// If it's not the bot or we got an invalid message, we ignore it.
-	if m.Prefix.Name != b.CurrentNick() || len(m.Params) < 1 {
-		return
-	}
-
-	p.dispatchReminders(b, channelTarget, m.Params[0])
+	go p.remindLoop(b)
 }
 
 func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
@@ -187,5 +245,5 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 
 	b.MentionReply(m, "Event stored")
 
-	go p.dispatch(b, r)
+	p.updateChan <- struct{}{}
 }
