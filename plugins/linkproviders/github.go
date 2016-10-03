@@ -136,7 +136,7 @@ var repoTemplate = TemplateMustCompile("githubRepo", `
 {{- if and .repo.Fork .repo.Parent }} (forked from {{ .repo.Parent.FullName }}){{ end }}
 {{- with .repo.PushedAt }} Last pushed to {{ . | dateFormat "2 Jan 2006" }}{{ end }}
 {{- with .repo.Description }} - {{ . }}{{ end }}
-{{- with .repo.ForksCount }}, {{ .repo.ForksCount }} {{ "fork" | pluralize . }}{{ end }}
+{{- with .repo.ForksCount }}, {{ . }} {{ "fork" | pluralize . }}{{ end }}
 {{- with .repo.OpenIssuesCount }}, {{ . }} {{ "open issue" | pluralize . }}{{ end }}
 {{- with .repo.StargazersCount }}, {{ . }} {{ "star" | pluralize . }}{{ end }}
 `)
@@ -177,7 +177,7 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 // Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
 var issueTemplate = TemplateMustCompile("githubIssue", `
 Issue #{{ .issue.Number }} on {{ .user }}/{{ .repo }} [{{ .issue.State }}]
-{{- with .issue.Assignee.Login }} (assigned to {{ . }}){{ end }}
+{{- with .issue.Assignee }} (assigned to {{ .Login }}){{ end }}
 {{- with .issue.Title }} - {{ . }}{{ end }}
 {{- with .issue.CreatedAt }} [created {{ . | dateFormat "2 Jan 2006" }}]{{ end }}
 `)
