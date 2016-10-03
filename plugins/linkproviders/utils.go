@@ -12,7 +12,6 @@ import (
 	"github.com/belak/irc"
 	"github.com/bep/inflect"
 	"github.com/google/go-github/github"
-	"github.com/kr/pretty"
 	"github.com/spf13/cast"
 )
 
@@ -52,7 +51,6 @@ func RenderTemplate(t *template.Template, vars map[string]interface{}) (string, 
 // and respond to the given message. It will return true on success and false on
 // failure.
 func RenderRespond(b *seabird.Bot, m *irc.Message, logger *logrus.Entry, t *template.Template, prefix string, vars map[string]interface{}) bool {
-	pretty.Print(vars)
 	out, err := RenderTemplate(t, vars)
 	if err != nil {
 		logger.WithError(err).Error("Failed to render template")
