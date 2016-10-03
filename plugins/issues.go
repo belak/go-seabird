@@ -82,7 +82,7 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 
 		r.Title = &title
 
-		issue, _, err := p.api.Issues.Create("belak", "seabird", r)
+		issue, _, err := p.api.Issues.Create("belak", "go-seabird", r)
 		if err != nil {
 			b.MentionReply(m, "%s", err.Error())
 			return
