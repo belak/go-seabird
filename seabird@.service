@@ -1,0 +1,11 @@
+[Unit]
+Description=Seabird
+
+[Service]
+User=seabird
+WorkingDirectory=/opt/seabird
+ExecStart=/opt/seabird/go-seabird
+Environment=SEABIRD_CONFIG=%i.toml
+
+[Install]
+WantedBy=multi-user.target
