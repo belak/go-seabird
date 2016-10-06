@@ -2,10 +2,10 @@ package plugins
 
 import (
 	"fmt"
-	"net/http"
+	"strconv"
 	"time"
 
-	"github.com/Unknwon/com"
+	forecast "github.com/mlbright/forecast/v2"
 
 	"github.com/belak/go-seabird/seabird"
 	"github.com/belak/irc"
@@ -14,74 +14,6 @@ import (
 
 func init() {
 	seabird.RegisterPlugin("forecast", newForecastPlugin)
-}
-
-// DataPoint represents a point at a specific point in time,
-// Basic structures from https://github.com/mlbright/forecast/blob/master/v2/forecast.go
-// TODO: cleanup
-type dataPoint struct {
-	Time                   int64
-	Summary                string
-	Icon                   string
-	SunriseTime            float64
-	SunsetTime             float64
-	PrecipIntensity        float64
-	PrecipIntensityMax     float64
-	PrecipIntensityMaxTime float64
-	PrecipProbability      float64
-	PrecipType             string
-	PrecipAccumulation     float64
-	Temperature            float64
-	TemperatureMin         float64
-	TemperatureMinTime     float64
-	TemperatureMax         float64
-	TemperatureMaxTime     float64
-	DewPoint               float64
-	WindSpeed              float64
-	WindBearing            float64
-	CloudCover             float64
-	Humidity               float64
-	Pressure               float64
-	Visibility             float64
-	Ozone                  float64
-}
-
-type dataBlock struct {
-	Summary string
-	Icon    string
-	Data    []dataPoint
-}
-
-type alert struct {
-	Title   string
-	Expires float64
-	URI     string
-}
-
-type flags struct {
-	DarkSkyUnavailable string
-	DarkSkyStations    []string
-	DataPointStations  []string
-	ISDStations        []string
-	LAMPStations       []string
-	METARStations      []string
-	METNOLicense       string
-	Sources            []string
-	Units              string
-}
-
-type forecastResponse struct {
-	Latitude  float64
-	Longitude float64
-	Timezone  string
-	Offset    float64
-	Currently dataPoint
-	Minutely  dataBlock
-	Hourly    dataBlock
-	Daily     dataBlock
-	Alerts    []alert
-	Flags     flags
-	APICalls  int
 }
 
 type forecastPlugin struct {
@@ -136,19 +68,12 @@ func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error
 	return nil
 }
 
-func (p *forecastPlugin) forecastQuery(loc *Location) (*forecastResponse, error) {
-	link := fmt.Sprintf("https://api.forecast.io/forecast/%s/%.4f,%.4f",
+func (p *forecastPlugin) forecastQuery(loc *Location) (*forecast.Forecast, error) {
+	return forecast.Get(
 		p.Key,
-		loc.Lat,
-		loc.Lon)
-
-	f := &forecastResponse{}
-	err := com.HttpGetJSON(&http.Client{}, link, f)
-	if err != nil {
-		return nil, err
-	}
-
-	return f, nil
+		strconv.FormatFloat(loc.Lat, 'f', 4, 64),
+		strconv.FormatFloat(loc.Lon, 'f', 4, 64),
+		"now", forecast.US)
 }
 
 func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
@@ -209,7 +134,7 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 
 	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
 	for _, block := range fc.Daily.Data[1:4] {
-		day := time.Unix(block.Time, 0).Weekday()
+		day := time.Unix(int64(block.Time), 0).Weekday()
 
 		b.MentionReply(m,
 			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s",
