@@ -1,7 +1,6 @@
 package plugins
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 	"time"
@@ -68,7 +67,6 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) 
 
 func (p *reminderPlugin) joinHandler(b *seabird.Bot, m *irc.Message) {
 	if m.Prefix.Name != b.CurrentNick() {
-		fmt.Println("WE DIDN'T JOIN")
 		return
 	}
 
