@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/belak/go-seabird/seabird"
+	"github.com/belak/go-seabird"
 	"github.com/belak/irc"
 )
 
