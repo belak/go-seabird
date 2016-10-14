@@ -1,6 +1,6 @@
 // +build ignore
 
-package seabird_extra_plugins
+package extra
 
 import (
 	"bytes"

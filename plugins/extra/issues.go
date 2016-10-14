@@ -1,4 +1,4 @@
-package seabird_extra_plugins
+package extra
 
 import (
 	"fmt"
