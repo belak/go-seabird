@@ -48,7 +48,7 @@ func parseUserRepoNum(matches []string) (string, string, int, error) {
 	return matches[1], matches[2], int(retInt), nil
 }
 
-func newGithubProvider(b *seabird.Bot, urlPlugin *URLPlugin) error {
+func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	t := &githubProvider{}
 
 	gc := &githubConfig{}

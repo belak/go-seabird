@@ -66,7 +66,7 @@ type ytVideos struct {
 	} `json:"items"`
 }
 
-func newYoutubeProvider(b *seabird.Bot, urlPlugin *URLPlugin) error {
+func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	// Get API key from seabird config
 	yp := &youtubePlugin{}
 	err := b.Config("youtube", yp)

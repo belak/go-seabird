@@ -18,7 +18,7 @@ import (
 )
 
 func init() {
-	seabird.RegisterPlugin("url", newURLPlugin)
+	seabird.RegisterPlugin("url", newPlugin)
 }
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
@@ -33,19 +33,19 @@ var client = &http.Client{
 	Timeout: 5 * time.Second,
 }
 
-// LinkProvider is a callback to be registered with the URLPlugin. It
+// LinkProvider is a callback to be registered with the Plugin. It
 // takes the same parameters as a normal IRC callback in addition to a
 // *url.URL representing the found url. It returns true if it was able
 // to handle that url and false otherwise.
 type LinkProvider func(b *seabird.Bot, m *irc.Message, url *url.URL) bool
 
-// URLPlugin stores all registeres URL LinkProviders
-type URLPlugin struct {
+// Plugin stores all registeres URL LinkProviders
+type Plugin struct {
 	providers map[string][]LinkProvider
 }
 
-func newURLPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux) *URLPlugin {
-	p := &URLPlugin{
+func newPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux) *Plugin {
+	p := &Plugin{
 		providers: make(map[string][]LinkProvider),
 	}
 
@@ -60,13 +60,13 @@ func newURLPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux) *
 }
 
 // RegisterProvider registers a LinkProvider for a specific domain.
-func (p *URLPlugin) RegisterProvider(domain string, f LinkProvider) error {
+func (p *Plugin) RegisterProvider(domain string, f LinkProvider) error {
 	p.providers[domain] = append(p.providers[domain], f)
 
 	return nil
 }
 
-func (p *URLPlugin) callback(b *seabird.Bot, m *irc.Message) {
+func (p *Plugin) callback(b *seabird.Bot, m *irc.Message) {
 	for _, rawurl := range urlRegex.FindAllString(m.Trailing(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)

@@ -53,7 +53,7 @@ var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
 var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
 var redditPrefix = "[Reddit]"
 
-func newRedditProvider(urlPlugin *URLPlugin) {
+func newRedditProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("reddit.com", redditCallback)
 }
 

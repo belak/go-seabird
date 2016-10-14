@@ -64,7 +64,7 @@ var (
 	repoPullRequestsURL = "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s"
 )
 
-func newBitbucketProvider(urlPlugin *URLPlugin) {
+func newBitbucketProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("bitbucket.org", bitbucketCallback)
 }
 

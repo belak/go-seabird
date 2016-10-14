@@ -30,7 +30,7 @@ var twitterStatusRegex = regexp.MustCompile(`^/.*?/status/(.+)$`)
 var twitterUserRegex = regexp.MustCompile(`^/([^/]+)$`)
 var twitterPrefix = "[Twitter]"
 
-func newtwitterProvider(b *seabird.Bot, urlPlugin *URLPlugin) error {
+func newtwitterProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	t := &twitterProvider{}
 
 	tc := &twitterConfig{}

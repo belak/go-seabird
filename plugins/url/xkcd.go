@@ -21,7 +21,7 @@ func init() {
 var xkcdRegex = regexp.MustCompile(`^/([^/]+)$`)
 var xkcdPrefix = "[XKCD]"
 
-func newXKCDProvider(urlPlugin *URLPlugin) {
+func newXKCDProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("xkcd.com", handleXKCD)
 }
 
