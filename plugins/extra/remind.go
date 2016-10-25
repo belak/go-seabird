@@ -101,9 +101,10 @@ func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
 	p.updateChan <- struct{}{}
 }
 
-func (p reminderPlugin) nextReminder() (*reminder, error) {
+func (p *reminderPlugin) nextReminder() (*reminder, error) {
 	// Find the next reminder we'll have to send
 	var r *reminder
+
 	err := p.db.View(func(tx *nut.Tx) error {
 		// Grab the room lock for this transaction
 		p.roomLock.Lock()
@@ -113,7 +114,6 @@ func (p reminderPlugin) nextReminder() (*reminder, error) {
 		cursor := bucket.Cursor()
 
 		v := &reminder{}
-
 		for _, err := cursor.First(v); err == nil; _, err = cursor.Next(v) {
 			// If it's a channel target and we're not in the room,
 			// we need to skip it
@@ -125,7 +125,11 @@ func (p reminderPlugin) nextReminder() (*reminder, error) {
 			// reminder should be sent before our current one, we
 			// update it.
 			if r == nil || v.ReminderTime.Before(r.ReminderTime) {
-				r = v
+				// Make absolutely sure that we have a copy of the
+				// data because as soon as we call Next, it will go
+				// away.
+				tmp := *v
+				r = &tmp
 			}
 		}
 
@@ -147,7 +151,7 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 
 		var timer <-chan time.Time
 		if r != nil {
-			logger.WithField("reminder", r).Info("Got reminder")
+			logger.WithField("reminder", r).Debug("Next reminder")
 
 			waitDur := r.ReminderTime.Sub(time.Now())
 			if waitDur <= 0 {
@@ -187,7 +191,7 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 		logger.WithError(err).Error("Failed to remove reminder")
 	}
 
-	logger.Info("Dispatched reminder")
+	logger.Debug("Dispatched reminder")
 }
 
 // InitialDispatch is used to send private messages to users on connection. We
@@ -242,6 +246,9 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 	}
 
 	b.MentionReply(m, "Event stored")
+
+	logger := b.GetLogger()
+	logger.WithField("reminder", r).Debug("Stored reminder")
 
 	p.updateChan <- struct{}{}
 }
