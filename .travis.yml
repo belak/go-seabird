@@ -6,7 +6,9 @@ before_install:
   - gometalinter --install
   - go get github.com/Masterminds/glide
 
-script:
+install:
   - glide install
+
+script:
   - gometalinter ./... --fast -D dupl -D gas
   - go test -v ./...
