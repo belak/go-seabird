@@ -4,7 +4,12 @@ go: 1.7
 before_install:
   - go get github.com/alecthomas/gometalinter
   - gometalinter --install
+  - go get github.com/Masterminds/glide
+
+install:
+  - glide install
+  - glide rebuild
 
 script:
-  - gometalinter ./... --fast -D dupl -D gas
-  - go test -v ./...
+  - gometalinter $(glide novendor) --fast -D dupl -D gas
+  - go test -v $(glide novendor)

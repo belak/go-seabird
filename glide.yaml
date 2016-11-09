@@ -1,0 +1,33 @@
+package: github.com/belak/go-seabird
+import:
+- package: github.com/BurntSushi/toml
+  version: ^0.2.0
+- package: github.com/ChannelMeter/iso8601duration
+- package: github.com/ChimeraCoder/anaconda
+- package: github.com/Sirupsen/logrus
+  version: ^0.11.0
+- package: github.com/Unknwon/com
+  version: ^1.0.0
+- package: github.com/belak/go-plugin
+- package: github.com/belak/irc
+- package: github.com/belak/nut
+- package: github.com/bep/inflect
+- package: github.com/google/go-github
+  subpackages:
+  - github
+- package: github.com/mlbright/forecast
+  subpackages:
+  - v2
+- package: github.com/soudy/mathcat
+- package: github.com/spf13/cast
+- package: github.com/yhat/scrape
+- package: golang.org/x/net
+  subpackages:
+  - html
+  - html/atom
+- package: golang.org/x/oauth2
+testImport:
+- package: github.com/stretchr/testify
+  version: ^1.1.4
+  subpackages:
+  - assert

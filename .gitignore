@@ -1,6 +1,7 @@
 /seabird
 /go-seabird
 y.output
+/vendor
 
 *.db
 config.toml
