@@ -7,10 +7,6 @@
 * go >= 1.6
 * gcc
 
-```
-apt-get install golang
-```
-
 ## Configuring
 
 A sample config file is provided [here](./_extra/config.sample.toml). Note that
