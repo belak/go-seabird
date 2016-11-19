@@ -4,6 +4,7 @@ go: 1.7
 before_install:
   - go get github.com/alecthomas/gometalinter
   - gometalinter --install
+  - go get -t ./...
 
 script:
   - gometalinter ./... --fast -D dupl -D gas
