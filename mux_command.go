@@ -59,7 +59,12 @@ func (m *CommandMux) help(b *Bot, msg *irc.Message) {
 			b.Reply(msg, "Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
 		} else {
 			for _, v := range keys {
-				b.Reply(msg, "%s: %s", v, m.cmdHelp[v])
+				h := m.cmdHelp[v]
+				if h.Usage != "" {
+					b.Reply(msg, "%s %s: %s", v, h.Usage, h.Description)
+				} else {
+					b.Reply(msg, "%s: %s", v, h.Description)
+				}
 			}
 		}
 	} else if help, ok := m.cmdHelp[cmd]; ok {
