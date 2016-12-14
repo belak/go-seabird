@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"net"
-	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Sirupsen/logrus"
@@ -240,23 +239,27 @@ func (b *Bot) Run() error {
 	}
 	b.client = irc.NewClient(c, rc)
 
-	b.client.DebugCallback = func(operation, line string) {
-		b.log.WithField("op", operation).Debug(line)
-		if operation == "write" {
-			if len(line) > 512 {
-				b.log.WithFields(logrus.Fields{
-					"op":  operation,
-					"msg": line,
-				}).Warn("Output line longer than 512 chars")
-			}
-			if strings.ContainsAny(line, "\n\r") {
-				b.log.WithFields(logrus.Fields{
-					"op":  operation,
-					"msg": line,
-				}).Warn("Output contains a newline")
+	/* DebugCallback was removed in belak/irc so we should work around
+	it at some point.
+
+		b.client.DebugCallback = func(operation, line string) {
+			b.log.WithField("op", operation).Debug(line)
+			if operation == "write" {
+				if len(line) > 512 {
+					b.log.WithFields(logrus.Fields{
+						"op":  operation,
+						"msg": line,
+					}).Warn("Output line longer than 512 chars")
+				}
+				if strings.ContainsAny(line, "\n\r") {
+					b.log.WithFields(logrus.Fields{
+						"op":  operation,
+						"msg": line,
+					}).Warn("Output contains a newline")
+				}
 			}
 		}
-	}
+	*/
 
 	// Start the main loop
 	return b.client.Run()
