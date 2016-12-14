@@ -49,7 +49,7 @@ func Metar(code string) (string, error) {
 		}
 	}
 
-	resp, err := http.Get(fmt.Sprintf("http://weather.noaa.gov/pub/data/observations/metar/stations/%s.TXT", code))
+	resp, err := http.Get(fmt.Sprintf("http://tgftp.nws.noaa.gov/data/observations/metar/stations/%s.TXT", code))
 	if err != nil {
 		return "", errors.New("NOAA appears to be down")
 	}
