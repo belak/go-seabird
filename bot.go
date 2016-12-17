@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"strings"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Sirupsen/logrus"
@@ -30,7 +31,7 @@ type coreConfig struct {
 
 	Plugins []string
 
-	Quiet bool
+	Debug bool
 }
 
 // A Bot is our wrapper around the irc.Client. It could be used for a general
@@ -71,16 +72,18 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		return nil, err
 	}
 
-	b.log = logrus.NewEntry(logrus.New())
-	b.log.Logger.Level = logrus.DebugLevel
-
 	// Load up the core config
 	err = b.Config("core", &b.config)
 	if err != nil {
 		return nil, err
 	}
 
-	if b.config.Quiet {
+	// Set up logging/debugging
+	b.log = logrus.NewEntry(logrus.New())
+
+	if b.config.Debug {
+		b.log.Logger.Level = logrus.DebugLevel
+	} else {
 		b.log.Logger.Level = logrus.InfoLevel
 	}
 
@@ -242,11 +245,10 @@ func (b *Bot) Run() error {
 
 	// Now that we have a client, set up debug callbacks
 	b.client.Reader.DebugCallback = func(line string) {
-		b.log.Debug("<-- ", line)
+		b.log.Debug("<-- ", strings.Trim(line, "\r\n"))
 	}
 	b.client.Writer.DebugCallback = func(line string) {
-		// TODO: Properly trim the trailing \r\n
-		b.log.Debug("--> ", line)
+		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
 	}
 
 	/* DebugCallback was removed in belak/irc so we should work around
