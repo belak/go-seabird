@@ -25,6 +25,8 @@ type coreConfig struct {
 	Host        string
 	TLS         bool
 	TLSNoVerify bool
+	TLSCert     string
+	TLSKey      string
 
 	Cmds   []string
 	Prefix string
@@ -221,6 +223,17 @@ func (b *Bot) Run() error {
 	if b.config.TLS {
 		conf := &tls.Config{
 			InsecureSkipVerify: b.config.TLSNoVerify,
+		}
+
+		if b.config.TLSCert != "" && b.config.TLSKey != "" {
+			var cert tls.Certificate
+			cert, err = tls.LoadX509KeyPair(b.config.TLSCert, b.config.TLSKey)
+			if err != nil {
+				return err
+			}
+
+			conf.Certificates = []tls.Certificate{cert}
+			conf.BuildNameToCertificate()
 		}
 
 		c, err = tls.Dial("tcp", b.config.Host, conf)
