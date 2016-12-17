@@ -192,9 +192,6 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 }
 
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
-	// This is the base handler, so we can log input here.
-	b.log.Debug("<-- ", m.String())
-
 	// Handle the event and pass it along
 	if m.Command == "001" {
 		b.log.Info("Connected")
@@ -242,6 +239,15 @@ func (b *Bot) Run() error {
 		Handler: irc.HandlerFunc(b.handler),
 	}
 	b.client = irc.NewClient(c, rc)
+
+	// Now that we have a client, set up debug callbacks
+	b.client.Reader.DebugCallback = func(line string) {
+		b.log.Debug("<-- ", line)
+	}
+	b.client.Writer.DebugCallback = func(line string) {
+		// TODO: Properly trim the trailing \r\n
+		b.log.Debug("--> ", line)
+	}
 
 	/* DebugCallback was removed in belak/irc so we should work around
 	it at some point.
