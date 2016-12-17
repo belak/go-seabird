@@ -192,6 +192,10 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 }
 
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
+	// This is the base handler, so we can log input here.
+	b.log.Debug("<-- ", m.String())
+
+	// Handle the event and pass it along
 	if m.Command == "001" {
 		b.log.Info("Connected")
 
