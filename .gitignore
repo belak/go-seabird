@@ -4,3 +4,4 @@ y.output
 
 *.db
 config.toml
+*.pem
