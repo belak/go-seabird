@@ -21,7 +21,7 @@ export SEABIRD_CONFIG=$HOME/config.toml
 # Running
 
 ```
-go get $(go list -f {{.Deps}} cmd/seabird/main.go | tr ' ' '\n' | egrep 'github\.com|golang\.org')
+go get ./
 SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
 ```
 
