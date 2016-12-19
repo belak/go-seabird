@@ -17,3 +17,14 @@ Config is pulled from the environment variable `SEABIRD_CONFIG`. Set with
 ```
 export SEABIRD_CONFIG=$HOME/config.toml
 ```
+
+# Running
+
+```
+go get $(go list -f {{.Deps}} cmd/seabird/main.go | tr ' ' '\n' | egrep 'github\.com|golang\.org')
+SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
+```
+
+# License
+
+[BSD](LICENSE)
