@@ -12,7 +12,7 @@ const HAND_SIZE = 7
 type ColorCode int
 
 const (
-	COLOR_NONE = iota
+	COLOR_NONE ColorCode = iota
 	COLOR_RED
 	COLOR_YELLOW
 	COLOR_GREEN
@@ -22,7 +22,7 @@ const (
 type cardType int
 
 const (
-	CARD_TYPE_0 = iota
+	CARD_TYPE_0 cardType = iota
 	CARD_TYPE_1
 	CARD_TYPE_2
 	CARD_TYPE_3
@@ -42,7 +42,7 @@ const (
 type GameState int
 
 const (
-	STATE_RUNNING = iota
+	STATE_RUNNING GameState = iota
 	STATE_WAITING_TURN
 	STATE_WAITING_COLOR
 	STATE_WAITING_COLOR_FOUR
