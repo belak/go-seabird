@@ -327,6 +327,9 @@ func (g *UnoGame) Playable(player *UnoPlayer, card UnoCard) bool {
 
 func (g *UnoGame) AdvancePlayer() {
 	g.playerIndex = (g.playerIndex + g.playDirection) % len(g.Players)
+	if g.playerIndex < 0 {
+		g.playerIndex = len(g.Players) - 1
+	}
 	g.state = StateWaitingTurn
 }
 
