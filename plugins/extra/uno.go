@@ -35,9 +35,6 @@ func PrivateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
 	})
 }
 
-// Buckets:
-// - players
-// - decks
 func newUnoPlugin(cm *seabird.CommandMux, db *nut.DB) error {
 	p := &unoPlugin{db: db}
 

@@ -267,7 +267,6 @@ func (g *UnoGame) CurrentPlayer() *UnoPlayer {
 }
 
 func (g *UnoGame) ShuffleDiscard() error {
-	// TODO(jsvana): shuffle discard into deck save for top card
 	topCard, err := g.Discard.Draw()
 	if err != nil {
 		return err
