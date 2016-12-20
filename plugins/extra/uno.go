@@ -173,21 +173,6 @@ func (p *unoPlugin) getHandCallback(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
-func ColorForString(colorStr string) uno.ColorCode {
-	switch colorStr {
-	case "red":
-		return uno.COLOR_RED
-	case "yellow":
-		return uno.COLOR_YELLOW
-	case "green":
-		return uno.COLOR_GREEN
-	case "blue":
-		return uno.COLOR_BLUE
-	default:
-		return uno.COLOR_NONE
-	}
-}
-
 func (p *unoPlugin) colorCallback(b *seabird.Bot, m *irc.Message) {
 	colorStr := m.Trailing()
 	if colorStr == "" {
@@ -195,20 +180,20 @@ func (p *unoPlugin) colorCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	msg, ok := p.checkGame(b, m, []uno.GameState{uno.STATE_WAITING_COLOR, uno.STATE_WAITING_COLOR_FOUR})
+	msg, ok := p.checkGame(b, m, []uno.GameState{uno.StateWaitingColor, uno.StateWaitingColorFour})
 	if !ok {
 		b.MentionReply(m, msg)
 		return
 	}
 
-	color := ColorForString(colorStr)
-	if color == uno.COLOR_NONE {
+	color := uno.ColorFromString(colorStr)
+	if color == uno.ColorNone {
 		b.MentionReply(m, "Unknown color \"%s\"", colorStr)
 		return
 	}
 
 	p.game.ChooseColor(color)
-	if p.game.State() == uno.STATE_WAITING_COLOR_FOUR {
+	if p.game.State() == uno.StateWaitingColorFour {
 		p.game.AdvancePlayer()
 		b.Reply(m, "%s forced to draw four cards and skip a turn!", p.game.CurrentPlayer().Name)
 		p.game.CurrentPlayer().DrawCards(p.game, 4)
@@ -231,7 +216,7 @@ func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	msg, ok := p.checkGame(b, m, []uno.GameState{uno.STATE_WAITING_TURN})
+	msg, ok := p.checkGame(b, m, []uno.GameState{uno.StateWaitingTurn})
 	if !ok {
 		b.MentionReply(m, msg)
 		return
@@ -248,7 +233,7 @@ func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *unoPlugin) drawCallback(b *seabird.Bot, m *irc.Message) {
-	msg, ok := p.checkGame(b, m, []uno.GameState{uno.STATE_WAITING_TURN})
+	msg, ok := p.checkGame(b, m, []uno.GameState{uno.StateWaitingTurn})
 	if !ok {
 		b.MentionReply(m, msg)
 		return

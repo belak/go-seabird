@@ -7,45 +7,60 @@ import (
 	"strings"
 )
 
-const HAND_SIZE = 7
+const handSize = 7
 
 type ColorCode int
 
 const (
-	COLOR_NONE ColorCode = iota
-	COLOR_RED
-	COLOR_YELLOW
-	COLOR_GREEN
-	COLOR_BLUE
+	ColorNone ColorCode = iota
+	ColorRed
+	ColorYellow
+	ColorGreen
+	ColorBlue
 )
+
+func ColorFromString(colorStr string) ColorCode {
+	switch colorStr {
+	case "red":
+		return ColorRed
+	case "yellow":
+		return ColorYellow
+	case "green":
+		return ColorGreen
+	case "blue":
+		return ColorBlue
+	default:
+		return ColorNone
+	}
+}
 
 type cardType int
 
 const (
-	CARD_TYPE_0 cardType = iota
-	CARD_TYPE_1
-	CARD_TYPE_2
-	CARD_TYPE_3
-	CARD_TYPE_4
-	CARD_TYPE_5
-	CARD_TYPE_6
-	CARD_TYPE_7
-	CARD_TYPE_8
-	CARD_TYPE_9
-	CARD_TYPE_SKIP
-	CARD_TYPE_REVERSE
-	CARD_TYPE_DRAW_TWO
-	CARD_TYPE_WILDCARD
-	CARD_TYPE_WILDCARD_DRAW_FOUR
+	cardType0 cardType = iota
+	cardType1
+	cardType2
+	cardType3
+	cardType4
+	cardType5
+	cardType6
+	cardType7
+	cardType8
+	cardType9
+	cardTypeSkip
+	cardTypeReverse
+	cardTypeDrawTwo
+	cardTypeWildcard
+	cardTypeWildcardDrawFour
 )
 
 type GameState int
 
 const (
-	STATE_RUNNING GameState = iota
-	STATE_WAITING_TURN
-	STATE_WAITING_COLOR
-	STATE_WAITING_COLOR_FOUR
+	StateRunning GameState = iota
+	StateWaitingTurn
+	StateWaitingColor
+	StateWaitingColorFour
 )
 
 type UnoCard struct {
@@ -74,8 +89,8 @@ type UnoGame struct {
 
 func addUnoColor(deck *unoDeck, color ColorCode) {
 	deck.Cards = append(deck.Cards, UnoCard{0, color})
-	for i := CARD_TYPE_1; i < CARD_TYPE_WILDCARD; i++ {
-		card := UnoCard{cardType(i), color}
+	for i := cardType1; i < cardTypeWildcard; i++ {
+		card := UnoCard{i, color}
 		deck.Cards = append(deck.Cards, card)
 		deck.Cards = append(deck.Cards, card)
 	}
@@ -84,49 +99,49 @@ func addUnoColor(deck *unoDeck, color ColorCode) {
 func (c UnoCard) String() string {
 	var num string
 	switch c.Type {
-	case CARD_TYPE_0:
+	case cardType0:
 		num = "0"
-	case CARD_TYPE_1:
+	case cardType1:
 		num = "1"
-	case CARD_TYPE_2:
+	case cardType2:
 		num = "2"
-	case CARD_TYPE_3:
+	case cardType3:
 		num = "3"
-	case CARD_TYPE_4:
+	case cardType4:
 		num = "4"
-	case CARD_TYPE_5:
+	case cardType5:
 		num = "5"
-	case CARD_TYPE_6:
+	case cardType6:
 		num = "6"
-	case CARD_TYPE_7:
+	case cardType7:
 		num = "7"
-	case CARD_TYPE_8:
+	case cardType8:
 		num = "8"
-	case CARD_TYPE_9:
+	case cardType9:
 		num = "9"
-	case CARD_TYPE_SKIP:
+	case cardTypeSkip:
 		num = "skip"
-	case CARD_TYPE_REVERSE:
+	case cardTypeReverse:
 		num = "reverse"
-	case CARD_TYPE_DRAW_TWO:
+	case cardTypeDrawTwo:
 		num = "draw_two"
-	case CARD_TYPE_WILDCARD:
+	case cardTypeWildcard:
 		num = "wildcard"
-	case CARD_TYPE_WILDCARD_DRAW_FOUR:
+	case cardTypeWildcardDrawFour:
 		num = "wildcard_draw_four"
 	}
 
 	var color string
 	switch c.Color {
-	case COLOR_NONE:
+	case ColorNone:
 		color = "none"
-	case COLOR_RED:
+	case ColorRed:
 		color = "red"
-	case COLOR_YELLOW:
+	case ColorYellow:
 		color = "yellow"
-	case COLOR_GREEN:
+	case ColorGreen:
 		color = "green"
-	case COLOR_BLUE:
+	case ColorBlue:
 		color = "blue"
 	}
 
@@ -140,16 +155,16 @@ func (c UnoCard) Equals(other UnoCard) bool {
 func makeUnoDeck() *unoDeck {
 	deck := &unoDeck{}
 
-	addUnoColor(deck, COLOR_RED)
-	addUnoColor(deck, COLOR_YELLOW)
-	addUnoColor(deck, COLOR_GREEN)
-	addUnoColor(deck, COLOR_BLUE)
+	addUnoColor(deck, ColorRed)
+	addUnoColor(deck, ColorYellow)
+	addUnoColor(deck, ColorGreen)
+	addUnoColor(deck, ColorBlue)
 
-	wildcard := UnoCard{CARD_TYPE_WILDCARD_DRAW_FOUR, COLOR_NONE}
-	wildcard_draw_four := UnoCard{CARD_TYPE_WILDCARD, COLOR_NONE}
+	wildcard := UnoCard{cardTypeWildcardDrawFour, ColorNone}
+	wildcardDrawFour := UnoCard{cardTypeWildcard, ColorNone}
 	for i := 0; i < 4; i++ {
 		deck.Cards = append(deck.Cards, wildcard)
-		deck.Cards = append(deck.Cards, wildcard_draw_four)
+		deck.Cards = append(deck.Cards, wildcardDrawFour)
 	}
 
 	return deck
@@ -203,8 +218,8 @@ func (d *unoDeck) Draw() (UnoCard, error) {
 }
 
 func (d *unoDeck) DrawHand() (unoDeck, error) {
-	hand := make([]UnoCard, HAND_SIZE)
-	for i := 0; i < HAND_SIZE; i++ {
+	hand := make([]UnoCard, handSize)
+	for i := 0; i < handSize; i++ {
 		card, err := d.Draw()
 		if err != nil {
 			return unoDeck{}, err
@@ -245,7 +260,7 @@ func (p *UnoPlayer) RemoveCard(idx int) (UnoCard, error) {
 
 func (g *UnoGame) addPlayer(name string) error {
 	player := &UnoPlayer{Name: name, Hand: unoDeck{}}
-	err := player.DrawCards(g, HAND_SIZE)
+	err := player.DrawCards(g, handSize)
 	if err != nil {
 		return err
 	}
@@ -285,14 +300,14 @@ func (g *UnoGame) ShuffleDiscard() error {
 
 func (g *UnoGame) Playable(player *UnoPlayer, card UnoCard) bool {
 	topCard := g.Discard.Top()
-	if card.Color != COLOR_NONE {
-		if g.nextColor != COLOR_NONE {
+	if card.Color != ColorNone {
+		if g.nextColor != ColorNone {
 			return card.Color == g.nextColor
 		}
 		return card.Color == topCard.Color
 	}
 
-	if card.Type == CARD_TYPE_WILDCARD {
+	if card.Type == cardTypeWildcard {
 		return true
 	}
 
@@ -300,7 +315,7 @@ func (g *UnoGame) Playable(player *UnoPlayer, card UnoCard) bool {
 		if card.Equals(other) {
 			continue
 		}
-		if other.Color != COLOR_NONE && topCard.Color == other.Color {
+		if other.Color != ColorNone && topCard.Color == other.Color {
 			return false
 		}
 	}
@@ -310,7 +325,7 @@ func (g *UnoGame) Playable(player *UnoPlayer, card UnoCard) bool {
 
 func (g *UnoGame) AdvancePlayer() {
 	g.playerIndex = (g.playerIndex + g.playDirection) % len(g.Players)
-	g.state = STATE_WAITING_TURN
+	g.state = StateWaitingTurn
 }
 
 func (g *UnoGame) Reverse() {
@@ -352,33 +367,33 @@ func (g *UnoGame) State() GameState {
 }
 
 func (g *UnoGame) ClearExpectedColor() {
-	g.nextColor = COLOR_NONE
+	g.nextColor = ColorNone
 }
 
 func (g *UnoGame) RunCard(card UnoCard) []string {
 	messages := []string{}
 
 	switch card.Type {
-	case CARD_TYPE_SKIP:
+	case cardTypeSkip:
 		messages = append(messages, fmt.Sprintf("%s skipped!", g.CurrentPlayer().Name))
 		g.ClearExpectedColor()
 		g.AdvancePlayer()
-	case CARD_TYPE_DRAW_TWO:
+	case cardTypeDrawTwo:
 		g.CurrentPlayer().DrawCards(g, 2)
 		messages = append(messages, fmt.Sprintf("%s draws two and skips a turn.", g.CurrentPlayer().Name))
 		g.ClearExpectedColor()
 		g.AdvancePlayer()
-	case CARD_TYPE_REVERSE:
-		messages = append(messages, fmt.Sprintf("Play reversed.", g.CurrentPlayer().Name))
+	case cardTypeReverse:
+		messages = append(messages, "Play reversed.")
 		g.ClearExpectedColor()
 		g.Reverse()
 		g.AdvancePlayer()
-	case CARD_TYPE_WILDCARD:
+	case cardTypeWildcard:
 		messages = append(messages, fmt.Sprintf("%s must declare next color.", g.CurrentPlayer().Name))
-		g.state = STATE_WAITING_COLOR
-	case CARD_TYPE_WILDCARD_DRAW_FOUR:
+		g.state = StateWaitingColor
+	case cardTypeWildcardDrawFour:
 		messages = append(messages, fmt.Sprintf("%s must declare next color.", g.CurrentPlayer().Name))
-		g.state = STATE_WAITING_COLOR_FOUR
+		g.state = StateWaitingColorFour
 	default:
 		g.ClearExpectedColor()
 	}
@@ -390,7 +405,7 @@ func (g *UnoGame) FirstTurn() []string {
 		fmt.Sprintf("%s's turn.", g.CurrentPlayer().Name),
 		fmt.Sprintf("%s is on top of discard.", g.Discard.Top()),
 	}
-	if g.Discard.Top().Type == CARD_TYPE_WILDCARD_DRAW_FOUR {
+	if g.Discard.Top().Type == cardTypeWildcardDrawFour {
 		messages = append(messages, "Wildcard draw four can't be the first card. Let's try again.")
 
 		err := g.Deck.AddTopFromOther(g.Discard)
@@ -403,9 +418,9 @@ func (g *UnoGame) FirstTurn() []string {
 				nextAttemptMessages := g.FirstTurn()
 				messages = append(messages, nextAttemptMessages...)
 				return messages
-			} else {
-				messages = append(messages, fmt.Sprintf("Error drawing first card: %s", err))
 			}
+
+			messages = append(messages, fmt.Sprintf("Error drawing first card: %s", err))
 		} else {
 			// This should really never happen
 			messages = append(messages, fmt.Sprintf("Error drawing from discard: %s", err))
@@ -423,7 +438,7 @@ func (g *UnoGame) ChooseColor(color ColorCode) {
 }
 
 func NewGame(players []string) (*UnoGame, error) {
-	game := &UnoGame{Deck: makeUnoDeck(), Discard: &unoDeck{}, playerIndex: 0, playDirection: 1, state: STATE_RUNNING, nextColor: COLOR_NONE}
+	game := &UnoGame{Deck: makeUnoDeck(), Discard: &unoDeck{}, playerIndex: 0, playDirection: 1, state: StateRunning, nextColor: ColorNone}
 	game.Deck.Shuffle()
 
 	var err error
