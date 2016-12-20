@@ -95,11 +95,11 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, lines []string)
 }
 
 func (p *unoPlugin) messageHand(b *seabird.Bot, m *irc.Message, player *uno.UnoPlayer) {
-	PrivateMessage(b, player.Name, "<hand.summary>")
-	for _, card := range player.Hand.Cards {
-		PrivateMessage(b, player.Name, card.String())
+	cards := make([]string, len(player.Hand.Cards))
+	for i := 0; i < len(player.Hand.Cards); i++ {
+		cards[i] = player.Hand.Cards[i].String()
 	}
-	PrivateMessage(b, player.Name, "</hand.summary>")
+	PrivateMessage(b, player.Name, strings.Join(cards, ", "))
 }
 
 func (p *unoPlugin) messageHands(b *seabird.Bot, m *irc.Message) {

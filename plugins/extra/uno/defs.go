@@ -96,56 +96,58 @@ func addUnoColor(deck *unoDeck, color ColorCode) {
 	}
 }
 
-func (c UnoCard) String() string {
-	var num string
-	switch c.Type {
+func CardTypeString(ct cardType) string {
+	switch ct {
 	case cardType0:
-		num = "0"
+		return "0"
 	case cardType1:
-		num = "1"
+		return "1"
 	case cardType2:
-		num = "2"
+		return "2"
 	case cardType3:
-		num = "3"
+		return "3"
 	case cardType4:
-		num = "4"
+		return "4"
 	case cardType5:
-		num = "5"
+		return "5"
 	case cardType6:
-		num = "6"
+		return "6"
 	case cardType7:
-		num = "7"
+		return "7"
 	case cardType8:
-		num = "8"
+		return "8"
 	case cardType9:
-		num = "9"
+		return "9"
 	case cardTypeSkip:
-		num = "skip"
+		return "S"
 	case cardTypeReverse:
-		num = "reverse"
+		return "R"
 	case cardTypeDrawTwo:
-		num = "draw_two"
+		return "D"
 	case cardTypeWildcard:
-		num = "wildcard"
+		return "W"
 	case cardTypeWildcardDrawFour:
-		num = "wildcard_draw_four"
+		return "W4"
 	}
+	return ""
+}
 
+func (c UnoCard) String() string {
 	var color string
+	prefix := "\x03"
 	switch c.Color {
 	case ColorNone:
-		color = "none"
+		color = ""
 	case ColorRed:
-		color = "red"
+		color = prefix + "4"
 	case ColorYellow:
-		color = "yellow"
+		color = prefix + "8"
 	case ColorGreen:
-		color = "green"
+		color = prefix + "3"
 	case ColorBlue:
-		color = "blue"
+		color = prefix + "2"
 	}
-
-	return "[card " + num + " " + color + "]"
+	return fmt.Sprintf("%s[%s]\x030", color, CardTypeString(c.Type))
 }
 
 func (c UnoCard) Equals(other UnoCard) bool {
