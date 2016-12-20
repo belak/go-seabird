@@ -1,7 +1,9 @@
 package extra
 
 import (
+	"math/rand"
 	"strings"
+	"time"
 
 	"github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/extra/uno"
@@ -11,6 +13,8 @@ import (
 
 func init() {
 	seabird.RegisterPlugin("uno", newUnoPlugin)
+
+	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 type unoPlugin struct {
@@ -34,6 +38,11 @@ func newUnoPlugin(cm *seabird.CommandMux, db *nut.DB) error {
 		Description: "UNO command",
 	})
 
+	cm.Event("hand", p.getHandCallback, &seabird.HelpInfo{
+		Usage:       "hand",
+		Description: "Messages you your hand in an UNO game",
+	})
+
 	return nil
 }
 
@@ -54,6 +63,12 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
+func (p *unoPlugin) firstTurn(b *seabird.Bot, m *irc.Message) {
+	for _, message := range p.game.FirstTurn() {
+		b.MentionReply(m, message)
+	}
+}
+
 func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message, args []string) {
 	if p.game != nil {
 		b.MentionReply(m, "Game already running")
@@ -71,8 +86,34 @@ func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message, args []string)
 		b.MentionReply(m, "Unable to start UNO game: ", err)
 	}
 
-	b.MentionReply(m, p.game.Deck.Top().String())
-	logger.Info(p.game.Players[0].Hand.String())
+	p.firstTurn(b, m)
+
+	b.MentionReply(m, p.game.Discard.Top().String())
+	for _, player := range p.game.Players {
+		logger.Info(player.Name)
+	}
+}
+
+func (p *unoPlugin) getHandCallback(b *seabird.Bot, m *irc.Message) {
+	if p.game == nil {
+		b.MentionReply(m, "No UNO game running.")
+		return
+	}
+
+	player, err := p.game.GetPlayer(m.Prefix.Name)
+	if err != nil {
+		b.MentionReply(m, "Looks like you're not playing UNO right now. Try again next time!")
+		return
+	}
+
+	if m.FromChannel() {
+		b.MentionReply(m, "You probably don't want to show your hand to other players.")
+		return
+	}
+
+	for _, card := range player.Hand.Cards {
+		b.Reply(m, card.String())
+	}
 }
 
 /*

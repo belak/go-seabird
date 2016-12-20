@@ -2,6 +2,7 @@ package uno
 
 import (
 	"errors"
+	"fmt"
 	"math/rand"
 	"strings"
 )
@@ -53,9 +54,11 @@ type unoPlayer struct {
 }
 
 type UnoGame struct {
-	Players     []unoPlayer
-	Deck        *unoDeck
-	playerIndex int
+	Players       []*unoPlayer
+	Deck          *unoDeck
+	Discard       *unoDeck
+	playerIndex   int
+	playDirection int
 }
 
 func addUnoColor(deck *unoDeck, color colorCode) {
@@ -154,6 +157,19 @@ func (d *unoDeck) Shuffle() {
 	d.Cards = newCards
 }
 
+func (d *unoDeck) Add(card unoCard) {
+	d.Cards = append(d.Cards, card)
+}
+
+func (d *unoDeck) AddTopFromOther(other *unoDeck) error {
+	card, err := other.Draw()
+	if err != nil {
+		return err
+	}
+	d.Add(card)
+	return nil
+}
+
 func (d *unoDeck) Empty() bool {
 	return len(d.Cards) == 0
 }
@@ -184,17 +200,100 @@ func (d *unoDeck) DrawHand() (unoDeck, error) {
 	return deck, nil
 }
 
-func (g *UnoGame) addPlayer(name string) error {
-	hand, err := g.Deck.DrawHand()
-	if err != nil {
-		return err
+func (p *unoPlayer) DrawCards(deck *unoDeck, number int) error {
+	for i := 0; i < HAND_SIZE; i++ {
+		card, err := deck.Draw()
+		if err != nil {
+			return err
+		}
+		p.Hand.Add(card)
 	}
-	g.Players = append(g.Players, unoPlayer{Name: name, Hand: hand})
 	return nil
 }
 
+func (g *UnoGame) addPlayer(name string) error {
+	player := &unoPlayer{Name: name, Hand: unoDeck{}}
+	err := player.DrawCards(g.Deck, HAND_SIZE)
+	if err != nil {
+		return err
+	}
+	g.Players = append(g.Players, player)
+	return nil
+}
+
+func (g *UnoGame) GetPlayer(name string) (*unoPlayer, error) {
+	for _, player := range g.Players {
+		if player.Name == name {
+			return player, nil
+		}
+	}
+	return nil, fmt.Errorf("Can't find player \"%s\"", name)
+}
+
+func (g *UnoGame) CurrentPlayer() *unoPlayer {
+	return g.Players[g.playerIndex]
+}
+
+func (g *UnoGame) AdvancePlayer() {
+	g.playerIndex = (g.playerIndex + g.playDirection) % len(g.Players)
+}
+
+func (g *UnoGame) Reverse() {
+	g.playDirection *= -1
+}
+
+func (g *UnoGame) TakeTurn(card unoCard) {
+}
+
+func (g *UnoGame) FirstTurn() []string {
+	messages := []string{
+		fmt.Sprintf("%s is on top of discard.", g.Discard.Top()),
+		fmt.Sprintf("%s's turn.", g.CurrentPlayer().Name),
+	}
+	switch g.Discard.Top().Type {
+	case CARD_TYPE_SKIP:
+		messages = append(messages, fmt.Sprintf("%s skipped!", g.CurrentPlayer().Name))
+		g.AdvancePlayer()
+	case CARD_TYPE_DRAW_TWO:
+		g.CurrentPlayer().DrawCards(g.Deck, 2)
+		messages = append(messages, fmt.Sprintf("%s draws two and skips a turn.", g.CurrentPlayer().Name))
+		g.AdvancePlayer()
+	case CARD_TYPE_REVERSE:
+		messages = append(messages, fmt.Sprintf("Play reversed.", g.CurrentPlayer().Name))
+		g.Reverse()
+		g.AdvancePlayer()
+	case CARD_TYPE_WILDCARD:
+		messages = append(messages, fmt.Sprintf("%s must declare next color.", g.CurrentPlayer().Name))
+		// TODO(jsvana): somehow handle input states
+	case CARD_TYPE_WILDCARD_DRAW_FOUR:
+		messages = append(messages, "Wildcard draw four can't be the first card. Let's try again.")
+
+		err := g.Deck.AddTopFromOther(g.Discard)
+		if err == nil {
+			g.Deck.Shuffle()
+
+			g.Discard.AddTopFromOther(g.Deck)
+			// This should really never happen
+			if err == nil {
+				nextAttemptMessages := g.FirstTurn()
+				messages = append(messages, nextAttemptMessages...)
+				return messages
+			} else {
+				messages = append(messages, fmt.Sprintf("Error drawing first card: %s", err))
+			}
+		} else {
+			// This should really never happen
+			messages = append(messages, fmt.Sprintf("Error drawing from discard: %s", err))
+		}
+	}
+	messages = append(messages, fmt.Sprintf("%s to play.", g.CurrentPlayer().Name))
+	messages = append(messages, fmt.Sprintf("%s is on top of discard.", g.Discard.Top().String()))
+
+	return messages
+}
+
 func NewGame(players []string) (*UnoGame, error) {
-	game := &UnoGame{Deck: makeUnoDeck()}
+	game := &UnoGame{Deck: makeUnoDeck(), Discard: &unoDeck{}, playerIndex: 0, playDirection: 1}
 	game.Deck.Shuffle()
 
 	var err error
@@ -205,7 +304,10 @@ func NewGame(players []string) (*UnoGame, error) {
 		}
 	}
 
+	err = game.Discard.AddTopFromOther(game.Deck)
+	if err != nil {
+		return nil, err
+	}
+
 	return game, nil
 }
-
-//func (g *UnoGame)
