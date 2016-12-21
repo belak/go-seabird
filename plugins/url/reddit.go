@@ -58,12 +58,13 @@ func newRedditProvider(urlPlugin *Plugin) {
 }
 
 func redditCallback(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
-	if redditUserRegex.MatchString(u.Path) {
-		return redditGetUser(b, m, u.Path)
-	} else if redditCommentRegex.MatchString(u.Path) {
-		return redditGetComment(b, m, u.Path)
-	} else if redditSubRegex.MatchString(u.Path) {
-		return redditGetSub(b, m, u.Path)
+	text := u.Path
+	if redditUserRegex.MatchString(text) {
+		return redditGetUser(b, m, text)
+	} else if redditCommentRegex.MatchString(text) {
+		return redditGetComment(b, m, text)
+	} else if redditSubRegex.MatchString(text) {
+		return redditGetSub(b, m, text)
 	}
 
 	return false
@@ -119,7 +120,7 @@ func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
 	}
 
 	rs := &redditSub{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/user/%s/about.json", matches[2]), rs)
+	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/r/%s/about.json", matches[1]), rs)
 	if err != nil {
 		return false
 	}
