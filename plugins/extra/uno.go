@@ -21,10 +21,10 @@ func init() {
 
 type unoPlugin struct {
 	db   *nut.DB
-	game *uno.UnoGame
+	game *uno.Game
 }
 
-func PrivateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
+func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
 	b.Send(&irc.Message{
 		Prefix:  &irc.Prefix{},
 		Command: "PRIVMSG",
@@ -94,12 +94,12 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, lines []string)
 	}
 }
 
-func (p *unoPlugin) messageHand(b *seabird.Bot, m *irc.Message, player *uno.UnoPlayer) {
+func (p *unoPlugin) messageHand(b *seabird.Bot, m *irc.Message, player *uno.Player) {
 	cards := make([]string, len(player.Hand.Cards))
 	for i := 0; i < len(player.Hand.Cards); i++ {
 		cards[i] = player.Hand.Cards[i].String()
 	}
-	PrivateMessage(b, player.Name, strings.Join(cards, ", "))
+	privateMessage(b, player.Name, strings.Join(cards, ", "))
 }
 
 func (p *unoPlugin) messageHands(b *seabird.Bot, m *irc.Message) {
@@ -229,7 +229,7 @@ func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	b.Reply(m, "Playing %s's %s", p.game.CurrentPlayer().Name, card.String())
-	p.game.RunCard(card)
+	p.game.PlayCard(card)
 }
 
 func (p *unoPlugin) drawCallback(b *seabird.Bot, m *irc.Message) {
