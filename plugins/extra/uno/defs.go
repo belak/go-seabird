@@ -291,28 +291,37 @@ func (g *Game) shuffleDiscard() error {
 }
 
 func (g *Game) playable(player *Player, card Card) bool {
-	topCard := g.Discard.Top()
-	if card.color != ColorNone {
-		if g.nextcolor != ColorNone {
-			return card.color == g.nextcolor
-		}
-		return card.color == topCard.color
-	}
-
+	// If it's a wildcard, they can play it no matter what.
 	if card.Type == CardTypeWildcard {
 		return true
 	}
 
-	for _, other := range player.Hand.Cards {
-		if card.equals(other) {
-			continue
-		}
-		if other.color != ColorNone && topCard.color == other.color {
-			return false
-		}
+	// If the color or type matches, they're allowed to play it.
+	topCard := g.Discard.Top()
+	if card.color == g.nextColor || card.Type == topCard.Type {
+		return true
 	}
 
-	return true
+	// If we've made it to this point, we need to make sure all the
+	// other cards aren't playable because a D4 wild can only be
+	// played if the user can't play any other cards.
+	if card.Type == CardTypeWildcardDrawFour {
+		for _, other := range player.Hand.Cards {
+			// We need to skip D4 wilds so we don't recurse forever.
+			if card.Type == CardTypeWildcardDrawFour {
+				continue
+			}
+
+			if g.playable(player, other) {
+				return false
+			}
+		}
+
+		return true
+	}
+
+	// This shouldn't be reachable, but it's here just in case.
+	return false
 }
 
 // AdvancePlayer moves the game to the next player
