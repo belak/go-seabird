@@ -137,7 +137,7 @@ func (c Card) equals(other Card) bool {
 	return c.color == other.color && c.Type == other.Type
 }
 
-func makeDeck() *Deck {
+func newDeck() *Deck {
 	deck := &Deck{}
 
 	addcolor(deck, ColorRed)
@@ -438,7 +438,14 @@ func (g *Game) ChooseColor(color ColorCode) {
 
 // NewGame constructs and starts a new game
 func NewGame(players []string) (*Game, error) {
-	game := &Game{Deck: makeDeck(), Discard: &Deck{}, playerIndex: 0, playDirection: 1, state: StateRunning, nextcolor: ColorNone}
+	game := &Game{
+		Deck:          newDeck(),
+		Discard:       &Deck{},
+		playerIndex:   0,
+		playDirection: 1,
+		state:         StateRunning,
+		nextcolor:     ColorNone,
+	}
 	game.Deck.shuffle()
 
 	var err error
