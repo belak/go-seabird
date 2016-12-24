@@ -12,6 +12,11 @@ const handSize = 7
 // ColorCode is a type for card color codes
 type ColorCode int
 
+// NOTE: These don't generate code which passes the linter, so I
+// recommend the following:
+// sed -i 's/_name/Name/g' *_string.go
+// sed -i 's/_index/Index/g' *_string.go
+//
 //go:generate stringer -type ColorCode
 //go:generate stringer -type CardType
 
@@ -40,8 +45,10 @@ func ColorFromString(colorStr string) ColorCode {
 	}
 }
 
+// CardType represents each of the different UNO card types.
 type CardType int
 
+// Card types
 const (
 	CardType0 CardType = iota
 	CardType1
