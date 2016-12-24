@@ -103,12 +103,14 @@ type Game struct {
 	playerIndex   int
 	playDirection int
 	state         GameState
-	nextcolor     ColorCode
+	nextColor     ColorCode
 }
 
 func addcolor(deck *Deck, color ColorCode) {
+	// This adds 1 of every 0, and two of each other number, skip,
+	// reverse, and draw two.
 	deck.Cards = append(deck.Cards, Card{0, color})
-	for i := CardType1; i < CardTypeWildcard; i++ {
+	for i := CardType1; i <= CardTypeDrawTwo; i++ {
 		card := Card{i, color}
 		deck.Cards = append(deck.Cards, card)
 		deck.Cards = append(deck.Cards, card)
@@ -145,8 +147,8 @@ func newDeck() *Deck {
 	addcolor(deck, ColorGreen)
 	addcolor(deck, ColorBlue)
 
-	wildcard := Card{CardTypeWildcardDrawFour, ColorNone}
-	wildcardDrawFour := Card{CardTypeWildcard, ColorNone}
+	wildcard := Card{CardTypeWildcard, ColorNone}
+	wildcardDrawFour := Card{CardTypeWildcardDrawFour, ColorNone}
 	for i := 0; i < 4; i++ {
 		deck.Cards = append(deck.Cards, wildcard)
 		deck.Cards = append(deck.Cards, wildcardDrawFour)
@@ -156,9 +158,9 @@ func newDeck() *Deck {
 }
 
 func (d *Deck) String() string {
-	cardStrings := make([]string, len(d.Cards))
-	for i, c := range d.Cards {
-		cardStrings[i] = c.String()
+	var cardStrings []string
+	for _, c := range d.Cards {
+		cardStrings = append(cardStrings, c.String())
 	}
 
 	return strings.Join(cardStrings, "\n")
@@ -364,7 +366,7 @@ func (g *Game) State() GameState {
 }
 
 func (g *Game) clearExpectedColor() {
-	g.nextcolor = ColorNone
+	g.nextColor = ColorNone
 }
 
 func (g *Game) runCard(card Card) []string {
@@ -433,7 +435,7 @@ func (g *Game) FirstTurn() []string {
 
 // ChooseColor sets the expected color
 func (g *Game) ChooseColor(color ColorCode) {
-	g.nextcolor = color
+	g.nextColor = color
 }
 
 // NewGame constructs and starts a new game
@@ -444,7 +446,7 @@ func NewGame(players []string) (*Game, error) {
 		playerIndex:   0,
 		playDirection: 1,
 		state:         StateRunning,
-		nextcolor:     ColorNone,
+		nextColor:     ColorNone,
 	}
 	game.Deck.shuffle()
 
