@@ -4,13 +4,13 @@ package uno
 
 import "fmt"
 
-const _ColorCode_name = "ColorNoneColorRedColorYellowColorGreenColorBlue"
+const _ColorCodeName = "ColorNoneColorRedColorYellowColorGreenColorBlue"
 
-var _ColorCode_index = [...]uint8{0, 9, 17, 28, 38, 47}
+var _ColorCodeIndex = [...]uint8{0, 9, 17, 28, 38, 47}
 
 func (i ColorCode) String() string {
-	if i < 0 || i >= ColorCode(len(_ColorCode_index)-1) {
+	if i < 0 || i >= ColorCode(len(_ColorCodeIndex)-1) {
 		return fmt.Sprintf("ColorCode(%d)", i)
 	}
-	return _ColorCode_name[_ColorCode_index[i]:_ColorCode_index[i+1]]
+	return _ColorCodeName[_ColorCodeIndex[i]:_ColorCodeIndex[i+1]]
 }
