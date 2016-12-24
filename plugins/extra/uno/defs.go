@@ -12,6 +12,9 @@ const handSize = 7
 // ColorCode is a type for card color codes
 type ColorCode int
 
+//go:generate stringer -type ColorCode
+//go:generate stringer -type CardType
+
 // Card color codes
 const (
 	ColorNone ColorCode = iota
@@ -37,24 +40,24 @@ func ColorFromString(colorStr string) ColorCode {
 	}
 }
 
-type cardType int
+type CardType int
 
 const (
-	cardType0 cardType = iota
-	cardType1
-	cardType2
-	cardType3
-	cardType4
-	cardType5
-	cardType6
-	cardType7
-	cardType8
-	cardType9
-	cardTypeSkip
-	cardTypeReverse
-	cardTypeDrawTwo
-	cardTypeWildcard
-	cardTypeWildcardDrawFour
+	CardType0 CardType = iota
+	CardType1
+	CardType2
+	CardType3
+	CardType4
+	CardType5
+	CardType6
+	CardType7
+	CardType8
+	CardType9
+	CardTypeSkip
+	CardTypeReverse
+	CardTypeDrawTwo
+	CardTypeWildcard
+	CardTypeWildcardDrawFour
 )
 
 // GameState is a type for game states
@@ -70,7 +73,7 @@ const (
 
 // Card represents an UNO card
 type Card struct {
-	Type  cardType
+	Type  CardType
 	color ColorCode
 }
 
@@ -98,48 +101,11 @@ type Game struct {
 
 func addcolor(deck *Deck, color ColorCode) {
 	deck.Cards = append(deck.Cards, Card{0, color})
-	for i := cardType1; i < cardTypeWildcard; i++ {
+	for i := CardType1; i < CardTypeWildcard; i++ {
 		card := Card{i, color}
 		deck.Cards = append(deck.Cards, card)
 		deck.Cards = append(deck.Cards, card)
 	}
-}
-
-// CardTypeString returns a string representation of a given cardType
-func CardTypeString(ct cardType) string {
-	switch ct {
-	case cardType0:
-		return "0"
-	case cardType1:
-		return "1"
-	case cardType2:
-		return "2"
-	case cardType3:
-		return "3"
-	case cardType4:
-		return "4"
-	case cardType5:
-		return "5"
-	case cardType6:
-		return "6"
-	case cardType7:
-		return "7"
-	case cardType8:
-		return "8"
-	case cardType9:
-		return "9"
-	case cardTypeSkip:
-		return "S"
-	case cardTypeReverse:
-		return "R"
-	case cardTypeDrawTwo:
-		return "D"
-	case cardTypeWildcard:
-		return "W"
-	case cardTypeWildcardDrawFour:
-		return "W4"
-	}
-	return ""
 }
 
 func (c Card) String() string {
@@ -157,7 +123,7 @@ func (c Card) String() string {
 	case ColorBlue:
 		color = prefix + "2"
 	}
-	return fmt.Sprintf("%s[%s]\x030", color, CardTypeString(c.Type))
+	return fmt.Sprintf("%s[%s]\x030", color, c.Type.String())
 }
 
 func (c Card) equals(other Card) bool {
@@ -172,8 +138,8 @@ func makeDeck() *Deck {
 	addcolor(deck, ColorGreen)
 	addcolor(deck, ColorBlue)
 
-	wildcard := Card{cardTypeWildcardDrawFour, ColorNone}
-	wildcardDrawFour := Card{cardTypeWildcard, ColorNone}
+	wildcard := Card{CardTypeWildcardDrawFour, ColorNone}
+	wildcardDrawFour := Card{CardTypeWildcard, ColorNone}
 	for i := 0; i < 4; i++ {
 		deck.Cards = append(deck.Cards, wildcard)
 		deck.Cards = append(deck.Cards, wildcardDrawFour)
@@ -324,7 +290,7 @@ func (g *Game) playable(player *Player, card Card) bool {
 		return card.color == topCard.color
 	}
 
-	if card.Type == cardTypeWildcard {
+	if card.Type == CardTypeWildcard {
 		return true
 	}
 
@@ -398,24 +364,24 @@ func (g *Game) runCard(card Card) []string {
 	messages := []string{}
 
 	switch card.Type {
-	case cardTypeSkip:
+	case CardTypeSkip:
 		messages = append(messages, fmt.Sprintf("%s skipped!", g.CurrentPlayer().Name))
 		g.clearExpectedColor()
 		g.AdvancePlayer()
-	case cardTypeDrawTwo:
+	case CardTypeDrawTwo:
 		g.CurrentPlayer().DrawCards(g, 2)
 		messages = append(messages, fmt.Sprintf("%s draws two and skips a turn.", g.CurrentPlayer().Name))
 		g.clearExpectedColor()
 		g.AdvancePlayer()
-	case cardTypeReverse:
+	case CardTypeReverse:
 		messages = append(messages, "Play reversed.")
 		g.clearExpectedColor()
 		g.reverse()
 		g.AdvancePlayer()
-	case cardTypeWildcard:
+	case CardTypeWildcard:
 		messages = append(messages, fmt.Sprintf("%s must declare next color.", g.CurrentPlayer().Name))
 		g.state = StateWaitingColor
-	case cardTypeWildcardDrawFour:
+	case CardTypeWildcardDrawFour:
 		messages = append(messages, fmt.Sprintf("%s must declare next color.", g.CurrentPlayer().Name))
 		g.state = StateWaitingColorFour
 	default:
@@ -430,7 +396,7 @@ func (g *Game) FirstTurn() []string {
 		fmt.Sprintf("%s's turn.", g.CurrentPlayer().Name),
 		fmt.Sprintf("%s is on top of discard.", g.Discard.Top()),
 	}
-	if g.Discard.Top().Type == cardTypeWildcardDrawFour {
+	if g.Discard.Top().Type == CardTypeWildcardDrawFour {
 		messages = append(messages, "Wildcard draw four can't be the first card. Let's try again.")
 
 		err := g.Deck.addTopFromOther(g.Discard)
