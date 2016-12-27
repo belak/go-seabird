@@ -2,10 +2,8 @@ package extra
 
 import (
 	"fmt"
-	"math/rand"
 	"strconv"
 	"strings"
-	"time"
 
 	"github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/extra/uno"
@@ -15,8 +13,6 @@ import (
 
 func init() {
 	seabird.RegisterPlugin("uno", newUnoPlugin)
-
-	rand.Seed(time.Now().UTC().UnixNano())
 }
 
 type unoPlugin struct {

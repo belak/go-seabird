@@ -1,7 +1,9 @@
 package main
 
 import (
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 
@@ -21,6 +23,9 @@ func failIfErr(err error, desc string) {
 }
 
 func main() {
+	// Seed the random number generator for plugins to use.
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	conf := os.Getenv("SEABIRD_CONFIG")
 	if conf == "" {
 		conf = "config.toml"
