@@ -10,7 +10,8 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
-// TODO: Figure out what to do with dead sessions in other plugins
+// TODO: Figure out what to do with dead sessions in other
+// plugins... maybe a session removal callback.
 
 func init() {
 	seabird.RegisterPlugin("channel_track", newChannelTracker)
@@ -69,13 +70,6 @@ type ChannelTracker struct {
 	uuids map[string]string
 }
 
-// TODO: The public api needs to be done
-//
-// UserInChannel
-// GetUsersInChannel
-// BotInChannel
-// GetBotChannels
-
 func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelTracker {
 	p := &ChannelTracker{
 		isupport: isupport,
@@ -112,6 +106,9 @@ func (p *ChannelTracker) LookupUser(b *seabird.Bot, user string) *User {
 
 // LookupChannel will return the Channel object for the given channel
 // name or nil if we're not in that channel.
+func (p *ChannelTracker) LookupChannel(b *seabird.Bot, channel string) *Channel {
+	return p.channels[channel]
+}
 
 // Private functions
 
