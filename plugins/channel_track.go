@@ -86,7 +86,7 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 
 	// We only care about the symbols
 	i := strings.IndexByte(prefix, ')')
-	if i < 0 {
+	if len(prefix) == 0 || prefix[0] != '(' || i < 0 {
 		logger.WithField("prefix", prefix).Warnf("Invalid prefix format")
 		return
 	}
@@ -99,8 +99,6 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 		user = strings.TrimLeft(user, prefixes)
 		fmt.Printf("%s is in channel %s\n", user, channel)
 	}
-
-	fmt.Println(m)
 }
 
 func (p *ChannelTracker) endOfNamesCallback(b *seabird.Bot, m *irc.Message) {
