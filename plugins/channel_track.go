@@ -45,7 +45,8 @@ type ChannelTracker struct {
 	uuids map[string]string
 }
 
-// TODO:
+// TODO: The public api needs to be done
+//
 // UserInChannel
 // GetUsersInChannel
 // BotInChannel
@@ -138,7 +139,7 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 
 		p.addUserToChannel(b, user, channel)
 
-		fmt.Printf("%s is in channel %s\n", user, channel)
+		fmt.Printf("%s (%s) is in channel %s\n", user, p.uuids[user], channel)
 	}
 }
 
