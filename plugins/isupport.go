@@ -20,7 +20,9 @@ type ISupportPlugin struct {
 
 func newISupportPlugin(b *seabird.Bot, bm *seabird.BasicMux) *ISupportPlugin {
 	p := &ISupportPlugin{
-		make(map[string]string),
+		raw: map[string]string{
+			"PREFIX": "(ov)@+",
+		},
 	}
 	bm.Event("005", p.handle005)
 	return p

@@ -82,11 +82,7 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 	logger := b.GetLogger()
 
 	// Sample: (qaohv)~&@%+
-	prefix, ok := p.isupport.GetRaw("PREFIX")
-	if !ok {
-		// TODO: Put default value in isupport plugin
-		prefix = "(ov)@+"
-	}
+	prefix, _ := p.isupport.GetRaw("PREFIX")
 
 	// We only care about the symbols
 	i := strings.IndexByte(prefix, ')')
