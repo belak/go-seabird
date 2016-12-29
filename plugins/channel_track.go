@@ -95,7 +95,7 @@ func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelT
 // LookupUser will return the User object for the given nick or nil if
 // we don't know about this user. The returned value can be stored and
 // will track this user even if they change nicks.
-func (p *ChannelTracker) LookupUser(b *seabird.Bot, user string) *User {
+func (p *ChannelTracker) LookupUser(user string) *User {
 	userUUID, ok := p.uuids[user]
 	if !ok {
 		return nil
@@ -104,10 +104,34 @@ func (p *ChannelTracker) LookupUser(b *seabird.Bot, user string) *User {
 	return p.users[userUUID]
 }
 
+// UsersInChannel will return all the users in the given channel name
+// or nil if we're not in that channel.
+func (p *ChannelTracker) UsersInChannel(channel string) []*User {
+	c := p.LookupChannel(channel)
+	if c == nil {
+		return nil
+	}
+
+	var ret []*User
+	for userUUID := range c.users {
+		ret = append(ret, p.users[userUUID])
+	}
+	return ret
+}
+
 // LookupChannel will return the Channel object for the given channel
 // name or nil if we're not in that channel.
-func (p *ChannelTracker) LookupChannel(b *seabird.Bot, channel string) *Channel {
+func (p *ChannelTracker) LookupChannel(channel string) *Channel {
 	return p.channels[channel]
+}
+
+// Channels will return all the channel objects this bot knows about.
+func (p *ChannelTracker) Channels() []*Channel {
+	var ret []*Channel
+	for _, v := range p.channels {
+		ret = append(ret, v)
+	}
+	return ret
 }
 
 // Private functions
