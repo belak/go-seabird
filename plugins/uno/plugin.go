@@ -6,9 +6,7 @@ import (
 	"strings"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/extra/uno"
 	"github.com/belak/irc"
-	"github.com/belak/nut"
 )
 
 func init() {
@@ -16,7 +14,6 @@ func init() {
 }
 
 type unoPlugin struct {
-	db   *nut.DB
 	game *uno.Game
 }
 
@@ -31,13 +28,8 @@ func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
 	})
 }
 
-func newUnoPlugin(cm *seabird.CommandMux, db *nut.DB) error {
-	p := &unoPlugin{db: db}
-
-	err := p.db.EnsureBucket("uno")
-	if err != nil {
-		return err
-	}
+func newUnoPlugin(cm *seabird.CommandMux) error {
+	p := &unoPlugin{}
 
 	cm.Event("uno", p.unoCallback, &seabird.HelpInfo{
 		Usage:       "tbd",
