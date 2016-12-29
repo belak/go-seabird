@@ -1,4 +1,4 @@
-package extra
+package uno
 
 import (
 	"fmt"
@@ -6,7 +6,8 @@ import (
 	"strings"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/belak/go-seabird/plugins"
+	"github.com/go-irc/irc"
 )
 
 func init() {
@@ -14,7 +15,7 @@ func init() {
 }
 
 type unoPlugin struct {
-	game *uno.Game
+	game *Game
 }
 
 func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
@@ -28,12 +29,12 @@ func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
 	})
 }
 
-func newUnoPlugin(cm *seabird.CommandMux) error {
+func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) error {
 	p := &unoPlugin{}
 
 	cm.Event("uno", p.unoCallback, &seabird.HelpInfo{
-		Usage:       "tbd",
-		Description: "UNO command",
+		Usage:       "[create|join|start|stop]",
+		Description: "Flow control and stuff",
 	})
 
 	cm.Event("hand", p.getHandCallback, &seabird.HelpInfo{
@@ -68,8 +69,12 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 
 	args := strings.Split(trailing, " ")
 	switch args[0] {
+	//case "create":
+	//	p.createCallback(b, m, args[1:])
 	case "start":
 		p.startCallback(b, m, args[1:])
+	//case "stop":
+	//	p.stopCallback(b, m, args[1:])
 	default:
 		b.MentionReply(m, "Unknown command \"%s\"", args[0])
 		return
@@ -82,7 +87,7 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, lines []string)
 	}
 }
 
-func (p *unoPlugin) messageHand(b *seabird.Bot, m *irc.Message, player *uno.Player) {
+func (p *unoPlugin) messageHand(b *seabird.Bot, m *irc.Message, player *Player) {
 	cards := make([]string, len(player.Hand.Cards))
 	for i := 0; i < len(player.Hand.Cards); i++ {
 		cards[i] = player.Hand.Cards[i].String()
@@ -101,13 +106,14 @@ func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message, args []string)
 		b.MentionReply(m, "Game already running")
 		return
 	}
+
 	if len(args) < 2 {
 		b.MentionReply(m, "Must provide at least two players")
 		return
 	}
 
 	logger := b.GetLogger()
-	game, err := uno.NewGame(args)
+	game, err := NewGame(args)
 	p.game = game
 	if err != nil {
 		b.MentionReply(m, "Unable to start UNO game: ", err)
@@ -123,7 +129,7 @@ func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message, args []string)
 	}
 }
 
-func (p *unoPlugin) checkGame(b *seabird.Bot, m *irc.Message, desiredStates []uno.GameState) (string, bool) {
+func (p *unoPlugin) checkGame(b *seabird.Bot, m *irc.Message, desiredStates []GameState) (string, bool) {
 	if p.game == nil {
 		return "No UNO game running.", false
 	}
@@ -168,20 +174,20 @@ func (p *unoPlugin) colorCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	msg, ok := p.checkGame(b, m, []uno.GameState{uno.StateWaitingColor, uno.StateWaitingColorFour})
+	msg, ok := p.checkGame(b, m, []GameState{StateWaitingColor, StateWaitingColorFour})
 	if !ok {
 		b.MentionReply(m, msg)
 		return
 	}
 
-	color := uno.ColorFromString(colorStr)
-	if color == uno.ColorNone {
+	color := ColorFromString(colorStr)
+	if color == ColorNone {
 		b.MentionReply(m, "Unknown color \"%s\"", colorStr)
 		return
 	}
 
 	p.game.ChooseColor(color)
-	if p.game.State() == uno.StateWaitingColorFour {
+	if p.game.State() == StateWaitingColorFour {
 		p.game.AdvancePlayer()
 		b.Reply(m, "%s forced to draw four cards and skip a turn!", p.game.CurrentPlayer().Name)
 		p.game.CurrentPlayer().DrawCards(p.game, 4)
@@ -204,7 +210,7 @@ func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	msg, ok := p.checkGame(b, m, []uno.GameState{uno.StateWaitingTurn})
+	msg, ok := p.checkGame(b, m, []GameState{StateWaitingTurn})
 	if !ok {
 		b.MentionReply(m, msg)
 		return
@@ -221,7 +227,7 @@ func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *unoPlugin) drawCallback(b *seabird.Bot, m *irc.Message) {
-	msg, ok := p.checkGame(b, m, []uno.GameState{uno.StateWaitingTurn})
+	msg, ok := p.checkGame(b, m, []GameState{StateWaitingTurn})
 	if !ok {
 		b.MentionReply(m, msg)
 		return
