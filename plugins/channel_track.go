@@ -10,20 +10,44 @@ import (
 	uuid "github.com/satori/go.uuid"
 )
 
+// TODO: Figure out what to do with dead sessions in other plugins
+
 func init() {
 	seabird.RegisterPlugin("channel_track", newChannelTracker)
 }
 
-// ichannel is an internal type for representing a channel.
-type ichannel struct {
+// Channel is an internal type for representing a channel.
+type Channel struct {
 	users map[string]bool
 }
 
-// iuser is an internal type for representing a user.
-type iuser struct {
+// HasUser returns true if the user is in the channel, otherwise
+// false.
+func (c *Channel) HasUser(user string) bool {
+	return c.users[user]
+}
+
+// User is an type for representing a user.
+type User struct {
 	channels map[string]bool
 
-	nick string
+	Nick string
+	UUID string
+}
+
+// Channels returns which channels the user is currently in.
+func (u *User) Channels() []string {
+	var ret []string
+	for k := range u.channels {
+		ret = append(ret, k)
+	}
+	return ret
+}
+
+// InChannel returns true if the user is in the channel, otherwise
+// false.
+func (u *User) InChannel(channel string) bool {
+	return u.channels[channel]
 }
 
 // ChannelTracker is a simple plugin which is only meant to track what
@@ -35,11 +59,11 @@ type ChannelTracker struct {
 
 	// Channels can't be renamed, so it's just a mapping of name to
 	// channel object.
-	channels map[string]*ichannel
+	channels map[string]*Channel
 
 	// Users can be renamed so we key them on uuid. There's also a
 	// separate nick to uuid mapping.
-	users map[string]*iuser
+	users map[string]*User
 
 	// This simply maps the nick to the uuid
 	uuids map[string]string
@@ -55,8 +79,8 @@ type ChannelTracker struct {
 func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelTracker {
 	p := &ChannelTracker{
 		isupport: isupport,
-		channels: make(map[string]*ichannel),
-		users:    make(map[string]*iuser),
+		channels: make(map[string]*Channel),
+		users:    make(map[string]*User),
 		uuids:    make(map[string]string),
 	}
 
@@ -71,6 +95,25 @@ func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelT
 
 	return p
 }
+
+// Public interfaces
+
+// LookupUser will return the User object for the given nick or nil if
+// we don't know about this user. The returned value can be stored and
+// will track this user even if they change nicks.
+func (p *ChannelTracker) LookupUser(b *seabird.Bot, user string) *User {
+	userUUID, ok := p.uuids[user]
+	if !ok {
+		return nil
+	}
+
+	return p.users[userUUID]
+}
+
+// LookupChannel will return the Channel object for the given channel
+// name or nil if we're not in that channel.
+
+// Private functions
 
 func (p *ChannelTracker) joinCallback(b *seabird.Bot, m *irc.Message) {
 	user := m.Prefix.Name
@@ -177,8 +220,9 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 	// Add the user if they don't exist.
 	u, ok := p.users[userUUID]
 	if !ok {
-		u = &iuser{
-			nick:     user,
+		u = &User{
+			Nick:     user,
+			UUID:     userUUID,
 			channels: make(map[string]bool),
 		}
 		p.users[userUUID] = u
@@ -228,7 +272,7 @@ func (p *ChannelTracker) addChannel(b *seabird.Bot, channel string) {
 		logger.WithField("channel", channel).Warn("Already in channel")
 	}
 
-	p.channels[channel] = &ichannel{
+	p.channels[channel] = &Channel{
 		users: make(map[string]bool),
 	}
 }
@@ -236,36 +280,51 @@ func (p *ChannelTracker) addChannel(b *seabird.Bot, channel string) {
 func (p *ChannelTracker) removeChannel(b *seabird.Bot, channel string) {
 	logger := b.GetLogger()
 
-	if _, ok := p.channels[channel]; !ok {
+	c, ok := p.channels[channel]
+	if !ok {
 		logger.Warn("Not in channel")
 		return
 	}
 
-	delete(p.channels, channel)
+	// Remove all users currently in this channel from this channel.
+	for userUUID := range c.users {
+		u := p.users[userUUID]
+		delete(u.channels, channel)
 
-	// Loop through all the users and remove this channel from their
-	// list. If they have no more channels left, queue them for deletion.
-	var queuedDeletes []string
-	for _, user := range p.users {
-		delete(user.channels, channel)
-
-		if len(user.channels) == 0 {
-			queuedDeletes = append(queuedDeletes, user.nick)
+		// If this user has no more channels, they need to be removed.
+		if len(u.channels) == 0 {
+			p.removeUser(b, u.Nick)
 		}
 	}
 
-	for _, k := range queuedDeletes {
-		p.removeUser(b, k)
-	}
+	// Clean up the channel object
+	c.users = make(map[string]bool)
+
+	// Remove the channel from tracking
+	delete(p.channels, channel)
 }
 
 func (p *ChannelTracker) removeUser(b *seabird.Bot, user string) {
-	// TODO: Warn if not exist
-	userUUID := p.uuids[user]
+	logger := b.GetLogger()
 
+	userUUID, ok := p.uuids[user]
+	if !ok {
+		logger.Warn("User does not exist")
+		return
+	}
+
+	// We need to clear out the channels and Nick to show this session
+	// is invalid.
+	u := p.users[userUUID]
+	u.Nick = ""
+	for channel := range u.channels {
+		delete(p.channels[channel].users, userUUID)
+	}
+	u.channels = make(map[string]bool)
+
+	// Now that the User is empty, delete all internal traces.
 	delete(p.uuids, user)
 	delete(p.users, userUUID)
-
 }
 
 func (p *ChannelTracker) renameUser(b *seabird.Bot, oldNick, newNick string) {
@@ -281,7 +340,7 @@ func (p *ChannelTracker) renameUser(b *seabird.Bot, oldNick, newNick string) {
 
 	// Rename the user object
 	u := p.users[userUUID]
-	u.nick = newNick
+	u.Nick = newNick
 
 	// Swap where the UUID points to
 	delete(p.uuids, oldNick)
