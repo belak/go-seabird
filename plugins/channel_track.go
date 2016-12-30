@@ -254,21 +254,18 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 		return
 	}
 
-	// If there's no mapping, add it and create the user.
-	userUUID, ok := p.uuids[user]
-	if !ok {
-		userUUID = uuid.NewV4().String()
-		p.uuids[user] = userUUID
-		p.users[userUUID] = &User{
+	u := p.LookupUser(user)
+	if u == nil {
+		u = &User{
 			Nick:     user,
-			UUID:     userUUID,
+			UUID:     uuid.NewV4().String(),
 			channels: make(map[string]bool),
 		}
+		p.users[u.UUID] = u
+		p.uuids[user] = u.UUID
 	}
 
-	logger = logger.WithField("userUUID", userUUID)
-
-	u := p.users[userUUID]
+	logger = logger.WithField("userUUID", u.UUID)
 
 	if _, ok := u.channels[channel]; ok {
 		logger.Warn("User already in channel")
@@ -276,7 +273,7 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 	}
 
 	u.channels[channel] = true
-	c.users[userUUID] = true
+	c.users[u.UUID] = true
 
 	logger.Info("User added to channel")
 }
@@ -287,20 +284,20 @@ func (p *ChannelTracker) removeUserFromChannel(b *seabird.Bot, user, channel str
 	if user == b.CurrentNick() {
 		p.removeChannel(b, channel)
 	} else {
-		userUUID, ok := p.uuids[user]
-		if !ok {
+		u := p.LookupUser(user)
+		if u == nil {
 			logger.Warn("Can't remove unknown user")
 			return
 		}
 
-		logger = logger.WithField("userUUID", userUUID)
+		logger = logger.WithField("userUUID", u.UUID)
 
-		u := p.users[userUUID]
 		if _, ok := u.channels[channel]; !ok {
-			logger.Warn("Can only remove users from channels we are in")
-		} else {
-			delete(u.channels, channel)
+			logger.Warn("Can only remove users from users they are in")
+			return
 		}
+
+		delete(u.channels, channel)
 
 		logger.Info("Removing user from channel")
 
@@ -362,24 +359,23 @@ func (p *ChannelTracker) removeChannel(b *seabird.Bot, channel string) {
 func (p *ChannelTracker) removeUser(b *seabird.Bot, user string) {
 	logger := b.GetLogger().WithField("user", user)
 
-	userUUID, ok := p.uuids[user]
-	if !ok {
+	u := p.LookupUser(user)
+	if u == nil {
 		logger.Warn("User does not exist")
 		return
 	}
 
 	// We need to clear out the channels and Nick to show this session
 	// is invalid.
-	u := p.users[userUUID]
 	u.Nick = ""
 	for channel := range u.channels {
-		delete(p.channels[channel].users, userUUID)
+		delete(p.channels[channel].users, u.UUID)
 	}
 	u.channels = make(map[string]bool)
 
 	// Now that the User is empty, delete all internal traces.
 	delete(p.uuids, user)
-	delete(p.users, userUUID)
+	delete(p.users, u.UUID)
 
 	// Run any cleanup callbacks
 	for _, f := range p.cleanupCallbacks {
@@ -395,21 +391,20 @@ func (p *ChannelTracker) renameUser(b *seabird.Bot, oldNick, newNick string) {
 		"newNick": newNick,
 	})
 
-	userUUID, ok := p.uuids[oldNick]
-	if !ok {
+	u := p.LookupUser(oldNick)
+	if u == nil {
 		logger.Warn("Can't rename user that doesn't exist")
 		return
 	}
 
-	logger = logger.WithField("userUUID", userUUID)
+	logger = logger.WithField("userUUID", u.UUID)
 
 	// Rename the user object
-	u := p.users[userUUID]
 	u.Nick = newNick
 
 	// Swap where the UUID points to
 	delete(p.uuids, oldNick)
-	p.uuids[newNick] = userUUID
+	p.uuids[newNick] = u.UUID
 
 	logger.Info("Renamed user")
 }
