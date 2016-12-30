@@ -12,6 +12,8 @@ import (
 
 // TODO: Figure out what to do with dead sessions in other
 // plugins... maybe a session removal callback.
+//
+// TODO: Improve logging
 
 func init() {
 	seabird.RegisterPlugin("channel_track", newChannelTracker)
