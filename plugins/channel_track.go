@@ -201,6 +201,11 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 	for _, user := range users {
 		user = strings.TrimLeft(user, prefixes)
 
+		// The bot user should be added via JOIN
+		if user == b.CurrentNick() {
+			continue
+		}
+
 		p.addUserToChannel(b, user, channel)
 
 		fmt.Printf("%s (%s) is in channel %s\n", user, p.uuids[user], channel)
