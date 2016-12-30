@@ -11,9 +11,6 @@ import (
 	"github.com/belak/irc"
 )
 
-// TODO: Figure out what to do with dead sessions in other
-// plugins... maybe a session removal callback.
-
 func init() {
 	seabird.RegisterPlugin("channel_track", newChannelTracker)
 }
@@ -74,6 +71,9 @@ type ChannelTracker struct {
 
 	// This simply maps the nick to the uuid
 	uuids map[string]string
+
+	// Session cleanup callbacks
+	cleanupCallbacks []func(u *User)
 }
 
 func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelTracker {
@@ -141,6 +141,12 @@ func (p *ChannelTracker) Channels() []*Channel {
 		ret = append(ret, v)
 	}
 	return ret
+}
+
+// RegisterSessionCleanupCallback lets you register a function to be
+// called when a session is removed.
+func (p *ChannelTracker) RegisterSessionCleanupCallback(f func(u *User)) {
+	p.cleanupCallbacks = append(p.cleanupCallbacks, f)
 }
 
 // Private functions
@@ -374,6 +380,11 @@ func (p *ChannelTracker) removeUser(b *seabird.Bot, user string) {
 	// Now that the User is empty, delete all internal traces.
 	delete(p.uuids, user)
 	delete(p.users, userUUID)
+
+	// Run any cleanup callbacks
+	for _, f := range p.cleanupCallbacks {
+		f(u)
+	}
 
 	logger.Info("Removed user")
 }
