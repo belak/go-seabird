@@ -5,9 +5,10 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/satori/go.uuid"
+
 	"github.com/belak/go-seabird"
 	"github.com/belak/irc"
-	uuid "github.com/satori/go.uuid"
 )
 
 // TODO: Figure out what to do with dead sessions in other
