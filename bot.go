@@ -209,17 +209,10 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, m)
 }
 
-// Run starts the bot and loops until it dies
-func (b *Bot) Run() error {
-	// TODO: We currently ignore the injector, but it could be nice to keep it
-	// around for optional plugins.
-	_, err := b.registry.Load(b.config.Plugins, nil)
-	if err != nil {
-		return err
-	}
-
+func (b *Bot) ConnectAndRun() error {
 	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
 	var c io.ReadWriteCloser
+	var err error
 	if b.config.TLS {
 		conf := &tls.Config{
 			InsecureSkipVerify: b.config.TLSNoVerify,
@@ -241,6 +234,20 @@ func (b *Bot) Run() error {
 		c, err = net.Dial("tcp", b.config.Host)
 	}
 
+	if err != nil {
+		return err
+	}
+
+	return b.Run(c)
+}
+
+// Run starts the bot and loops until it dies. It accepts a
+// ReadWriter. If you wish to use the connection feature from the
+// config, use ConnectAndRun.
+func (b *Bot) Run(c io.ReadWriter) error {
+	// TODO: We currently ignore the injector, but it could be nice to keep it
+	// around for optional plugins.
+	_, err := b.registry.Load(b.config.Plugins, nil)
 	if err != nil {
 		return err
 	}
