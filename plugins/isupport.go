@@ -5,7 +5,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 func init() {

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 // CommandMux is a simple IRC event multiplexer, based on the BasicMux.

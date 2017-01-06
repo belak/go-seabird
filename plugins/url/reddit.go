@@ -9,7 +9,7 @@ import (
 	"github.com/Unknwon/com"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 func init() {

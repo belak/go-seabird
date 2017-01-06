@@ -13,7 +13,7 @@ import (
 
 	"github.com/belak/go-plugin"
 	"github.com/belak/go-seabird/internal"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 type coreConfig struct {

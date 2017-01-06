@@ -6,7 +6,7 @@ import (
 	"unicode"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 	"github.com/belak/nut"
 )
 

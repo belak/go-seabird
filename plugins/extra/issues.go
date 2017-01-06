@@ -8,7 +8,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 func init() {
@@ -104,7 +104,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	}
 
 	split = append(split, []string{
-		"repo:belak/irc",
+		"repo:go-irc/irc",
 		"repo:belak/go-seabird",
 	}...)
 
