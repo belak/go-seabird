@@ -1,14 +1,11 @@
 package extra
 
 import (
+	"errors"
+	"regexp"
 	"strings"
 	"sync"
 	"time"
-	"bytes"
-	"unicode"
-	"strconv"
-	"fmt"
-	"errors"
 
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"
@@ -18,6 +15,8 @@ import (
 func init() {
 	seabird.RegisterPlugin("remind", newreminderPlugin)
 }
+
+var timeRegexp = regexp.MustCompile(`\d+[smhd]`)
 
 type reminderPlugin struct {
 	db *nut.DB
@@ -42,13 +41,6 @@ type reminder struct {
 	TargetType   targetType
 	Content      string
 	ReminderTime time.Time
-}
-
-type timeData struct {
-	Secs  float64
-	Mins  float64
-	Hours float64
-	Days  float64
 }
 
 func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
@@ -212,79 +204,34 @@ func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
 	go p.remindLoop(b)
 }
 
-// Parses the text string and turns it into a time.Duration
+// ParseTime parses the text string and turns it into a time.Duration
 func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
-	buf := bytes.NewBufferString(timeStr)
-	parsed := &timeData{}
+	var ret time.Duration
 
-	var tmp string
-	var val float64
-	var isFloat bool
-	for buf.Len() > 0 {
-		// Read next character
-		curChar, size, err := buf.ReadRune()
-		if err != nil || size > 1 {
-			return -1, err
-		}
-
-		// Fix uppercase
-		if curChar >= 'A' && curChar <= 'Z' {
-			curChar = unicode.ToLower(curChar)
-		}
-
-		// Parse previous number if we're at a letter
-		if curChar >= 'a' && curChar <= 'z' {
-			if tmp == "" || tmp == "-" || tmp == "." {
-				return -1, errors.New("Blank value passed.")
-			}
-
-			val, err = strconv.ParseFloat(tmp, 64)
+	for _, match := range timeRegexp.FindAllString(timeStr, -1) {
+		switch match[len(match)-1] {
+		case 's', 'm', 'h':
+			tmp, err := time.ParseDuration(match)
 			if err != nil {
-				return -1, err
+				return ret, err
 			}
-
-			tmp = ""
-		}
-
-		// Store parsed values
-		switch (curChar) {
+			ret += tmp
 		case 'd':
-			parsed.Days = val
-		case 'h':
-			parsed.Hours = val
-		case 'm':
-			parsed.Mins = val
-		case 's':
-			parsed.Secs = val
-		case '.':
-			if !isFloat {
-				isFloat = true
-				tmp += "."
-			} else {
-				return -1, errors.New("Too many decimal points specified.")
+			// We can parse days as if they were hours then just
+			// multiply the result by 24. This will result in some
+			// loss of precision, but it should otherwise be fine.
+			tmp, err := time.ParseDuration(match[:len(match)-1] + "h")
+			if err != nil {
+				return ret, err
 			}
+
+			ret += tmp * 24
 		default:
-			if curChar >= '0' && curChar <= '9' {
-				tmp += fmt.Sprintf("%c", curChar)
-			} else if tmp == "" && curChar == '-' {
-				// Only allow - at the beginning of numbers
-				tmp += "-"
-			} else {
-				return -1, errors.New("Invalid character specified.")
-			}
+			return ret, errors.New("Unknown time type")
 		}
 	}
 
-	// Calculate seconds
-	var nsecs time.Duration
-	nsecs = time.Duration(((parsed.Days * 86400) + (parsed.Hours * 3600) + (parsed.Mins * 60) + parsed.Secs) * 1000000000)
-	if nsecs < 0 {
-		return -1, errors.New("Setting reminders in the past is pointless.")
-	}
-
-//	fmt.Printf("parsed = %+v\nseconds = %d\n", parsed, nsecs)
-
-	return nsecs, nil
+	return ret, nil
 }
 
 func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
