@@ -261,30 +261,11 @@ func (b *Bot) Run() error {
 		b.log.Debug("<-- ", strings.Trim(line, "\r\n"))
 	}
 	b.client.Writer.DebugCallback = func(line string) {
+		if len(line) > 512 {
+			b.log.Warnf("Line longer than 512 chars: %s", strings.Trim(line, "\r\n"))
+		}
 		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
 	}
-
-	/* DebugCallback was removed in belak/irc so we should work around
-	it at some point.
-
-		b.client.DebugCallback = func(operation, line string) {
-			b.log.WithField("op", operation).Debug(line)
-			if operation == "write" {
-				if len(line) > 512 {
-					b.log.WithFields(logrus.Fields{
-						"op":  operation,
-						"msg": line,
-					}).Warn("Output line longer than 512 chars")
-				}
-				if strings.ContainsAny(line, "\n\r") {
-					b.log.WithFields(logrus.Fields{
-						"op":  operation,
-						"msg": line,
-					}).Warn("Output contains a newline")
-				}
-			}
-		}
-	*/
 
 	// Start the main loop
 	return b.client.Run()
