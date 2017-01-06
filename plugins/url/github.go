@@ -10,7 +10,7 @@ import (
 	"golang.org/x/oauth2"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 func init() {

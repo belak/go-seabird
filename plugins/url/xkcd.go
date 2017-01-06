@@ -11,7 +11,7 @@ import (
 	"golang.org/x/net/html/atom"
 
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 )
 
 func init() {

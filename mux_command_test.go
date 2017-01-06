@@ -3,7 +3,7 @@ package seabird
 import (
 	"testing"
 
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 	"github.com/stretchr/testify/assert"
 )
 

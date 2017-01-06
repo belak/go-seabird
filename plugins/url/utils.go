@@ -9,7 +9,7 @@ import (
 
 	"github.com/Sirupsen/logrus"
 	"github.com/belak/go-seabird"
-	"github.com/belak/irc"
+	"github.com/go-irc/irc"
 	"github.com/bep/inflect"
 	"github.com/google/go-github/github"
 	"github.com/spf13/cast"
