@@ -36,6 +36,6 @@ func main() {
 	failIfErr(err, "Failed to create new bot")
 
 	// Run the bot
-	err = b.Run()
+	err = b.ConnectAndRun()
 	failIfErr(err, "Failed to create run bot")
 }

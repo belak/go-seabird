@@ -209,17 +209,13 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, m)
 }
 
-// Run starts the bot and loops until it dies
-func (b *Bot) Run() error {
-	// TODO: We currently ignore the injector, but it could be nice to keep it
-	// around for optional plugins.
-	_, err := b.registry.Load(b.config.Plugins, nil)
-	if err != nil {
-		return err
-	}
-
+// ConnectAndRun is a convenience function which will pull the
+// connection information out of the config and connect, then call
+// Run.
+func (b *Bot) ConnectAndRun() error {
 	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
 	var c io.ReadWriteCloser
+	var err error
 	if b.config.TLS {
 		conf := &tls.Config{
 			InsecureSkipVerify: b.config.TLSNoVerify,
@@ -245,6 +241,20 @@ func (b *Bot) Run() error {
 		return err
 	}
 
+	return b.Run(c)
+}
+
+// Run starts the bot and loops until it dies. It accepts a
+// ReadWriter. If you wish to use the connection feature from the
+// config, use ConnectAndRun.
+func (b *Bot) Run(c io.ReadWriter) error {
+	// TODO: We currently ignore the injector, but it could be nice to keep it
+	// around for optional plugins.
+	_, err := b.registry.Load(b.config.Plugins, nil)
+	if err != nil {
+		return err
+	}
+
 	// Create a client from the connection we've just opened
 	rc := irc.ClientConfig{
 		Nick: b.config.Nick,
@@ -261,30 +271,11 @@ func (b *Bot) Run() error {
 		b.log.Debug("<-- ", strings.Trim(line, "\r\n"))
 	}
 	b.client.Writer.DebugCallback = func(line string) {
+		if len(line) > 512 {
+			b.log.Warnf("Line longer than 512 chars: %s", strings.Trim(line, "\r\n"))
+		}
 		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
 	}
-
-	/* DebugCallback was removed in belak/irc so we should work around
-	it at some point.
-
-		b.client.DebugCallback = func(operation, line string) {
-			b.log.WithField("op", operation).Debug(line)
-			if operation == "write" {
-				if len(line) > 512 {
-					b.log.WithFields(logrus.Fields{
-						"op":  operation,
-						"msg": line,
-					}).Warn("Output line longer than 512 chars")
-				}
-				if strings.ContainsAny(line, "\n\r") {
-					b.log.WithFields(logrus.Fields{
-						"op":  operation,
-						"msg": line,
-					}).Warn("Output contains a newline")
-				}
-			}
-		}
-	*/
 
 	// Start the main loop
 	return b.client.Run()
