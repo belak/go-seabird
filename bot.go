@@ -209,6 +209,9 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, m)
 }
 
+// ConnectAndRun is a convenience function which will pull the
+// connection information out of the config and connect, then call
+// Run.
 func (b *Bot) ConnectAndRun() error {
 	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
 	var c io.ReadWriteCloser
