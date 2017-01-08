@@ -66,8 +66,8 @@ func (cs *TestClientServer) CheckLines(t *testing.T, expected []string) bool {
 	}
 
 	// Ensure all the expected and incoming lines were used up
-	ok = ok && assert.True(t, len(expected) == 0, "Not enough lines: %s", strings.Join(expected, ", "))
-	ok = ok && assert.True(t, len(lines) == 0, "Extra non-empty lines: %s", strings.Join(lines, ", "))
+	ok = ok && assert.Equal(t, 0, len(expected), "Not enough lines: %s", strings.Join(expected, ", "))
+	ok = ok && assert.Equal(t, 0, len(lines), "Extra non-empty lines: %s", strings.Join(lines, ", "))
 
 	// Reset the contents
 	cs.client.Reset()

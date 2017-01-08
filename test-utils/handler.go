@@ -22,9 +22,9 @@ func (th *TestHandler) Handle(b *seabird.Bot, m *irc.Message) {
 	th.messages = append(th.messages, m)
 }
 
-// Messages will return all the messages that were passed to this
+// PopMessages will return all the messages that were passed to this
 // handler.
-func (th *TestHandler) Messages() []*irc.Message {
+func (th *TestHandler) PopMessages() []*irc.Message {
 	th.lock.Lock()
 	defer th.lock.Unlock()
 
