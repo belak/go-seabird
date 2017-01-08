@@ -182,6 +182,18 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) erro
 	return nil
 }
 
+// PrivateReply is similar to Reply, but it will always send privately.
+func (b *Bot) PrivateReply(m *irc.Message, format string, v ...interface{}) {
+	b.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
+		Command: "PRIVMSG",
+		Params: []string{
+			m.Prefix.Name,
+			fmt.Sprintf(format, v...),
+		},
+	})
+}
+
 // CTCPReply is a convenience function to respond to CTCP requests.
 func (b *Bot) CTCPReply(m *irc.Message, format string, v ...interface{}) error {
 	if m.Command != "CTCP" {
