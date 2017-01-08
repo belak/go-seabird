@@ -24,6 +24,8 @@ var expectedBaseOutput = []string{
 	"USER seabird_user 0.0.0.0 0.0.0.0 :Seabird Bot",
 }
 
+// RunTest is a wrapper around a bot for testing a given input and
+// output.
 func RunTest(t *testing.T, testConfig string, input, output []string) bool {
 	cs, b := NewTestBot(t, testConfig)
 
