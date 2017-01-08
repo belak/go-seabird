@@ -69,9 +69,11 @@ func (cs *TestClientServer) CheckLines(t *testing.T, expected []string) bool {
 	ok = ok && assert.Equal(t, 0, len(expected), "Not enough lines: %s", strings.Join(expected, ", "))
 	ok = ok && assert.Equal(t, 0, len(lines), "Extra non-empty lines: %s", strings.Join(lines, ", "))
 
-	// Reset the contents
+	return ok
+}
+
+// Reset clears the contents of the internal buffers
+func (cs *TestClientServer) Reset() {
 	cs.client.Reset()
 	cs.server.Reset()
-
-	return ok
 }
