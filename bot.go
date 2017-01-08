@@ -10,6 +10,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/Sirupsen/logrus"
+	"github.com/codegangsta/inject"
 
 	"github.com/belak/go-plugin"
 	"github.com/belak/go-seabird/internal"
@@ -51,9 +52,11 @@ type Bot struct {
 	client   *irc.Client
 	registry *plugin.Registry
 	log      *logrus.Entry
+	injector inject.Injector
 }
 
-// NewBot will return a new Bot given the name of a toml config file.
+// NewBot will return a new Bot given an io.Reader pointing to a
+// config file.
 func NewBot(confReader io.Reader) (*Bot, error) {
 	var err error
 
@@ -64,6 +67,7 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		coreConfig{},
 		nil,
 		plugins.Copy(),
+		nil,
 		nil,
 	}
 
@@ -248,9 +252,9 @@ func (b *Bot) ConnectAndRun() error {
 // ReadWriter. If you wish to use the connection feature from the
 // config, use ConnectAndRun.
 func (b *Bot) Run(c io.ReadWriter) error {
-	// TODO: We currently ignore the injector, but it could be nice to keep it
-	// around for optional plugins.
-	_, err := b.registry.Load(b.config.Plugins, nil)
+	var err error
+
+	b.injector, err = b.registry.Load(b.config.Plugins, nil)
 	if err != nil {
 		return err
 	}
