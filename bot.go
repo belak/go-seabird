@@ -61,14 +61,10 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	var err error
 
 	b := &Bot{
-		NewBasicMux(),
-		make(map[string]toml.Primitive),
-		toml.MetaData{},
-		coreConfig{},
-		nil,
-		plugins.Copy(),
-		nil,
-		nil,
+		mux:        NewBasicMux(),
+		confValues: make(map[string]toml.Primitive),
+		md:         toml.MetaData{},
+		registry:   plugins.Copy(),
 	}
 
 	// Decode the file, but leave all the config sections intact so we can
