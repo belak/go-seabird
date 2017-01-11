@@ -228,6 +228,13 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 	b.client.Writef(format, args...)
 }
 
+// FromChannel is a wrapper around the irc package's FromChannel. It's
+// more accurate than Message.FromChannel so this should be used
+// whenever possible.
+func (b *Bot) FromChannel(m *irc.Message) bool {
+	return b.client.FromChannel(m)
+}
+
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	// Handle the event and pass it along
 	if m.Command == "001" {
