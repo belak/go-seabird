@@ -1,8 +1,8 @@
 package uno
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
 	"strings"
 
 	"github.com/belak/go-seabird"
@@ -15,7 +15,8 @@ func init() {
 }
 
 type unoPlugin struct {
-	game *Game
+	games   map[string]*Game
+	tracker *plugins.ChannelTracker
 }
 
 func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
@@ -29,15 +30,20 @@ func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
 	})
 }
 
-func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) error {
-	p := &unoPlugin{}
+func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
+	p := &unoPlugin{
+		games:   make(map[string]*Game),
+		tracker: tracker,
+	}
+
+	// TODO: Make these only callable from the channel
 
 	cm.Event("uno", p.unoCallback, &seabird.HelpInfo{
 		Usage:       "[create|join|start|stop]",
 		Description: "Flow control and stuff",
 	})
 
-	cm.Event("hand", p.getHandCallback, &seabird.HelpInfo{
+	cm.Event("hand", p.handCallback, &seabird.HelpInfo{
 		Usage:       "hand",
 		Description: "Messages you your hand in an UNO game",
 	})
@@ -56,182 +62,144 @@ func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) error
 		Usage:       "color red|yellow|green|blue",
 		Description: "Selects next color to play",
 	})
+}
 
-	return nil
+func (p *unoPlugin) lookupDataRaw(b *seabird.Bot, m *irc.Message) (*plugins.User, *Game) {
+	user := p.tracker.LookupUser(m.Prefix.Name)
+	game := p.games[m.Params[0]]
+
+	return user, game
+}
+
+func (p *unoPlugin) lookupData(b *seabird.Bot, m *irc.Message) (*plugins.User, *Game, error) {
+	user, game := p.lookupDataRaw(b, m)
+
+	if user == nil {
+		return user, game, errors.New("Couldn't find user")
+	}
+
+	if game == nil {
+		return user, game, errors.New("No game in this channel")
+	}
+
+	return user, game, nil
+}
+
+func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsg *Message) {
+	if uMsg.Target == nil {
+		b.Reply(m, "%s", uMsg)
+	} else {
+		b.Send(&irc.Message{
+			Command: "PRIVMSG",
+			Params: []string{
+				uMsg.Target.Nick,
+				uMsg.Message,
+			},
+		})
+	}
 }
 
 func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := m.Trailing()
 	if trailing == "" {
-		b.MentionReply(m, "Usage: <prefix>uno start")
+		b.MentionReply(m, "Usage: <prefix>uno [create|join|start|stop]")
 		return
 	}
 
 	args := strings.Split(trailing, " ")
 	switch args[0] {
-	//case "create":
-	//	p.createCallback(b, m, args[1:])
+	case "create":
+		p.createCallback(b, m)
 	case "start":
-		p.startCallback(b, m, args[1:])
-	//case "stop":
-	//	p.stopCallback(b, m, args[1:])
+		p.startCallback(b, m)
+	case "stop":
+		p.stopCallback(b, m)
 	default:
 		b.MentionReply(m, "Unknown command \"%s\"", args[0])
 		return
 	}
 }
 
-func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, lines []string) {
-	for _, line := range lines {
-		b.Reply(m, line)
-	}
-}
-
-func (p *unoPlugin) messageHand(b *seabird.Bot, m *irc.Message, player *Player) {
-	cards := make([]string, len(player.Hand.Cards))
-	for i := 0; i < len(player.Hand.Cards); i++ {
-		cards[i] = player.Hand.Cards[i].String()
-	}
-	privateMessage(b, player.Name, strings.Join(cards, ", "))
-}
-
-func (p *unoPlugin) messageHands(b *seabird.Bot, m *irc.Message) {
-	for _, player := range p.game.Players {
-		p.messageHand(b, m, player)
-	}
-}
-
-func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message, args []string) {
-	if p.game != nil {
-		b.MentionReply(m, "Game already running")
+func (p *unoPlugin) createCallback(b *seabird.Bot, m *irc.Message) {
+	user, game := p.lookupDataRaw(b, m)
+	if user == nil {
+		b.MentionReply(m, "Couldn't find user")
 		return
 	}
 
-	if len(args) < 2 {
-		b.MentionReply(m, "Must provide at least two players")
+	if game != nil {
+		b.MentionReply(m, "There's already a game in this channel")
 		return
 	}
 
-	logger := b.GetLogger()
-	game, err := NewGame(args)
-	p.game = game
+	// Create a new game, add the current user and store it.
+	game = NewGame()
+	game.AddPlayer(user)
+	p.games[m.Params[0]] = game
+}
+
+func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
 	if err != nil {
-		b.MentionReply(m, "Unable to start UNO game: ", err)
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	p.messageHands(b, m)
-
-	p.sendMessages(b, m, p.game.FirstTurn())
-
-	for _, player := range p.game.Players {
-		logger.Info(player.Name)
-	}
+	p.sendMessages(b, m, game.Start(user))
 }
 
-func (p *unoPlugin) checkGame(b *seabird.Bot, m *irc.Message, desiredStates []GameState) (string, bool) {
-	if p.game == nil {
-		return "No UNO game running.", false
-	}
-	if p.game.CurrentPlayer().Name != m.Prefix.Name {
-		return "It's not your turn!", false
-	}
-
-	for _, state := range desiredStates {
-		if p.game.State() == state {
-			return "", true
-		}
-	}
-	return "Oak's words echoed... There's a time and place for everything, but not now.", false
-}
-
-func (p *unoPlugin) getHandCallback(b *seabird.Bot, m *irc.Message) {
-	if p.game == nil {
-		b.MentionReply(m, "No UNO game running.")
-		return
-	}
-
-	player, err := p.game.GetPlayer(m.Prefix.Name)
+func (p *unoPlugin) stopCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
 	if err != nil {
-		b.MentionReply(m, "Looks like you're not playing UNO right now. Try again next time!")
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	if m.FromChannel() {
-		b.MentionReply(m, "You probably don't want to show your hand to other players.")
-		return
-	}
+	messages, ok := game.Stop(user)
 
-	for _, card := range player.Hand.Cards {
-		b.Reply(m, card.String())
+	p.sendMessages(b, m, messages)
+
+	if ok {
+		delete(p.games, m.Params[0])
 	}
 }
 
-func (p *unoPlugin) colorCallback(b *seabird.Bot, m *irc.Message) {
-	colorStr := m.Trailing()
-	if colorStr == "" {
-		b.MentionReply(m, "Usage: <prefix>color <color>")
+func (p *unoPlugin) handCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	msg, ok := p.checkGame(b, m, []GameState{StateWaitingColor, StateWaitingColorFour})
-	if !ok {
-		b.MentionReply(m, msg)
-		return
-	}
-
-	color := ColorFromString(colorStr)
-	if color == ColorNone {
-		b.MentionReply(m, "Unknown color \"%s\"", colorStr)
-		return
-	}
-
-	p.game.ChooseColor(color)
-	if p.game.State() == StateWaitingColorFour {
-		p.game.AdvancePlayer()
-		b.Reply(m, "%s forced to draw four cards and skip a turn!", p.game.CurrentPlayer().Name)
-		p.game.CurrentPlayer().DrawCards(p.game, 4)
-	}
-	p.game.AdvancePlayer()
-	b.Reply(m, "%s's turn.", p.game.CurrentPlayer().Name)
-	b.Reply(m, "%s is on top of discard.", p.game.Discard.Top())
+	p.sendMessages(b, m, game.GetHand(user))
 }
 
 func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
-	idxStr := m.Trailing()
-	if idxStr == "" {
-		b.MentionReply(m, "Usage: <prefix>play <hand_index>")
-		return
-	}
-
-	idx, err := strconv.Atoi(idxStr)
-	if err != nil || idx < 0 || idx >= len(p.game.CurrentPlayer().Hand.Cards) {
-		b.MentionReply(m, "Bad card index \"%s\"", idxStr)
-		return
-	}
-
-	msg, ok := p.checkGame(b, m, []GameState{StateWaitingTurn})
-	if !ok {
-		b.MentionReply(m, msg)
-		return
-	}
-
-	card, err := p.game.CurrentPlayer().RemoveCard(idx)
+	user, game, err := p.lookupData(b, m)
 	if err != nil {
-		b.MentionReply(m, "Bad card index \"%s\"", idxStr)
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	b.Reply(m, "Playing %s's %s", p.game.CurrentPlayer().Name, card.String())
-	p.game.PlayCard(card)
+	p.sendMessages(b, m, game.Play(user, m.Trailing()))
 }
 
 func (p *unoPlugin) drawCallback(b *seabird.Bot, m *irc.Message) {
-	msg, ok := p.checkGame(b, m, []GameState{StateWaitingTurn})
-	if !ok {
-		b.MentionReply(m, msg)
+	user, game, err := p.lookupData(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	p.sendMessages(b, m, p.game.DrawCard())
+	p.sendMessages(b, m, game.Draw(user))
+}
+
+func (p *unoPlugin) colorCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	p.sendMessages(b, m, game.SetColor(user, m.Trailing()))
 }
