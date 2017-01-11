@@ -2,7 +2,6 @@ package uno
 
 import (
 	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/belak/go-seabird"
@@ -19,17 +18,6 @@ type unoPlugin struct {
 	tracker *plugins.ChannelTracker
 }
 
-func privateMessage(b *seabird.Bot, target, format string, v ...interface{}) {
-	b.Send(&irc.Message{
-		Prefix:  &irc.Prefix{},
-		Command: "PRIVMSG",
-		Params: []string{
-			target,
-			fmt.Sprintf(format, v...),
-		},
-	})
-}
-
 func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
 	p := &unoPlugin{
 		games:   make(map[string]*Game),
@@ -37,6 +25,7 @@ func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
 	}
 
 	// TODO: Make these only callable from the channel
+	// TODO: Track channel parts
 
 	cm.Event("uno", p.unoCallback, &seabird.HelpInfo{
 		Usage:       "[create|join|start|stop]",
@@ -85,10 +74,12 @@ func (p *unoPlugin) lookupData(b *seabird.Bot, m *irc.Message) (*plugins.User, *
 	return user, game, nil
 }
 
+// sendMessages is an abstraction around sending the uno Message
+// type. This simplifies the translation between that and IRC.
 func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsg *Message) {
 	if uMsg.Target == nil {
 		b.Reply(m, "%s", uMsg)
-	} else {
+	} else if uMsg.Private {
 		b.Send(&irc.Message{
 			Command: "PRIVMSG",
 			Params: []string{
@@ -96,6 +87,8 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsg *Message) 
 				uMsg.Message,
 			},
 		})
+	} else {
+		b.Reply(m, "%s: %s", uMsg.Target.Nick, uMsg.Message)
 	}
 }
 
@@ -110,6 +103,8 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 	switch args[0] {
 	case "create":
 		p.createCallback(b, m)
+	case "join":
+		p.joinCallback(b, m)
 	case "start":
 		p.startCallback(b, m)
 	case "stop":
@@ -133,9 +128,19 @@ func (p *unoPlugin) createCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	// Create a new game, add the current user and store it.
-	game = NewGame()
-	game.AddPlayer(user)
+	game, messages := NewGame(user)
+	p.sendMessages(b, m, messages)
 	p.games[m.Params[0]] = game
+}
+
+func (p *unoPlugin) joinCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	p.sendMessages(b, m, game.AddPlayer(user))
 }
 
 func (p *unoPlugin) startCallback(b *seabird.Bot, m *irc.Message) {
