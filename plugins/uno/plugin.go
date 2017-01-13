@@ -24,30 +24,34 @@ func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
 		tracker: tracker,
 	}
 
-	// TODO: Make these only callable from the channel
 	// TODO: Track channel parts
 
-	cm.Event("uno", p.unoCallback, &seabird.HelpInfo{
+	cm.Channel("uno", p.unoCallback, &seabird.HelpInfo{
 		Usage:       "[create|join|start|stop]",
 		Description: "Flow control and stuff",
 	})
 
-	cm.Event("hand", p.handCallback, &seabird.HelpInfo{
+	cm.Channel("hand", p.handCallback, &seabird.HelpInfo{
 		Usage:       "hand",
 		Description: "Messages you your hand in an UNO game",
 	})
 
-	cm.Event("play", p.playCallback, &seabird.HelpInfo{
+	cm.Channel("play", p.playCallback, &seabird.HelpInfo{
 		Usage:       "play <hand_index>",
 		Description: "Plays card from your hand at <hand_index> and ends your turn",
 	})
 
-	cm.Event("draw", p.drawCallback, &seabird.HelpInfo{
+	cm.Channel("draw", p.drawCallback, &seabird.HelpInfo{
 		Usage:       "draw",
 		Description: "Draws a card and possibly ends your turn",
 	})
 
-	cm.Event("color", p.colorCallback, &seabird.HelpInfo{
+	cm.Channel("draw_play", p.drawPlayCallback, &seabird.HelpInfo{
+		Usage:       "draw_play [yes|no]",
+		Description: "Used after a call to <prefix>draw to possibly play a card",
+	})
+
+	cm.Channel("color", p.colorCallback, &seabird.HelpInfo{
 		Usage:       "color red|yellow|green|blue",
 		Description: "Selects next color to play",
 	})
@@ -76,19 +80,21 @@ func (p *unoPlugin) lookupData(b *seabird.Bot, m *irc.Message) (*plugins.User, *
 
 // sendMessages is an abstraction around sending the uno Message
 // type. This simplifies the translation between that and IRC.
-func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsg *Message) {
-	if uMsg.Target == nil {
-		b.Reply(m, "%s", uMsg)
-	} else if uMsg.Private {
-		b.Send(&irc.Message{
-			Command: "PRIVMSG",
-			Params: []string{
-				uMsg.Target.Nick,
-				uMsg.Message,
-			},
-		})
-	} else {
-		b.Reply(m, "%s: %s", uMsg.Target.Nick, uMsg.Message)
+func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsgs []*Message) {
+	for _, uMsg := range uMsgs {
+		if uMsg.Target == nil {
+			b.Reply(m, "%s", uMsg.Message)
+		} else if uMsg.Private {
+			b.Send(&irc.Message{
+				Command: "PRIVMSG",
+				Params: []string{
+					uMsg.Target.Nick,
+					uMsg.Message,
+				},
+			})
+		} else {
+			b.Reply(m, "%s: %s", uMsg.Target.Nick, uMsg.Message)
+		}
 	}
 }
 
@@ -197,6 +203,16 @@ func (p *unoPlugin) drawCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	p.sendMessages(b, m, game.Draw(user))
+}
+
+func (p *unoPlugin) drawPlayCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	p.sendMessages(b, m, game.DrawPlay(user, m.Trailing()))
 }
 
 func (p *unoPlugin) colorCallback(b *seabird.Bot, m *irc.Message) {

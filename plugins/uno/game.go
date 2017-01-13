@@ -2,8 +2,26 @@ package uno
 
 import (
 	"container/ring"
+	"fmt"
+	"math/rand"
+	"strings"
 
 	"github.com/belak/go-seabird/plugins"
+)
+
+type gameState int
+
+// TODO: Add !state command for debugging
+// TODO: Watch privmsg commands for keywords
+// TODO: Make it possible to call someone (draw 4)
+// TODO: Let people know when the discard pile is shuffled and turned into the deck
+
+const (
+	stateNew gameState = iota
+	stateNeedsPlay
+	stateNeedsColor
+	statePostDraw
+	stateDone
 )
 
 // Message represents a message to be sent to at least one person.
@@ -30,13 +48,18 @@ type Game struct {
 	// switch between turns.
 	players *ring.Ring
 
-	deck  []*Card
-	state gameState
+	announcePlayer bool
+	currentColor   ColorCode
+	reversed       bool
+	deck           []Card
+	discard        []Card
+	state          gameState
 }
 
 type player struct {
-	User *plugins.User
-	Hand []*Card
+	User      *plugins.User
+	Hand      []Card
+	CalledUno bool
 }
 
 // NewGame creates a game, adds the given user as the owner, and as
@@ -49,29 +72,449 @@ func NewGame(u *plugins.User) (*Game, []*Message) {
 
 	return g, []*Message{
 		{
+			Target:  u,
 			Message: "Created game",
 		},
 	}
 }
 
+func (g *Game) announceIfNeeded() []*Message {
+	if !g.announcePlayer {
+		return nil
+	}
+	g.announcePlayer = false
+
+	p := g.currentPlayer()
+
+	handStrings := []string{}
+	for _, card := range p.Hand {
+		handStrings = append(handStrings, card.String())
+	}
+
+	return []*Message{
+		{
+			Message: fmt.Sprintf("It is now %s's turn", g.currentPlayer().User.Nick),
+		},
+		{
+			Target:  p.User,
+			Private: true,
+			Message: "Your hand: " + strings.Join(handStrings, ", "),
+		},
+	}
+}
+
+func (g *Game) lastPlayed() Card {
+	return g.discard[len(g.discard)-1]
+}
+
+func (g *Game) advancePlay() {
+	// Any time we go to the next player, we need to tell them and
+	// send their hand.
+	g.announcePlayer = true
+
+	if g.reversed {
+		g.players = g.players.Prev()
+	} else {
+		g.players = g.players.Next()
+	}
+}
+
+func (g *Game) currentPlayer() *player {
+	return g.players.Value.(*player)
+}
+
+func (g *Game) nextPlayer() *player {
+	if g.reversed {
+		return g.players.Prev().Value.(*player)
+	}
+
+	return g.players.Next().Value.(*player)
+}
+
+func (g *Game) draw() Card {
+	if len(g.deck) == 0 {
+		// Grab the last card because that still needs to be on the
+		// discard pile.
+		tmp := g.discard[len(g.discard)-1]
+
+		//Add all the cards from discard other than the last one to
+		//the deck
+		g.deck = g.discard[:len(g.discard)-1]
+
+		// Add the last card back onto the discard pile
+		g.discard = []Card{tmp}
+
+		// Shuffle the draw pile
+		g.shuffle()
+	}
+
+	ret := g.deck[0]
+	g.deck = g.deck[1:]
+	return ret
+}
+
+func (g *Game) shuffle() {
+	newDeck := make([]Card, len(g.deck))
+	for i, v := range rand.Perm(len(g.deck)) {
+		newDeck[v] = g.deck[i]
+	}
+	g.deck = newDeck
+}
+
+func (g *Game) play(p *player, c Card) []*Message {
+	i := -1
+	for idx, handCard := range p.Hand {
+		if c == handCard {
+			i = idx
+			break
+		}
+	}
+
+	// If we didn't find it, something bad happened, but we'll ignore
+	// it, because this should never be the case.
+	if i > 0 {
+		p.Hand = append(p.Hand[:i], p.Hand[i+1:]...)
+	}
+
+	g.discard = append(g.discard, c)
+
+	ret := []*Message{{
+		Message: fmt.Sprintf("%s played a %s", p.User.Nick, c.String()),
+	}}
+
+	moreMsgs := c.Play(g)
+	if len(moreMsgs) > 0 {
+		ret = append(ret, moreMsgs...)
+	}
+
+	announcement := g.announceIfNeeded()
+	if len(announcement) > 0 {
+		ret = append(ret, announcement...)
+	}
+
+	return ret
+
+}
+
 // AddPlayer only works if the game has not been started yet. It will
 // add the player to the list of players.
 func (g *Game) AddPlayer(u *plugins.User) []*Message {
-	if g.state != stateInit {
+	if g.state != stateNew {
 		return []*Message{{
 			Target:  u,
 			Message: "You can only join a game which hasn't been started yet.",
 		}}
 	}
 
+	// TODO: Ensure the user isn't in the game already
+
 	// We want to add them after the last user, so we take the current
 	// user (the first at this point), go to the previous, and add it
 	// after that.
 	prev := g.players.Prev()
-	prev.Link(&player{User: u})
+	prev.Link(&ring.Ring{Value: &player{User: u}})
 
 	return []*Message{{
 		Target:  u,
 		Message: "Welcome to the game!",
 	}}
+}
+
+func (g *Game) Start(u *plugins.User) []*Message {
+	if g.state != stateNew {
+		return []*Message{{
+			Target:  u,
+			Message: "This game is already started!",
+		}}
+	} else if g.owner != u {
+		return []*Message{{
+			Target:  u,
+			Message: "Only the game owner can start the game!",
+		}}
+	}
+
+	// For each color we need to add 1 zero, and 2 of every other card.
+	for color := colorRed; color <= colorYellow; color++ {
+		zero := &BasicCard{Color: color, Type: "0"}
+		g.deck = append(g.deck, zero)
+
+		for i := '1'; i <= '9'; i++ {
+			card := &BasicCard{
+				Color: color,
+				Type:  string(i),
+			}
+
+			g.deck = append(g.deck, card, card)
+		}
+	}
+
+	// Select a top card before any special cards are in here.
+	g.shuffle()
+	g.discard = append(g.discard, g.draw())
+	g.currentColor = g.discard[0].(*BasicCard).Color
+
+	// Add in two of all the special cards.
+	for color := colorRed; color <= colorYellow; color++ {
+		drawTwo := &DrawTwoCard{Color: color}
+		reverse := &ReverseCard{Color: color}
+		skip := &SkipCard{Color: color}
+
+		g.deck = append(
+			g.deck,
+
+			drawTwo, drawTwo,
+			reverse, reverse,
+			skip, skip,
+		)
+	}
+
+	// Add in the wilds
+	for i := 0; i < 4; i++ {
+		g.deck = append(g.deck, &WildCard{})
+		g.deck = append(g.deck, &DrawFourWildCard{})
+	}
+
+	g.shuffle()
+
+	var ret = []*Message{
+		{
+			Target:  u,
+			Message: "The game has started! Good luck!",
+		},
+		{
+			Message: "The top card is a " + g.discard[0].String(),
+		},
+	}
+
+	curPlayer := g.players
+	for i := g.players.Len(); i > 0; i-- {
+		actualPlayer := curPlayer.Value.(*player)
+
+		actualPlayer.Hand = []Card{
+			g.draw(), g.draw(), g.draw(), g.draw(),
+			g.draw(), g.draw(), g.draw(),
+		}
+
+		handStrings := []string{}
+		for _, card := range actualPlayer.Hand {
+			handStrings = append(handStrings, card.String())
+		}
+
+		ret = append(ret, &Message{
+			Target:  actualPlayer.User,
+			Private: true,
+			Message: "Your hand: " + strings.Join(handStrings, ", "),
+		})
+
+		curPlayer = curPlayer.Next()
+	}
+
+	g.state = stateNeedsPlay
+
+	return ret
+
+}
+
+func (g *Game) Stop(u *plugins.User) ([]*Message, bool) {
+	if g.state == stateNew {
+		return []*Message{{
+			Target:  u,
+			Message: "This game hasn't been started started!",
+		}}, false
+	} else if g.owner != u {
+		return []*Message{{
+			Target:  u,
+			Message: "Only the game owner can stop the game!",
+		}}, false
+	}
+
+	return []*Message{{
+		Target:  u,
+		Message: "Game has been stopped",
+	}}, true
+}
+
+func (g *Game) GetHand(u *plugins.User) []*Message {
+	if g.state <= stateNew || g.state >= stateDone {
+		return []*Message{{
+			Target:  u,
+			Message: "There isn't a game running!",
+		}}
+	}
+
+	var targetPlayer *player
+	curPlayer := g.players
+	for i := g.players.Len(); i > 0; i-- {
+		actualPlayer := curPlayer.Value.(*player)
+		if actualPlayer.User == u {
+			targetPlayer = actualPlayer
+			break
+		}
+
+		curPlayer = curPlayer.Next()
+	}
+
+	var handStrings []string
+	for _, card := range targetPlayer.Hand {
+		handStrings = append(handStrings, card.String())
+	}
+
+	return []*Message{{
+		Target:  u,
+		Private: true,
+		Message: "Here's your hand: " + strings.Join(handStrings, ", "),
+	}}
+}
+
+func (g *Game) Play(u *plugins.User, card string) []*Message {
+	if g.state != stateNeedsPlay {
+		return []*Message{{
+			Target:  u,
+			Message: "You can't do that right now!",
+		}}
+	}
+
+	p := g.currentPlayer()
+	if p.User != u {
+		return []*Message{{
+			Target:  u,
+			Message: "It's not your turn!",
+		}}
+	}
+
+	var playedCard Card
+	for _, handCard := range p.Hand {
+		if handCard.String() == card {
+			playedCard = handCard
+			break
+		}
+	}
+
+	if playedCard == nil || !playedCard.Playable(g) {
+		return []*Message{{
+			Target:  u,
+			Message: "You can't play that card right now!",
+		}}
+	}
+
+	return g.play(p, playedCard)
+}
+
+func (g *Game) Draw(u *plugins.User) []*Message {
+	if g.state != stateNeedsPlay {
+		return []*Message{{
+			Target:  u,
+			Message: "You can't do that right now!",
+		}}
+	}
+
+	p := g.currentPlayer()
+	if p.User != u {
+		return []*Message{{
+			Target:  u,
+			Message: "It's not your turn!",
+		}}
+	}
+
+	// We transition to postDraw and not Play because the user can
+	// play this card if they can (and want to).
+	g.state = statePostDraw
+
+	c := g.draw()
+	p.Hand = append(p.Hand, c)
+
+	return []*Message{
+		{
+			Message: p.User.Nick + " drew a card.",
+		},
+		{
+			Target:  u,
+			Private: true,
+			Message: "You drew a " + c.String(),
+		},
+		{
+			Target:  u,
+			Message: "Would you like to play the card you drew?",
+		},
+	}
+}
+
+func (g *Game) DrawPlay(u *plugins.User, action string) []*Message {
+	if g.state != statePostDraw {
+		return []*Message{{
+			Target:  u,
+			Message: "You can't do that right now!",
+		}}
+	}
+
+	p := g.currentPlayer()
+	if p.User != u {
+		return []*Message{{
+			Target:  u,
+			Message: "It's not your turn!",
+		}}
+	}
+
+	// We set the state to needs play. If a wild is played, it's fine
+	// that it's overwritten.
+	g.state = stateNeedsPlay
+
+	c := p.Hand[len(p.Hand)-1]
+	if action == "no" {
+		g.advancePlay()
+		return g.announceIfNeeded()
+	}
+
+	if !c.Playable(g) {
+		g.advancePlay()
+		return append([]*Message{{
+			Target:  u,
+			Message: "That card isn't playable. Sorry.",
+		}}, g.announceIfNeeded()...)
+	}
+
+	return g.play(p, c)
+}
+
+func (g *Game) SetColor(u *plugins.User, color string) []*Message {
+	if g.state != stateNeedsColor {
+		return []*Message{{
+			Target:  u,
+			Message: "You can't do that right now!",
+		}}
+	}
+
+	p := g.currentPlayer()
+	if p.User != u {
+		return []*Message{{
+			Target:  u,
+			Message: "It's not your turn!",
+		}}
+	}
+
+	g.currentColor = ColorCodeFromString(color)
+	if g.currentColor == colorNone {
+		return []*Message{{
+			Target:  u,
+			Message: "That's not a valid color!",
+		}}
+	}
+
+	// If the top card is a ColorNotifier, call the ColorChanged
+	// callback.
+	top := g.discard[len(g.discard)-1]
+	colorNotifier, ok := top.(ColorChangeNotifier)
+
+	ret := []*Message{{
+		Message: "The color is now " + g.currentColor.String(),
+	}}
+
+	if ok {
+		moreMsgs := colorNotifier.ColorChanged(g)
+		if len(moreMsgs) > 0 {
+			ret = append(ret, moreMsgs...)
+		}
+	}
+
+	return ret
 }
