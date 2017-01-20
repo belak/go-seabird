@@ -14,6 +14,13 @@ type gameState int
 // TODO: Add !state command for debugging
 // TODO: Watch privmsg commands for keywords
 // TODO: Let people know when the discard pile is shuffled and turned into the deck
+// TODO: Announce player after starting
+// TODO: Announce player after color change
+// TODO: Add !top command to see top card
+// TODO: Add card aliases
+// TODO: Sort cards in hand
+// TODO: Make it possible to call uno on someone who just played a draw two or draw 4 wild (or skip)
+// TODO: Improve interface for draw_play
 
 const (
 	stateNew gameState = iota
