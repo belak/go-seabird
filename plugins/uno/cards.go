@@ -221,12 +221,12 @@ type DrawFourWildCard struct{}
 func (c *DrawFourWildCard) Playable(g *Game) bool {
 	p := g.currentPlayer()
 	for _, rawHandCard := range p.Hand {
-		handCard, ok := rawHandCard.(*DrawFourWildCard)
+		_, ok := rawHandCard.(*DrawFourWildCard)
 		if ok {
 			continue
 		}
 
-		if handCard.Playable(g) {
+		if rawHandCard.Playable(g) {
 			return false
 		}
 	}
