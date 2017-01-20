@@ -13,7 +13,6 @@ type gameState int
 
 // TODO: Add !state command for debugging
 // TODO: Watch privmsg commands for keywords
-// TODO: Make it possible to call someone (draw 4)
 // TODO: Let people know when the discard pile is shuffled and turned into the deck
 
 const (
@@ -70,12 +69,10 @@ func NewGame(u *plugins.User) (*Game, []*Message) {
 		players: &ring.Ring{Value: &player{User: u}},
 	}
 
-	return g, []*Message{
-		{
-			Target:  u,
-			Message: "Created game",
-		},
-	}
+	return g, []*Message{{
+		Target:  u,
+		Message: "Created game",
+	}}
 }
 
 func (g *Game) announceIfNeeded() []*Message {
@@ -129,6 +126,14 @@ func (g *Game) nextPlayer() *player {
 	}
 
 	return g.players.Next().Value.(*player)
+}
+
+func (g *Game) prevPlayer() *player {
+	if g.reversed {
+		return g.players.Next().Value.(*player)
+	}
+
+	return g.players.Prev().Value.(*player)
 }
 
 func (g *Game) draw() Card {
@@ -192,8 +197,78 @@ func (g *Game) play(p *player, c Card) []*Message {
 		ret = append(ret, announcement...)
 	}
 
+	// Since we know it's playable at this point, we can reset the
+	// called uno flag.
+	p.CalledUno = false
+
 	return ret
 
+}
+
+func (g *Game) SayUno(u *plugins.User) []*Message {
+	target := g.prevPlayer()
+	if target.CalledUno {
+		return []*Message{{
+			Target:  u,
+			Message: fmt.Sprintf("%s has already called uno.", target.User.Nick),
+		}}
+	}
+
+	// If the user is the previous user, they're calling for themselves
+	if target.User == u {
+		if len(target.Hand) != 1 {
+			return []*Message{{
+				Target:  u,
+				Message: "You have more than 1 card left!",
+			}}
+		}
+
+		target.CalledUno = true
+		return []*Message{{
+			Message: fmt.Sprintf("%s called uno!", u.Nick),
+		}}
+	}
+
+	if len(target.Hand) != 1 {
+		return []*Message{{
+			Target:  u,
+			Message: fmt.Sprintf("%s has more than 1 card left!", target.User.Nick),
+		}}
+	}
+
+	// We set CalledUno to true so it can only be called on them once.
+	target.CalledUno = true
+
+	var newCards = []Card{
+		g.draw(),
+		g.draw(),
+		g.draw(),
+		g.draw(),
+	}
+
+	target.Hand = append(target.Hand, newCards...)
+
+	// We need to convert the drawn cards to strings so we can send
+	// them to the user.
+	var newCardStrings []string
+	for _, card := range newCards {
+		newCardStrings = append(newCardStrings, card.String())
+	}
+
+	// TODO: Reply when shuffle happens.
+	return []*Message{
+		{
+			Message: fmt.Sprintf("%s called uno on %s!", u.Nick, target.User.Nick),
+		},
+		{
+			Message: target.User.Nick + " drew 4 cards",
+		},
+		{
+			Target:  target.User,
+			Private: true,
+			Message: "New cards: " + strings.Join(newCardStrings, ", "),
+		},
+	}
 }
 
 // AddPlayer only works if the game has not been started yet. It will
@@ -366,12 +441,12 @@ func (g *Game) GetHand(u *plugins.User) []*Message {
 	}}
 }
 
-func (g *Game) Play(u *plugins.User, card string) []*Message {
+func (g *Game) Play(u *plugins.User, card string) ([]*Message, bool) {
 	if g.state != stateNeedsPlay {
 		return []*Message{{
 			Target:  u,
 			Message: "You can't do that right now!",
-		}}
+		}}, false
 	}
 
 	p := g.currentPlayer()
@@ -379,7 +454,7 @@ func (g *Game) Play(u *plugins.User, card string) []*Message {
 		return []*Message{{
 			Target:  u,
 			Message: "It's not your turn!",
-		}}
+		}}, false
 	}
 
 	var playedCard Card
@@ -394,10 +469,17 @@ func (g *Game) Play(u *plugins.User, card string) []*Message {
 		return []*Message{{
 			Target:  u,
 			Message: "You can't play that card right now!",
-		}}
+		}}, false
 	}
 
-	return g.play(p, playedCard)
+	// This is the win condition
+	if len(p.Hand) == 1 {
+		return []*Message{{
+			Message: fmt.Sprintf("Nice job! %s won!", u.Nick),
+		}}, true
+	}
+
+	return g.play(p, playedCard), false
 }
 
 func (g *Game) Draw(u *plugins.User) []*Message {

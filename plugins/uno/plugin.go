@@ -106,6 +106,12 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	args := strings.Split(trailing, " ")
+
+	if len(args) == 1 {
+		p.rawUnoCallback(b, m)
+		return
+	}
+
 	switch args[0] {
 	case "create":
 		p.createCallback(b, m)
@@ -119,6 +125,16 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 		b.MentionReply(m, "Unknown command \"%s\"", args[0])
 		return
 	}
+}
+
+func (p *unoPlugin) rawUnoCallback(b *seabird.Bot, m *irc.Message) {
+	user, game, err := p.lookupData(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	p.sendMessages(b, m, game.SayUno(user))
 }
 
 func (p *unoPlugin) createCallback(b *seabird.Bot, m *irc.Message) {
@@ -192,7 +208,12 @@ func (p *unoPlugin) playCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	p.sendMessages(b, m, game.Play(user, m.Trailing()))
+	messages, done := game.Play(user, m.Trailing())
+	if done {
+		delete(p.games, m.Params[0])
+	}
+
+	p.sendMessages(b, m, messages)
 }
 
 func (p *unoPlugin) drawCallback(b *seabird.Bot, m *irc.Message) {
