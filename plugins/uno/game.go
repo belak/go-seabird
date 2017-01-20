@@ -177,7 +177,7 @@ func (g *Game) play(p *player, c Card) []*Message {
 
 	// If we didn't find it, something bad happened, but we'll ignore
 	// it, because this should never be the case.
-	if i > 0 {
+	if i >= 0 {
 		p.Hand = append(p.Hand[:i], p.Hand[i+1:]...)
 	}
 
