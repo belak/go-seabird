@@ -99,20 +99,14 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsgs []*Messag
 }
 
 func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := m.Trailing()
-	if trailing == "" {
-		b.MentionReply(m, "Usage: <prefix>uno [create|join|start|stop]")
-		return
-	}
+	trailing := strings.TrimSpace(m.Trailing())
 
-	args := strings.Split(trailing, " ")
-
-	if len(args) == 1 {
+	if len(trailing) == 0 {
 		p.rawUnoCallback(b, m)
 		return
 	}
 
-	switch args[0] {
+	switch trailing {
 	case "create":
 		p.createCallback(b, m)
 	case "join":
@@ -122,8 +116,7 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 	case "stop":
 		p.stopCallback(b, m)
 	default:
-		b.MentionReply(m, "Unknown command \"%s\"", args[0])
-		return
+		b.MentionReply(m, "Usage: <prefix>uno [create|join|start|stop]")
 	}
 }
 
