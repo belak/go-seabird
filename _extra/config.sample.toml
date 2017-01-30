@@ -39,6 +39,9 @@ token = ""
 [net_tools]
 key = ""
 
+[tiny]
+key = ""
+
 [twitter]
 consumerkey       = ""
 consumersecret    = ""
