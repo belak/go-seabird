@@ -14,8 +14,6 @@ type gameState int
 // TODO: Add !state command for debugging
 // TODO: Watch privmsg commands for keywords
 // TODO: Let people know when the discard pile is shuffled and turned into the deck
-// TODO: Announce player after starting
-// TODO: Announce player after color change
 // TODO: Add !top command to see top card
 // TODO: Add card aliases
 // TODO: Sort cards in hand
@@ -72,8 +70,9 @@ type player struct {
 // the first user in the player ring.
 func NewGame(u *plugins.User) (*Game, []*Message) {
 	g := &Game{
-		owner:   u,
-		players: &ring.Ring{Value: &player{User: u}},
+		owner:          u,
+		players:        &ring.Ring{Value: &player{User: u}},
+		announcePlayer: true,
 	}
 
 	return g, []*Message{{
@@ -400,6 +399,8 @@ func (g *Game) Start(u *plugins.User) []*Message {
 
 	g.state = stateNeedsPlay
 
+	ret = append(ret, g.announceIfNeeded()...)
+
 	return ret
 
 }
@@ -610,9 +611,8 @@ func (g *Game) SetColor(u *plugins.User, color string) []*Message {
 
 	if ok {
 		moreMsgs := colorNotifier.ColorChanged(g)
-		if len(moreMsgs) > 0 {
-			ret = append(ret, moreMsgs...)
-		}
+		ret = append(ret, moreMsgs...)
+		ret = append(ret, g.announceIfNeeded()...)
 	}
 
 	return ret
