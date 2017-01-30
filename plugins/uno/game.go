@@ -19,7 +19,6 @@ type gameState int
 // TODO: Add !top command to see top card
 // TODO: Add card aliases
 // TODO: Sort cards in hand
-// TODO: Make it possible to call uno on someone who just played a draw two or draw 4 wild (or skip)
 // TODO: Improve interface for draw_play
 
 const (
@@ -60,6 +59,7 @@ type Game struct {
 	deck           []Card
 	discard        []Card
 	state          gameState
+	playedLast     *player
 }
 
 type player struct {
@@ -213,7 +213,14 @@ func (g *Game) play(p *player, c Card) []*Message {
 }
 
 func (g *Game) SayUno(u *plugins.User) []*Message {
-	target := g.prevPlayer()
+	target := g.playedLast
+	if target == nil {
+		return []*Message{{
+			Target:  u,
+			Message: "You can't call uno on the first turn.",
+		}}
+	}
+
 	if target.CalledUno {
 		return []*Message{{
 			Target:  u,
@@ -485,6 +492,9 @@ func (g *Game) Play(u *plugins.User, card string) ([]*Message, bool) {
 			Message: fmt.Sprintf("Nice job! %s won!", u.Nick),
 		}}, true
 	}
+
+	// Update the last player so we can have a target for "uno" calls.
+	g.playedLast = p
 
 	return g.play(p, playedCard), false
 }
