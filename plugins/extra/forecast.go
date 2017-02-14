@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"time"
 
-	forecast "github.com/mlbright/forecast/v2"
+	darksky "github.com/mlbright/darksky/v2"
 
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/belak/nut"
+	"github.com/go-irc/irc"
 )
 
 func init() {
@@ -68,12 +68,15 @@ func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error
 	return nil
 }
 
-func (p *forecastPlugin) forecastQuery(loc *Location) (*forecast.Forecast, error) {
-	return forecast.Get(
+func (p *forecastPlugin) forecastQuery(loc *Location) (*darksky.Forecast, error) {
+	return darksky.Get(
 		p.Key,
 		strconv.FormatFloat(loc.Lat, 'f', 4, 64),
 		strconv.FormatFloat(loc.Lon, 'f', 4, 64),
-		"now", forecast.US)
+		"now",
+		darksky.US,
+		darksky.English,
+	)
 }
 
 func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
