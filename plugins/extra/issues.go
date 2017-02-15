@@ -132,7 +132,11 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 		b.MentionReply(m, "There were %d results.", total)
 	}
 
-	for _, issue := range issues.Issues[:3] {
+	if total > 3 {
+		total = 3
+	}
+
+	for _, issue := range issues.Issues[:total] {
 		b.MentionReply(m, "%s", encodeIssue(issue))
 	}
 }
