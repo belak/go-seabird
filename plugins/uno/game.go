@@ -245,6 +245,8 @@ func (g *Game) play(p *player, c Card) []*Message {
 
 }
 
+// SayUno handles both a user calling Uno for themselves or on other
+// people
 func (g *Game) SayUno(u *plugins.User) []*Message {
 	target := g.playedLast
 	if target == nil {
@@ -320,6 +322,7 @@ func (g *Game) AddPlayer(u *plugins.User) []*Message {
 	}}
 }
 
+// Start will handle setup and starting a game.
 func (g *Game) Start(u *plugins.User) []*Message {
 	if g.state != stateNew {
 		return []*Message{{
@@ -420,13 +423,15 @@ func (g *Game) Start(u *plugins.User) []*Message {
 
 }
 
+// Stop will handle cleaning up a game. Only the owner can do this. If
+// the owner has left, this can be done by anyone.
 func (g *Game) Stop(u *plugins.User) ([]*Message, bool) {
 	if g.state == stateNew {
 		return []*Message{{
 			Target:  u,
 			Message: "This game hasn't been started started!",
 		}}, false
-	} else if g.owner != u {
+	} else if g.owner.Nick != "" && g.owner != u {
 		return []*Message{{
 			Target:  u,
 			Message: "Only the game owner can stop the game!",
@@ -439,6 +444,7 @@ func (g *Game) Stop(u *plugins.User) ([]*Message, bool) {
 	}}, true
 }
 
+// GetHand will return the hand for the current user.
 func (g *Game) GetHand(u *plugins.User) []*Message {
 	if g.state <= stateNew || g.state >= stateDone {
 		return []*Message{{
@@ -471,6 +477,8 @@ func (g *Game) GetHand(u *plugins.User) []*Message {
 	}}
 }
 
+// Play will handle a user playing a card. It will return messages
+// along with if the game is now over.
 func (g *Game) Play(u *plugins.User, card string) ([]*Message, bool) {
 	if g.state != stateNeedsPlay {
 		return []*Message{{
@@ -515,6 +523,7 @@ func (g *Game) Play(u *plugins.User, card string) ([]*Message, bool) {
 	return g.play(p, playedCard), false
 }
 
+// Draw makes the given player draw a card.
 func (g *Game) Draw(u *plugins.User) []*Message {
 	if g.state != stateNeedsPlay {
 		return []*Message{{
@@ -541,6 +550,8 @@ func (g *Game) Draw(u *plugins.User) []*Message {
 	})
 }
 
+// DrawPlay can only be called after a draw and mostly matters if
+// their card is playable.
 func (g *Game) DrawPlay(u *plugins.User, action string) []*Message {
 	if g.state != statePostDraw {
 		return []*Message{{
@@ -578,6 +589,7 @@ func (g *Game) DrawPlay(u *plugins.User, action string) []*Message {
 	return g.play(p, c)
 }
 
+// SetColor is a callback used by the wilds.
 func (g *Game) SetColor(u *plugins.User, color string) []*Message {
 	if g.state != stateNeedsColor {
 		return []*Message{{
