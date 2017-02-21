@@ -1,9 +1,6 @@
 package uno
 
-import (
-	"fmt"
-	"strings"
-)
+import "fmt"
 
 // TODO: Unexport this
 type colorCode int
@@ -107,35 +104,12 @@ func (c *DrawTwoCard) Play(g *Game) []*Message {
 	g.currentColor = c.Color
 	g.advancePlay()
 
-	var newCards = []Card{
-		g.draw(),
-		g.draw(),
-	}
-
+	// Move to the next player, draw two cards, then move on
 	target := g.currentPlayer()
-	target.Hand = append(target.Hand, newCards...)
-
+	ret := g.drawN(2, target)
 	g.advancePlay()
 
-	// We need to convert the drawn cards to strings so we can send
-	// them to the user.
-	var newCardStrings []string
-	for _, card := range newCards {
-		newCardStrings = append(newCardStrings, card.String())
-	}
-
-	// TODO: Reply when shuffle happens.
-	return []*Message{
-		{
-			Message: target.User.Nick + " drew 2 cards",
-		},
-		{
-			Target:  target.User,
-			Private: true,
-			Message: "New cards: " + strings.Join(newCardStrings, ", "),
-		},
-	}
-
+	return ret
 }
 
 func (c *DrawTwoCard) String() string {
@@ -245,36 +219,11 @@ func (c *DrawFourWildCard) ColorChanged(g *Game) []*Message {
 	g.state = stateNeedsPlay
 	g.advancePlay()
 
-	var newCards = []Card{
-		g.draw(),
-		g.draw(),
-		g.draw(),
-		g.draw(),
-	}
-
 	target := g.currentPlayer()
-	target.Hand = append(target.Hand, newCards...)
-
+	ret := g.drawN(4, target)
 	g.advancePlay()
 
-	// We need to convert the drawn cards to strings so we can send
-	// them to the user.
-	var newCardStrings []string
-	for _, card := range newCards {
-		newCardStrings = append(newCardStrings, card.String())
-	}
-
-	// TODO: Reply when shuffle happens.
-	return []*Message{
-		{
-			Message: target.User.Nick + " drew 4 cards",
-		},
-		{
-			Target:  target.User,
-			Private: true,
-			Message: "New cards: " + strings.Join(newCardStrings, ", "),
-		},
-	}
+	return ret
 }
 
 func (c *DrawFourWildCard) String() string {

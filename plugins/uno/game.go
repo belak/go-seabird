@@ -142,8 +142,12 @@ func (g *Game) prevPlayer() *player {
 	return g.players.Prev().Value.(*player)
 }
 
-func (g *Game) draw() Card {
+func (g *Game) draw() (Card, bool) {
+	var refreshed bool
+
 	if len(g.deck) == 0 {
+		refreshed = true
+
 		// Grab the last card because that still needs to be on the
 		// discard pile.
 		tmp := g.discard[len(g.discard)-1]
@@ -161,7 +165,45 @@ func (g *Game) draw() Card {
 
 	ret := g.deck[0]
 	g.deck = g.deck[1:]
-	return ret
+	return ret, refreshed
+}
+
+func (g *Game) drawN(n int, target *player) []*Message {
+	var msgs []*Message
+	var newCards []Card
+
+	msgs = append(msgs, &Message{
+		Message: fmt.Sprintf("%s drew %d cards", target.User.Nick, n),
+	})
+
+	for i := 0; i < n; i++ {
+		card, shuffledDraw := g.draw()
+		newCards = append(newCards, card)
+
+		if shuffledDraw {
+			msgs = append(msgs, &Message{
+				Message: "Deck was shuffled",
+			})
+		}
+	}
+
+	// Add the new cards to the target's hand
+	target.Hand = append(target.Hand, newCards...)
+
+	// We need to convert the drawn cards to strings so we can send
+	// them to the user.
+	var newCardStrings []string
+	for _, card := range newCards {
+		newCardStrings = append(newCardStrings, card.String())
+	}
+
+	msgs = append(msgs, &Message{
+		Target:  target.User,
+		Private: true,
+		Message: "New cards: " + strings.Join(newCardStrings, ", "),
+	})
+
+	return msgs
 }
 
 func (g *Game) shuffle() {
@@ -252,36 +294,14 @@ func (g *Game) SayUno(u *plugins.User) []*Message {
 	// We set CalledUno to true so it can only be called on them once.
 	target.CalledUno = true
 
-	var newCards = []Card{
-		g.draw(),
-		g.draw(),
-		g.draw(),
-		g.draw(),
-	}
+	// Start with calling uno
+	ret := []*Message{{
+		Message: fmt.Sprintf("%s called uno on %s!", u.Nick, target.User.Nick),
+	}}
 
-	target.Hand = append(target.Hand, newCards...)
+	ret = append(ret, g.drawN(4, target)...)
 
-	// We need to convert the drawn cards to strings so we can send
-	// them to the user.
-	var newCardStrings []string
-	for _, card := range newCards {
-		newCardStrings = append(newCardStrings, card.String())
-	}
-
-	// TODO: Reply when shuffle happens.
-	return []*Message{
-		{
-			Message: fmt.Sprintf("%s called uno on %s!", u.Nick, target.User.Nick),
-		},
-		{
-			Message: target.User.Nick + " drew 4 cards",
-		},
-		{
-			Target:  target.User,
-			Private: true,
-			Message: "New cards: " + strings.Join(newCardStrings, ", "),
-		},
-	}
+	return ret
 }
 
 // AddPlayer only works if the game has not been started yet. It will
@@ -338,7 +358,11 @@ func (g *Game) Start(u *plugins.User) []*Message {
 
 	// Select a top card before any special cards are in here.
 	g.shuffle()
-	g.discard = append(g.discard, g.draw())
+
+	// Grab the first card and take it from the deck
+	g.discard = append(g.discard, g.deck[0])
+	g.deck = g.deck[1:]
+
 	g.currentColor = g.discard[0].(*BasicCard).Color
 
 	// Add in two of all the special cards.
@@ -378,10 +402,9 @@ func (g *Game) Start(u *plugins.User) []*Message {
 	for i := g.players.Len(); i > 0; i-- {
 		actualPlayer := curPlayer.Value.(*player)
 
-		actualPlayer.Hand = []Card{
-			g.draw(), g.draw(), g.draw(), g.draw(),
-			g.draw(), g.draw(), g.draw(),
-		}
+		// Note: this returns messages but we ignore them during
+		// setup.
+		g.drawN(7, actualPlayer)
 
 		handStrings := []string{}
 		for _, card := range actualPlayer.Hand {
@@ -520,23 +543,10 @@ func (g *Game) Draw(u *plugins.User) []*Message {
 	// play this card if they can (and want to).
 	g.state = statePostDraw
 
-	c := g.draw()
-	p.Hand = append(p.Hand, c)
-
-	return []*Message{
-		{
-			Message: p.User.Nick + " drew a card.",
-		},
-		{
-			Target:  u,
-			Private: true,
-			Message: "You drew a " + c.String(),
-		},
-		{
-			Target:  u,
-			Message: "Would you like to play the card you drew?",
-		},
-	}
+	return append(g.drawN(1, p), &Message{
+		Target:  u,
+		Message: "Would you like to play the card you drew?",
+	})
 }
 
 func (g *Game) DrawPlay(u *plugins.User, action string) []*Message {
