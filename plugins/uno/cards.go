@@ -6,17 +6,17 @@ import (
 )
 
 // TODO: Unexport this
-type ColorCode int
+type colorCode int
 
 const (
-	colorNone ColorCode = iota
+	colorNone colorCode = iota
 	colorRed
 	colorGreen
 	colorBlue
 	colorYellow
 )
 
-func ColorCodeFromString(color string) ColorCode {
+func colorCodeFromString(color string) colorCode {
 	switch color {
 	case "red":
 		return colorRed
@@ -31,7 +31,7 @@ func ColorCodeFromString(color string) ColorCode {
 	return colorNone
 }
 
-func (cc ColorCode) String() string {
+func (cc colorCode) String() string {
 	switch cc {
 	case colorRed:
 		return "red"
@@ -71,7 +71,7 @@ type ColorChangeNotifier interface {
 }
 
 type BasicCard struct {
-	Color ColorCode
+	Color colorCode
 	Type  string
 }
 
@@ -95,7 +95,7 @@ func (c *BasicCard) String() string {
 }
 
 type DrawTwoCard struct {
-	Color ColorCode
+	Color colorCode
 }
 
 func (c *DrawTwoCard) Playable(g *Game) bool {
@@ -143,7 +143,7 @@ func (c *DrawTwoCard) String() string {
 }
 
 type SkipCard struct {
-	Color ColorCode
+	Color colorCode
 }
 
 func (c *SkipCard) Playable(g *Game) bool {
@@ -169,7 +169,7 @@ func (c *SkipCard) String() string {
 }
 
 type ReverseCard struct {
-	Color ColorCode
+	Color colorCode
 }
 
 func (c *ReverseCard) Playable(g *Game) bool {

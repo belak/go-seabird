@@ -52,7 +52,7 @@ type Game struct {
 	players *ring.Ring
 
 	announcePlayer bool
-	currentColor   ColorCode
+	currentColor   colorCode
 	reversed       bool
 	deck           []Card
 	discard        []Card
@@ -592,7 +592,7 @@ func (g *Game) SetColor(u *plugins.User, color string) []*Message {
 		}}
 	}
 
-	g.currentColor = ColorCodeFromString(color)
+	g.currentColor = colorCodeFromString(color)
 	if g.currentColor == colorNone {
 		return []*Message{{
 			Target:  u,
