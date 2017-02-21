@@ -67,11 +67,13 @@ type ColorChangeNotifier interface {
 	ColorChanged(*Game) []*Message
 }
 
+// BasicCard represents a 0-9
 type BasicCard struct {
 	Color colorCode
 	Type  string
 }
 
+// Playable implements (Card).Playable
 func (c *BasicCard) Playable(g *Game) bool {
 	last, ok := g.lastPlayed().(*BasicCard)
 	if ok && last.Type == c.Type {
@@ -81,6 +83,7 @@ func (c *BasicCard) Playable(g *Game) bool {
 	return g.currentColor == c.Color
 }
 
+// Play implements (Card).Play
 func (c *BasicCard) Play(g *Game) []*Message {
 	g.currentColor = c.Color
 	g.advancePlay()
@@ -91,15 +94,18 @@ func (c *BasicCard) String() string {
 	return c.Color.String() + " " + c.Type
 }
 
+// DrawTwoCard represents a draw two
 type DrawTwoCard struct {
 	Color colorCode
 }
 
+// Playable implements (Card).Playable
 func (c *DrawTwoCard) Playable(g *Game) bool {
 	_, ok := g.lastPlayed().(*DrawTwoCard)
 	return ok || g.currentColor == c.Color
 }
 
+// Play implements (Card).Play
 func (c *DrawTwoCard) Play(g *Game) []*Message {
 	g.currentColor = c.Color
 	g.advancePlay()
@@ -116,15 +122,18 @@ func (c *DrawTwoCard) String() string {
 	return c.Color.String() + " draw two"
 }
 
+// SkipCard represents a skip
 type SkipCard struct {
 	Color colorCode
 }
 
+// Playable implements (Card).Playable
 func (c *SkipCard) Playable(g *Game) bool {
 	_, ok := g.lastPlayed().(*SkipCard)
 	return ok || g.currentColor == c.Color
 }
 
+// Play implements (Card).Play
 func (c *SkipCard) Play(g *Game) []*Message {
 	g.currentColor = c.Color
 	g.advancePlay()
@@ -142,15 +151,18 @@ func (c *SkipCard) String() string {
 	return c.Color.String() + " skip"
 }
 
+// ReverseCard represents a reverse
 type ReverseCard struct {
 	Color colorCode
 }
 
+// Playable implements (Card).Playable
 func (c *ReverseCard) Playable(g *Game) bool {
 	_, ok := g.lastPlayed().(*ReverseCard)
 	return ok || g.currentColor == c.Color
 }
 
+// Play implements (Card).Play
 func (c *ReverseCard) Play(g *Game) []*Message {
 	g.currentColor = c.Color
 	g.reversed = !g.reversed
@@ -165,12 +177,15 @@ func (c *ReverseCard) String() string {
 	return c.Color.String() + " reverse"
 }
 
+// WildCard represents a wild
 type WildCard struct{}
 
+// Playable implements (Card).Playable
 func (c *WildCard) Playable(g *Game) bool {
 	return true
 }
 
+// Play implements (Card).Play
 func (c *WildCard) Play(g *Game) []*Message {
 	g.state = stateNeedsColor
 	return []*Message{{
@@ -179,6 +194,7 @@ func (c *WildCard) Play(g *Game) []*Message {
 	}}
 }
 
+// ColorChanged implements (ColorChangeNotifier).ColorChanged
 func (c *WildCard) ColorChanged(g *Game) []*Message {
 	g.state = stateNeedsPlay
 	g.advancePlay()
@@ -190,8 +206,10 @@ func (c *WildCard) String() string {
 	return "wild"
 }
 
+// DrawFourWildCard represents a draw four wild.
 type DrawFourWildCard struct{}
 
+// Playable implements (Card).Playable
 func (c *DrawFourWildCard) Playable(g *Game) bool {
 	p := g.currentPlayer()
 	for _, rawHandCard := range p.Hand {
@@ -207,6 +225,7 @@ func (c *DrawFourWildCard) Playable(g *Game) bool {
 	return true
 }
 
+// Play implements (Card).Play
 func (c *DrawFourWildCard) Play(g *Game) []*Message {
 	g.state = stateNeedsColor
 	return []*Message{{
@@ -215,6 +234,7 @@ func (c *DrawFourWildCard) Play(g *Game) []*Message {
 	}}
 }
 
+// ColorChanged implements (ColorChangeNotifier).ColorChanged
 func (c *DrawFourWildCard) ColorChanged(g *Game) []*Message {
 	g.state = stateNeedsPlay
 	g.advancePlay()
