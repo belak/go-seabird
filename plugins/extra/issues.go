@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -82,7 +83,7 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 
 		r.Title = &title
 
-		issue, _, err := p.api.Issues.Create("belak", "go-seabird", r)
+		issue, _, err := p.api.Issues.Create(context.TODO(), "belak", "go-seabird", r)
 		if err != nil {
 			b.MentionReply(m, "%s", err.Error())
 			return
@@ -114,7 +115,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 
 	opt := &github.SearchOptions{}
 
-	issues, _, err := p.api.Search.Issues(strings.Join(split, " "), opt)
+	issues, _, err := p.api.Search.Issues(context.TODO(), strings.Join(split, " "), opt)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return

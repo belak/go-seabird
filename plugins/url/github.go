@@ -1,6 +1,7 @@
 package url
 
 import (
+	"context"
 	"errors"
 	"net/url"
 	"regexp"
@@ -114,7 +115,7 @@ func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	user, _, err := t.api.Users.Get(matches[1])
+	user, _, err := t.api.Users.Get(context.TODO(), matches[1])
 	if err != nil {
 		logger.WithError(err).Error("Failed to get user from github")
 		return false
@@ -150,7 +151,7 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 
 	user := matches[1]
 	repoName := matches[2]
-	repo, _, err := t.api.Repositories.Get(user, repoName)
+	repo, _, err := t.api.Repositories.Get(context.TODO(), user, repoName)
 
 	if err != nil {
 		logger.WithError(err).Error("Failed to get repo from github")
@@ -191,7 +192,7 @@ func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bo
 		return false
 	}
 
-	issue, _, err := t.api.Issues.Get(user, repo, issueNum)
+	issue, _, err := t.api.Issues.Get(context.TODO(), user, repo, issueNum)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get issue from github")
 		return false
@@ -228,7 +229,7 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	pull, _, err := t.api.PullRequests.Get(user, repo, int(pullNum))
+	pull, _, err := t.api.PullRequests.Get(context.TODO(), user, repo, int(pullNum))
 	if err != nil {
 		logger.WithError(err).Error("Failed to get github pr")
 		return false
@@ -261,7 +262,7 @@ func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	id := matches[2]
-	gist, _, err := t.api.Gists.Get(id)
+	gist, _, err := t.api.Gists.Get(context.TODO(), id)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get gist")
 		return false
