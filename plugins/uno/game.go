@@ -11,14 +11,6 @@ import (
 
 type gameState int
 
-// TODO: Add !state command for debugging
-// TODO: Watch privmsg commands for keywords
-// TODO: Let people know when the discard pile is shuffled and turned into the deck
-// TODO: Add !top command to see top card
-// TODO: Add card aliases
-// TODO: Sort cards in hand
-// TODO: Improve interface for draw_play
-
 const (
 	stateNew gameState = iota
 	stateNeedsPlay

@@ -55,6 +55,11 @@ func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
 		Usage:       "color red|yellow|green|blue",
 		Description: "Selects next color to play",
 	})
+
+	cm.Channel("uno_state", p.stateCallback, &seabird.HelpInfo{
+		Usage: "uno_state",
+		Description: "Return the top card and current player.",
+	})
 }
 
 func (p *unoPlugin) lookupDataRaw(b *seabird.Bot, m *irc.Message) (*plugins.User, *Game) {
@@ -96,6 +101,22 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsgs []*Messag
 			b.Reply(m, "%s: %s", uMsg.Target.Nick, uMsg.Message)
 		}
 	}
+}
+
+func (p *unoPlugin) stateCallback(b *seabird.Bot, m *irc.Message) {
+	user, game := p.lookupDataRaw(b, m)
+	if user == nil {
+		b.MentionReply(m, "Couldn't find user")
+		return
+	}
+
+	if game == nil {
+		b.MentionReply(m, "There's no game in this channel")
+		return
+	}
+
+	b.MentionReply(m, "Current Player: %s", game.currentPlayer().User.Nick)
+	b.MentionReply(m, "Top Card: %s", game.lastPlayed())
 }
 
 func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
