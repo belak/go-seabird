@@ -115,6 +115,8 @@ func (p *unoPlugin) stateCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
+	// TODO: This should pull from some State struct or similar from
+	// the Game
 	b.MentionReply(m, "Current Player: %s", game.currentPlayer().User.Nick)
 	b.MentionReply(m, "Top Card: %s", game.lastPlayed())
 }
