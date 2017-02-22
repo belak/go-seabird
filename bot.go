@@ -139,14 +139,17 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 		target = m.Params[0]
 	}
 
-	b.Send(&irc.Message{
-		Prefix:  &irc.Prefix{},
-		Command: "PRIVMSG",
-		Params: []string{
-			target,
-			fmt.Sprintf(format, v...),
-		},
-	})
+	fullMsg := fmt.Sprintf(format, v...)
+	for _, resp := range strings.Split(fullMsg, "\n") {
+		b.Send(&irc.Message{
+			Prefix:  &irc.Prefix{},
+			Command: "PRIVMSG",
+			Params: []string{
+				target,
+				resp,
+			},
+		})
+	}
 
 	return nil
 }
