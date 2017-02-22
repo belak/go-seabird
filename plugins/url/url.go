@@ -130,7 +130,7 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 
 	// If we got a result, pull the text from it
 	if ok {
-		b.Reply(m, "Title: %s", strings.Replace(scrape.Text(n), "\n", " ", -1))
+		b.Reply(m, "Title: %s", scrape.Text(n))
 	}
 
 	return ok

@@ -13,7 +13,6 @@ import (
 	"github.com/codegangsta/inject"
 
 	"github.com/belak/go-plugin"
-	"github.com/belak/go-seabird/internal"
 	"github.com/go-irc/irc"
 )
 
@@ -139,14 +138,17 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 		target = m.Params[0]
 	}
 
-	b.Send(&irc.Message{
-		Prefix:  &irc.Prefix{},
-		Command: "PRIVMSG",
-		Params: []string{
-			target,
-			fmt.Sprintf(format, v...),
-		},
-	})
+	fullMsg := fmt.Sprintf(format, v...)
+	for _, resp := range strings.Split(fullMsg, "\n") {
+		b.Send(&irc.Message{
+			Prefix:  &irc.Prefix{},
+			Command: "PRIVMSG",
+			Params: []string{
+				target,
+				resp,
+			},
+		})
+	}
 
 	return nil
 }
@@ -154,12 +156,30 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 // MentionReply acts the same as Bot.Reply but it will prefix it with the user's
 // nick if we are in a channel.
 func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) error {
-	if m.FromChannel() {
-		format = "%s: " + format
-		v = internal.Prepend(v, m.Prefix.Name)
+	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
+		return errors.New("Invalid IRC message")
 	}
 
-	return b.Reply(m, format, v...)
+	target := m.Prefix.Name
+	prefix := ""
+	if m.FromChannel() {
+		target = m.Params[0]
+		prefix = m.Prefix.Name + ": "
+	}
+
+	fullMsg := fmt.Sprintf(format, v...)
+	for _, resp := range strings.Split(fullMsg, "\n") {
+		b.Send(&irc.Message{
+			Prefix:  &irc.Prefix{},
+			Command: "PRIVMSG",
+			Params: []string{
+				target,
+				prefix + resp,
+			},
+		})
+	}
+
+	return nil
 }
 
 // CTCPReply is a convenience function to respond to CTCP requests.
