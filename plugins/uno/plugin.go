@@ -4,6 +4,7 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/Unknwon/com"
 	"github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins"
 	"github.com/go-irc/irc"
@@ -16,12 +17,22 @@ func init() {
 type unoPlugin struct {
 	games   map[string]*Game
 	tracker *plugins.ChannelTracker
+
+	BlacklistedChannels []string
+	BlacklistedMessage  string
 }
 
-func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
+func newUnoPlugin(b *seabird.Bot, cm *seabird.CommandMux, tracker *plugins.ChannelTracker) error {
 	p := &unoPlugin{
 		games:   make(map[string]*Game),
 		tracker: tracker,
+
+		BlacklistedMessage: "Uno is blacklisted in this channel.",
+	}
+
+	err := b.Config("uno", p)
+	if err != nil {
+		return err
 	}
 
 	// TODO: Track channel parts
@@ -57,9 +68,11 @@ func newUnoPlugin(cm *seabird.CommandMux, tracker *plugins.ChannelTracker) {
 	})
 
 	cm.Channel("uno_state", p.stateCallback, &seabird.HelpInfo{
-		Usage: "uno_state",
+		Usage:       "uno_state",
 		Description: "Return the top card and current player.",
 	})
+
+	return nil
 }
 
 func (p *unoPlugin) lookupDataRaw(b *seabird.Bot, m *irc.Message) (*plugins.User, *Game) {
@@ -154,6 +167,12 @@ func (p *unoPlugin) rawUnoCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *unoPlugin) createCallback(b *seabird.Bot, m *irc.Message) {
+	// If the current channel is in the blacklist.
+	if com.IsSliceContainsStr(p.BlacklistedChannels, m.Params[0]) {
+		b.MentionReply(m, "%s", p.BlacklistedMessage)
+		return
+	}
+
 	user, game := p.lookupDataRaw(b, m)
 	if user == nil {
 		b.MentionReply(m, "Couldn't find user")
