@@ -1,13 +1,16 @@
 package main
 
 import (
+	"math/rand"
 	"os"
+	"time"
 
 	"github.com/Sirupsen/logrus"
 
 	// Load plugins
 	_ "github.com/belak/go-seabird/plugins"
 	_ "github.com/belak/go-seabird/plugins/extra"
+	_ "github.com/belak/go-seabird/plugins/uno"
 	_ "github.com/belak/go-seabird/plugins/url"
 
 	// Load the core
@@ -21,6 +24,9 @@ func failIfErr(err error, desc string) {
 }
 
 func main() {
+	// Seed the random number generator for plugins to use.
+	rand.Seed(time.Now().UTC().UnixNano())
+
 	conf := os.Getenv("SEABIRD_CONFIG")
 	if conf == "" {
 		conf = "config.toml"

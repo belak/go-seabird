@@ -182,6 +182,18 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) erro
 	return nil
 }
 
+// PrivateReply is similar to Reply, but it will always send privately.
+func (b *Bot) PrivateReply(m *irc.Message, format string, v ...interface{}) {
+	b.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
+		Command: "PRIVMSG",
+		Params: []string{
+			m.Prefix.Name,
+			fmt.Sprintf(format, v...),
+		},
+	})
+}
+
 // CTCPReply is a convenience function to respond to CTCP requests.
 func (b *Bot) CTCPReply(m *irc.Message, format string, v ...interface{}) error {
 	if m.Command != "CTCP" {
@@ -214,6 +226,13 @@ func (b *Bot) Write(line string) {
 // Writef is a convenience method around fmt.Sprintf and Bot.Write
 func (b *Bot) Writef(format string, args ...interface{}) {
 	b.client.Writef(format, args...)
+}
+
+// FromChannel is a wrapper around the irc package's FromChannel. It's
+// more accurate than Message.FromChannel so this should be used
+// whenever possible.
+func (b *Bot) FromChannel(m *irc.Message) bool {
+	return b.client.FromChannel(m)
 }
 
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
