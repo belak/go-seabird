@@ -6,8 +6,9 @@ import (
 	"unicode"
 
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/belak/nut"
+	"github.com/go-irc/irc"
+	"github.com/go-xorm/xorm"
 )
 
 func init() {
@@ -15,21 +16,21 @@ func init() {
 }
 
 type karmaPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 }
 
-// KarmaTarget represents an item with a karma count
-type KarmaTarget struct {
+// karmaTarget represents an item with a karma count
+type karmaTarget struct {
 	Name  string
 	Score int
 }
 
 var regex = regexp.MustCompile(`([^\s]+)(\+\+|--)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
+func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, oldDB *nut.DB, db *xorm.Engine) error {
 	p := &karmaPlugin{db: db}
 
-	err := p.db.EnsureBucket("karma")
+	err := p.db.Sync(&karmaTarget{})
 	if err != nil {
 		return err
 	}
@@ -60,26 +61,38 @@ func (p *karmaPlugin) cleanedName(name string) string {
 
 // GetKarmaFor returns the karma for the given name.
 func (p *karmaPlugin) GetKarmaFor(name string) int {
-	out := &KarmaTarget{Name: p.cleanedName(name)}
+	out := &karmaTarget{Name: p.cleanedName(name)}
 
-	_ = p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("karma")
-		return bucket.Get(out.Name, out)
-	})
+	// We can safely ignore errors here because we specifically want to fall
+	// back to the default value.
+	p.db.Get(out)
 
 	return out.Score
 }
 
 // UpdateKarma will update the karma for a given name and return the new karma value.
 func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
-	out := &KarmaTarget{Name: p.cleanedName(name)}
+	target := &karmaTarget{Name: p.cleanedName(name)}
+	out := &karmaTarget{Name: p.cleanedName(name)}
 
-	_ = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("karma")
-		bucket.Get(out.Name, out)
-		out.Score += diff
-		return bucket.Put(out.Name, out)
-	})
+	sess := p.db.NewSession()
+	err := sess.Begin()
+	if err != nil {
+		return 0
+	}
+	defer sess.Commit()
+
+	found, _ := sess.Get(out)
+	if err != nil {
+		return 0
+	}
+	out.Score += diff
+
+	if found {
+		sess.Update(out, target)
+	} else {
+		sess.Insert(out)
+	}
 
 	return out.Score
 }
@@ -97,7 +110,7 @@ func (p *karmaPlugin) karmaCallback(b *seabird.Bot, m *irc.Message) {
 
 /*
 func (p *karmaPlugin) karmaCheck(b *seabird.Bot, m *irc.Message, msg string, sort string) {
-	res := &KarmaTarget{}
+	res := &karmaTarget{}
 	p.db.Order("score " + sort).First(res)
 	b.MentionReply(m, "%s has the %s karma with %d", res.Name, msg, res.Score)
 }
