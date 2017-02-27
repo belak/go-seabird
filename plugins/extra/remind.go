@@ -8,7 +8,7 @@ import (
 	"time"
 
 	"github.com/belak/nut"
-	"github.com/jinzhu/gorm"
+	"github.com/go-xorm/xorm"
 
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"
@@ -21,7 +21,7 @@ func init() {
 var timeRegexp = regexp.MustCompile(`\d+[smhd]`)
 
 type reminderPlugin struct {
-	db *gorm.DB
+	db *xorm.Engine
 
 	roomLock *sync.Mutex
 	rooms    map[string]bool
@@ -38,15 +38,13 @@ const (
 )
 
 type reminder struct {
-	gorm.Model
-
 	Target       string
 	TargetType   targetType
 	Content      string
 	ReminderTime time.Time
 }
 
-func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, oldDB *nut.DB, db *gorm.DB) error {
+func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, oldDB *nut.DB, db *xorm.Engine) error {
 	p := &reminderPlugin{
 		db:         db,
 		roomLock:   &sync.Mutex{},
@@ -54,9 +52,9 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, oldDB *nut.D
 		updateChan: make(chan struct{}, 1),
 	}
 
-	p.db.AutoMigrate(&reminder{})
-	if p.db.Error != nil {
-		return p.db.Error
+	err := p.db.Sync(&reminder{})
+	if err != nil {
+		return err
 	}
 
 	// TODO: nutdb migration
@@ -111,27 +109,36 @@ func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *reminderPlugin) nextReminder() (*reminder, error) {
-	var tmp, tmp2 reminder
+	channelResult := reminder{TargetType: channelTarget}
+	privateResult := reminder{TargetType: privateTarget}
 
-	res := p.db.Order("reminder_time asc").Where("target_type = ?", channelTarget).First(&tmp)
-	res2 := p.db.Order("reminder_time asc").Where("target_type = ?", privateTarget).First(&tmp2)
-	if res.RecordNotFound() && res2.RecordNotFound() {
-		return nil, nil
+	foundChannel, err := p.db.OrderBy("reminder_time asc").Get(&channelResult)
+	if err != nil {
+		return nil, err
 	}
 
-	if res.Error != nil {
-		return nil, res.Error
+	foundPrivate, err := p.db.OrderBy("reminder_time asc").Get(&privateResult)
+	if err != nil {
+		return nil, err
 	}
 
-	if res2.Error != nil {
-		return nil, res2.Error
+	if foundChannel && foundPrivate {
+		if channelResult.ReminderTime.Before(privateResult.ReminderTime) {
+			return &channelResult, nil
+		}
+
+		return &privateResult, nil
 	}
 
-	if tmp.ReminderTime.Before(tmp2.ReminderTime) {
-		return &tmp, nil
+	if foundChannel {
+		return &channelResult, nil
 	}
 
-	return &tmp2, nil
+	if foundPrivate {
+		return &privateResult, nil
+	}
+
+	return nil, nil
 }
 
 func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
@@ -177,8 +184,9 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	})
 
 	// Nuke the reminder now that it's been sent
-	if err := p.db.Delete(r).Error; err != nil {
+	if _, err := p.db.Delete(r); err != nil {
 		logger.WithError(err).Error("Failed to remove reminder")
+		return
 	}
 
 	logger.Debug("Dispatched reminder")
@@ -247,7 +255,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 		r.Content = m.Prefix.Name + ": " + r.Content
 	}
 
-	if err := p.db.Create(r).Error; err != nil {
+	if _, err := p.db.Insert(r); err != nil {
 		b.MentionReply(m, "Failed to store reminder: %s", err)
 		return
 	}

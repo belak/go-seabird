@@ -13,10 +13,10 @@ import (
 	_ "github.com/belak/go-seabird/plugins/uno"
 	_ "github.com/belak/go-seabird/plugins/url"
 
-	// Load DB drivers we care about
-	_ "github.com/jinzhu/gorm/dialects/mysql"
-	_ "github.com/jinzhu/gorm/dialects/postgres"
-	_ "github.com/jinzhu/gorm/dialects/sqlite"
+	// Load DB drivers we care about. We only officially support postgres and
+	// sqlite but this should work with any db driver supported by xorm.
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
 
 	// Load the core
 	"github.com/belak/go-seabird"
