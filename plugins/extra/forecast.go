@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-xorm/xorm"
 	darksky "github.com/mlbright/darksky/v2"
 
 	"github.com/belak/go-seabird"
@@ -18,14 +19,13 @@ func init() {
 
 type forecastPlugin struct {
 	Key string
-	db  *nut.DB
-	// CacheDuration string
+	db  *xorm.Engine
 }
 
-// ForecastLocation is a simple cache which will store the lat and lon of a
+// forecastLocation is a simple cache which will store the lat and lon of a
 // geocoded location, along with the user who requested this be their home
 // location.
-type ForecastLocation struct {
+type forecastLocation struct {
 	Nick    string
 	Address string
 	Lat     float64
@@ -33,7 +33,7 @@ type ForecastLocation struct {
 }
 
 // ToLocation converts a ForecastLocation to a generic location
-func (fl *ForecastLocation) ToLocation() *Location {
+func (fl *forecastLocation) ToLocation() *Location {
 	return &Location{
 		Address: fl.Address,
 		Lat:     fl.Lat,
@@ -41,14 +41,16 @@ func (fl *ForecastLocation) ToLocation() *Location {
 	}
 }
 
-func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error {
+func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, oldDB *nut.DB, db *xorm.Engine) error {
 	p := &forecastPlugin{db: db}
 
 	// Ensure the table is created if it doesn't exist
-	err := p.db.EnsureBucket("forecast_location")
+	err := p.db.Sync(&forecastLocation{})
 	if err != nil {
 		return err
 	}
+
+	// TODO: nutdb migration
 
 	err = b.Config("forecast", p)
 	if err != nil {
@@ -82,15 +84,15 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*darksky.Forecast, error)
 func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 	l := m.Trailing()
 
-	target := &ForecastLocation{Nick: m.Prefix.Name}
+	target := &forecastLocation{Nick: m.Prefix.Name}
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		err := p.db.View(func(tx *nut.Tx) error {
-			bucket := tx.Bucket("forecast_location")
-			return bucket.Get(target.Nick, target)
-		})
+		found, err := p.db.Get(target)
 		if err != nil {
+			return nil, err
+		}
+		if !found {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
 		return target.ToLocation(), nil
@@ -103,17 +105,30 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 		return nil, err
 	}
 
-	newLocation := &ForecastLocation{
+	newLocation := &forecastLocation{
 		Nick:    m.Prefix.Name,
 		Address: loc.Address,
 		Lat:     loc.Lat,
 		Lon:     loc.Lon,
 	}
 
-	err = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("forecast_location")
-		return bucket.Put(newLocation.Nick, newLocation)
-	})
+	sess := p.db.NewSession()
+	err = sess.Begin()
+	if err != nil {
+		return nil, err
+	}
+	defer sess.Commit()
+
+	found, err := sess.Get(target)
+	if err != nil {
+		return nil, err
+	}
+
+	if found {
+		_, err = sess.Update(newLocation, target)
+	} else {
+		_, err = sess.Insert(newLocation)
+	}
 
 	if err != nil {
 		return nil, err
