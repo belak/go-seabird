@@ -304,7 +304,7 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	channel := m.Params[2]
-	users := strings.Split(m.Trailing(), " ")
+	users := strings.Split(strings.TrimSpace(m.Trailing()), " ")
 	for _, user := range users {
 		i := strings.IndexFunc(user, func(r rune) bool {
 			_, ok := prefixes[r]
