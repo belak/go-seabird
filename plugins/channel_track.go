@@ -28,10 +28,9 @@ func (c *Channel) HasUser(user string) bool {
 
 // User is an type for representing a user.
 type User struct {
-	channels map[string]bool
-
-	Nick string
-	UUID string
+	channels map[string]map[rune]bool
+	Nick     string
+	UUID     string
 }
 
 // Channels returns which channels the user is currently in.
@@ -43,10 +42,21 @@ func (u *User) Channels() []string {
 	return ret
 }
 
+// ModesInChannel returns a mapping of channel modes to a bool indicating if
+// it's on or not for this user in this channel.
+func (u *User) ModesInChannel(channel string) map[rune]bool {
+	ret, ok := u.channels[channel]
+	if !ok {
+		ret = make(map[rune]bool)
+	}
+	return ret
+}
+
 // InChannel returns true if the user is in the channel, otherwise
 // false.
 func (u *User) InChannel(channel string) bool {
-	return u.channels[channel]
+	_, ok := u.channels[channel]
+	return ok
 }
 
 // ChannelTracker is a simple plugin which is only meant to track what
@@ -89,7 +99,9 @@ func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelT
 	bm.Event("KICK", p.kickCallback)
 	bm.Event("QUIT", p.quitCallback)
 	bm.Event("NICK", p.nickCallback)
+	bm.Event("MODE", p.modeCallback)
 
+	bm.Event("352", p.whoCallback)
 	bm.Event("353", p.namesCallback)
 	// We don't need this for anything currently, so it's being
 	// disabled but left around.
@@ -196,7 +208,74 @@ func (p *ChannelTracker) nickCallback(b *seabird.Bot, m *irc.Message) {
 	//fmt.Printf("%s (%s) changed their name to %s\n", oldUser, p.uuids[newUser], newUser)
 }
 
-func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
+func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
+	// We only care about MODE messages where a specific user is changed.
+	if len(m.Params) < 3 {
+		return
+	}
+
+	channel := m.Params[0]
+	target := m.Params[2]
+
+	//change := m.Params[1]
+	//op := change[0]
+	//mode := change[1]
+
+	// Ensure we know about this user and this channel
+	u := p.LookupUser(target)
+	c := p.LookupChannel(channel)
+	if u == nil || c == nil {
+		// TODO: Warning
+		return
+	}
+
+	// Just send a WHO request and clear out the modes for this user because
+	// mode parsing is hard.
+	u.channels[channel] = make(map[rune]bool)
+	b.Writef("WHO :%s", target)
+}
+
+func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
+	// Filter out broken messages
+	if len(m.Params) < 7 {
+		return
+	}
+
+	prefixes, ok := p.getSymbolToPrefixMapping(b)
+	if !ok {
+		return
+	}
+
+	var (
+		channel = m.Params[0]
+		//user    = m.Params[1]
+		//host    = m.Params[2]
+		//server  = m.Params[3]
+		nick  = m.Params[4]
+		modes = m.Params[5]
+		//extra   = m.Params[6]
+	)
+
+	u := p.LookupUser(nick)
+	c := p.LookupChannel(channel)
+	if u == nil || c == nil {
+		// TODO: Warning
+		return
+	}
+
+	// Modes starts with H/G for here/gone, so we skip that because we don't
+	// care too much about tracking it.
+	userPrefixes := modes[1:]
+
+	// Clear out the modes and reset them
+	u.channels[channel] = make(map[rune]bool)
+	for _, v := range userPrefixes {
+		mode := prefixes[v]
+		u.channels[channel][mode] = true
+	}
+}
+
+func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune, bool) {
 	logger := b.GetLogger()
 
 	// Sample: (qaohv)~&@%+
@@ -206,15 +285,37 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 	i := strings.IndexByte(prefix, ')')
 	if len(prefix) == 0 || prefix[0] != '(' || i < 0 {
 		logger.WithField("prefix", prefix).Warnf("Invalid prefix format")
-		return
+		return nil, false
 	}
 
-	prefixes := prefix[i:]
+	// TODO: This might not be right if unicode is used in prefix symbols.
+	prefixes := make(map[rune]rune)
+	for k, p := range prefix[i:] {
+		prefixes[p] = rune(prefix[k+1])
+	}
+
+	return prefixes, true
+}
+
+func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
+	prefixes, ok := p.getSymbolToPrefixMapping(b)
+	if !ok {
+		return
+	}
 
 	channel := m.Params[2]
 	users := strings.Split(m.Trailing(), " ")
 	for _, user := range users {
-		user = strings.TrimLeft(user, prefixes)
+		i := strings.IndexFunc(user, func(r rune) bool {
+			_, ok := prefixes[r]
+			return !ok
+		})
+
+		var userPrefixes string
+		if i != -1 {
+			user = user[i:]
+			userPrefixes = user[:i]
+		}
 
 		// The bot user should be added via JOIN
 		if user == b.CurrentNick() {
@@ -222,6 +323,19 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 		}
 
 		p.addUserToChannel(b, user, channel)
+
+		u := p.LookupUser(user)
+		if u == nil {
+			continue
+		}
+
+		// Clear out the modes and reset them
+		u.channels[channel] = make(map[rune]bool)
+		for _, v := range userPrefixes {
+			mode := prefixes[v]
+			u.channels[channel][mode] = true
+		}
+		fmt.Printf("%+v, %+v, %+v\n", channel, user, u.channels[channel])
 
 		//fmt.Printf("%s (%s) is in channel %s\n", user, p.uuids[user], channel)
 	}
@@ -259,7 +373,7 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 		u = &User{
 			Nick:     user,
 			UUID:     uuid.NewV4().String(),
-			channels: make(map[string]bool),
+			channels: make(map[string]map[rune]bool),
 		}
 		p.users[u.UUID] = u
 		p.uuids[user] = u.UUID
@@ -272,7 +386,7 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 		return
 	}
 
-	u.channels[channel] = true
+	u.channels[channel] = make(map[rune]bool)
 	c.users[u.UUID] = true
 
 	logger.Info("User added to channel")
@@ -371,7 +485,7 @@ func (p *ChannelTracker) removeUser(b *seabird.Bot, user string) {
 	for channel := range u.channels {
 		delete(p.channels[channel].users, u.UUID)
 	}
-	u.channels = make(map[string]bool)
+	u.channels = make(map[string]map[rune]bool)
 
 	// Now that the User is empty, delete all internal traces.
 	delete(p.uuids, user)
