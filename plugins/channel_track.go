@@ -209,7 +209,8 @@ func (p *ChannelTracker) nickCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
-	// We only care about MODE messages where a specific user is changed.
+	// We only care about MODE messages where a specific user is
+	// changed.
 	if len(m.Params) < 3 {
 		return
 	}
@@ -264,7 +265,7 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	// Modes starts with H/G for here/gone, so we skip that because we don't
-	// care too much about tracking it.
+	// care too much about tracking it for now.
 	userPrefixes := modes[1:]
 
 	// Clear out the modes and reset them
@@ -275,6 +276,8 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
+// getSymbolToPrefixMapping gets the isupport info from the bot and
+// parses prefix into a mapping of the symbol to the mode
 func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune, bool) {
 	logger := b.GetLogger()
 
