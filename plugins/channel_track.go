@@ -313,8 +313,8 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 
 		var userPrefixes string
 		if i != -1 {
-			user = user[i:]
 			userPrefixes = user[:i]
+			user = user[i:]
 		}
 
 		// The bot user should be added via JOIN
