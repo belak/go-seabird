@@ -215,6 +215,8 @@ func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
+	logger := b.GetLogger()
+
 	channel := m.Params[0]
 	target := m.Params[2]
 
@@ -226,7 +228,7 @@ func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
 	u := p.LookupUser(target)
 	c := p.LookupChannel(channel)
 	if u == nil || c == nil {
-		// TODO: Warning
+		logger.Warnf("Got MODE callback for %s on %s but we aren't tracking both", target, channel)
 		return
 	}
 
@@ -257,10 +259,12 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
 		//extra   = m.Params[6]
 	)
 
+	logger := b.GetLogger()
+
 	u := p.LookupUser(nick)
 	c := p.LookupChannel(channel)
 	if u == nil || c == nil {
-		// TODO: Warning
+		logger.Warnf("Got WHO callback for %s on %s but we aren't tracking both", nick, channel)
 		return
 	}
 
@@ -291,10 +295,25 @@ func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune
 		return nil, false
 	}
 
-	// TODO: This might not be right if unicode is used in prefix symbols.
+	// We loop through the string using range so we get bytes, then we throw the
+	// two results together in the map.
+	var symbols []rune
+	for _, r := range prefix[i+1:] {
+		symbols = append(symbols, r)
+	}
+	var modes []rune
+	for _, r := range prefix[1:i] {
+		modes = append(modes, r)
+	}
+
+	if len(modes) != len(symbols) {
+		logger.WithField("prefix", prefix).Warnf("Mismatched modes and symbols")
+		return nil, false
+	}
+
 	prefixes := make(map[rune]rune)
-	for k, p := range prefix[i:] {
-		prefixes[p] = rune(prefix[k+1])
+	for k := range symbols {
+		prefixes[symbols[k]] = modes[k]
 	}
 
 	return prefixes, true
