@@ -104,7 +104,7 @@ func (p *unoPlugin) sendMessages(b *seabird.Bot, m *irc.Message, uMsgs []*Messag
 			b.Reply(m, "%s", uMsg.Message)
 		} else if uMsg.Private {
 			b.Send(&irc.Message{
-				Command: "PRIVMSG",
+				Command: "NOTICE",
 				Params: []string{
 					uMsg.Target.Nick,
 					uMsg.Message,
