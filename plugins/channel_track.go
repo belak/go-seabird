@@ -103,6 +103,7 @@ func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelT
 
 	bm.Event("352", p.whoCallback)
 	bm.Event("353", p.namesCallback)
+
 	// We don't need this for anything currently, so it's being
 	// disabled but left around.
 	//
@@ -121,7 +122,6 @@ func (p *ChannelTracker) LookupUser(user string) *User {
 	if !ok {
 		return nil
 	}
-
 	return p.users[userUUID]
 }
 
@@ -220,10 +220,6 @@ func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
 	channel := m.Params[0]
 	target := m.Params[2]
 
-	//change := m.Params[1]
-	//op := change[0]
-	//mode := change[1]
-
 	// Ensure we know about this user and this channel
 	u := p.LookupUser(target)
 	c := p.LookupChannel(channel)
@@ -251,12 +247,8 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
 
 	var (
 		channel = m.Params[0]
-		//user    = m.Params[1]
-		//host    = m.Params[2]
-		//server  = m.Params[3]
-		nick  = m.Params[4]
-		modes = m.Params[5]
-		//extra   = m.Params[6]
+		nick    = m.Params[4]
+		modes   = m.Params[5]
 	)
 
 	logger := b.GetLogger()
@@ -281,33 +273,41 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 // getSymbolToPrefixMapping gets the isupport info from the bot and
-// parses prefix into a mapping of the symbol to the mode
+// parses prefix into a mapping of the symbol to the mode. Eventually
+// this should be moved into the isupport plugin with a few more prefix
+// helper functions.
 func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune, bool) {
 	logger := b.GetLogger()
 
 	// Sample: (qaohv)~&@%+
 	prefix, _ := p.isupport.GetRaw("PREFIX")
 
+	logger = logger.WithField("prefix", prefix)
+
 	// We only care about the symbols
 	i := strings.IndexByte(prefix, ')')
 	if len(prefix) == 0 || prefix[0] != '(' || i < 0 {
-		logger.WithField("prefix", prefix).Warnf("Invalid prefix format")
+		logger.Warnf("Invalid prefix format")
 		return nil, false
 	}
 
 	// We loop through the string using range so we get bytes, then we throw the
 	// two results together in the map.
-	var symbols []rune
+	var symbols []rune // ~&@%+
 	for _, r := range prefix[i+1:] {
 		symbols = append(symbols, r)
 	}
-	var modes []rune
+	var modes []rune // qaohv
 	for _, r := range prefix[1:i] {
 		modes = append(modes, r)
 	}
 
 	if len(modes) != len(symbols) {
-		logger.WithField("prefix", prefix).Warnf("Mismatched modes and symbols")
+		logger.WithFields(logrus.Fields{
+			"modes":   modes,
+			"symbols": symbols,
+		}).Warnf("Mismatched modes and symbols")
+
 		return nil, false
 	}
 
@@ -324,6 +324,8 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 	if !ok {
 		return
 	}
+
+	logger := b.GetLogger()
 
 	channel := m.Params[2]
 	users := strings.Split(strings.TrimSpace(m.Trailing()), " ")
@@ -357,9 +359,12 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 			mode := prefixes[v]
 			u.channels[channel][mode] = true
 		}
-		fmt.Printf("%+v, %+v, %+v\n", channel, user, u.channels[channel])
 
-		//fmt.Printf("%s (%s) is in channel %s\n", user, p.uuids[user], channel)
+		logger.WithFields(logrus.Fields{
+			"user":    user,
+			"channel": channel,
+			"modes":   u.channels[channel],
+		}).Debug("User modes updated")
 	}
 }
 
@@ -401,7 +406,10 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 		p.uuids[user] = u.UUID
 	}
 
-	logger = logger.WithField("userUUID", u.UUID)
+	logger = logger.WithFields(logrus.Fields{
+		"user": user,
+		"uuid": u.UUID,
+	})
 
 	if _, ok := u.channels[channel]; ok {
 		logger.Warn("User already in channel")
