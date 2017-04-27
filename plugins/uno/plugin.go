@@ -43,32 +43,32 @@ func newUnoPlugin(b *seabird.Bot, cm *seabird.CommandMux, tracker *plugins.Chann
 	})
 
 	cm.Channel("hand", p.handCallback, &seabird.HelpInfo{
-		Usage:       "hand",
+		Usage:       "",
 		Description: "Messages you your hand in an UNO game",
 	})
 
 	cm.Channel("play", p.playCallback, &seabird.HelpInfo{
-		Usage:       "play <hand_index>",
+		Usage:       "<hand_index>",
 		Description: "Plays card from your hand at <hand_index> and ends your turn",
 	})
 
 	cm.Channel("draw", p.drawCallback, &seabird.HelpInfo{
-		Usage:       "draw",
+		Usage:       "",
 		Description: "Draws a card and possibly ends your turn",
 	})
 
 	cm.Channel("draw_play", p.drawPlayCallback, &seabird.HelpInfo{
-		Usage:       "draw_play [yes|no]",
+		Usage:       "[yes|no]",
 		Description: "Used after a call to <prefix>draw to possibly play a card",
 	})
 
 	cm.Channel("color", p.colorCallback, &seabird.HelpInfo{
-		Usage:       "color red|yellow|green|blue",
+		Usage:       "red|yellow|green|blue",
 		Description: "Selects next color to play",
 	})
 
 	cm.Channel("uno_state", p.stateCallback, &seabird.HelpInfo{
-		Usage:       "uno_state",
+		Usage:       "",
 		Description: "Return the top card and current player.",
 	})
 
