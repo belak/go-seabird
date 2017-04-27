@@ -48,8 +48,8 @@ func newUnoPlugin(b *seabird.Bot, cm *seabird.CommandMux, tracker *plugins.Chann
 	})
 
 	cm.Channel("play", p.playCallback, &seabird.HelpInfo{
-		Usage:       "<hand_index>",
-		Description: "Plays card from your hand at <hand_index> and ends your turn",
+		Usage:       "<card_name>",
+		Description: "Plays card from your hand matching the given card_name",
 	})
 
 	cm.Channel("draw", p.drawCallback, &seabird.HelpInfo{
