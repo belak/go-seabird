@@ -44,7 +44,7 @@ type Game struct {
 	players *ring.Ring
 
 	announcePlayer bool
-	currentColor   colorCode
+	currentColor   ColorCode
 	reversed       bool
 	deck           []Card
 	discard        []Card
@@ -337,14 +337,14 @@ func (g *Game) Start(u *plugins.User) []*Message {
 	}
 
 	// For each color we need to add 1 zero, and 2 of every other card.
-	for color := colorRed; color <= colorYellow; color++ {
-		zero := &BasicCard{Color: color, Type: "0"}
+	for color := ColorRed; color <= ColorYellow; color++ {
+		zero := &SimpleCard{color: color, symbol: "0"}
 		g.deck = append(g.deck, zero)
 
 		for i := '1'; i <= '9'; i++ {
-			card := &BasicCard{
-				Color: color,
-				Type:  string(i),
+			card := &SimpleCard{
+				color:  color,
+				symbol: string(i),
 			}
 
 			g.deck = append(g.deck, card, card)
@@ -358,13 +358,13 @@ func (g *Game) Start(u *plugins.User) []*Message {
 	g.discard = append(g.discard, g.deck[0])
 	g.deck = g.deck[1:]
 
-	g.currentColor = g.discard[0].(*BasicCard).Color
+	g.currentColor = g.discard[0].Color()
 
 	// Add in two of all the special cards.
-	for color := colorRed; color <= colorYellow; color++ {
-		drawTwo := &DrawTwoCard{Color: color}
-		reverse := &ReverseCard{Color: color}
-		skip := &SkipCard{Color: color}
+	for color := ColorRed; color <= ColorYellow; color++ {
+		drawTwo := NewDrawTwoCard(color)
+		reverse := NewReverseCard(color)
+		skip := NewSkipCard(color)
 
 		g.deck = append(
 			g.deck,
@@ -375,10 +375,13 @@ func (g *Game) Start(u *plugins.User) []*Message {
 		)
 	}
 
+	wild := NewWildCard()
+	drawfourwild := NewDrawFourWildCard()
+
 	// Add in the wilds
 	for i := 0; i < 4; i++ {
-		g.deck = append(g.deck, &WildCard{})
-		g.deck = append(g.deck, &DrawFourWildCard{})
+		g.deck = append(g.deck, wild)
+		g.deck = append(g.deck, drawfourwild)
 	}
 
 	g.shuffle()
@@ -606,8 +609,8 @@ func (g *Game) SetColor(u *plugins.User, color string) []*Message {
 		}}
 	}
 
-	g.currentColor = colorCodeFromString(color)
-	if g.currentColor == colorNone {
+	g.currentColor = ColorCodeFromString(color)
+	if g.currentColor == ColorNone {
 		return []*Message{{
 			Target:  u,
 			Message: "That's not a valid color!",
