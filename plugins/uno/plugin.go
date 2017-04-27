@@ -38,7 +38,7 @@ func newUnoPlugin(b *seabird.Bot, cm *seabird.CommandMux, tracker *plugins.Chann
 	// TODO: Track channel parts
 
 	cm.Channel("uno", p.unoCallback, &seabird.HelpInfo{
-		Usage:       "[create|join|start|stop]",
+		Usage:       "[create|join|start|state|stop]",
 		Description: "Flow control and stuff",
 	})
 
@@ -65,11 +65,6 @@ func newUnoPlugin(b *seabird.Bot, cm *seabird.CommandMux, tracker *plugins.Chann
 	cm.Channel("color", p.colorCallback, &seabird.HelpInfo{
 		Usage:       "red|yellow|green|blue",
 		Description: "Selects next color to play",
-	})
-
-	cm.Channel("uno_state", p.stateCallback, &seabird.HelpInfo{
-		Usage:       "",
-		Description: "Return the top card and current player.",
 	})
 
 	return nil
@@ -153,6 +148,8 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 		p.joinCallback(b, m)
 	case "start":
 		p.startCallback(b, m)
+	case "state":
+		p.stateCallback(b, m)
 	case "stop":
 		p.stopCallback(b, m)
 	default:
