@@ -129,8 +129,14 @@ func (p *unoPlugin) stateCallback(b *seabird.Bot, m *irc.Message) {
 		b.MentionReply(m, "Game hasn't been started yet")
 		return
 	}
+
 	b.MentionReply(m, "Current Player: %s", game.currentPlayer().User.Nick)
-	b.MentionReply(m, "Top Card: %s", game.lastPlayed())
+
+	card := game.lastPlayed()
+	b.MentionReply(m, "Top Card: %s", card)
+	if card.Color() == ColorWild {
+		b.MentionReply(m, "Current Color: %s", game.currentColor)
+	}
 }
 
 func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
