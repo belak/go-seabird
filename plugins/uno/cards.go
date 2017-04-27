@@ -5,6 +5,9 @@ import "fmt"
 // ColorCode represents the color of a card.
 type ColorCode int
 
+// Each color in here can be used on a card. ColorNone is a special
+// color mearning the color is unknown and ColorWild means the card
+// doesn't have a color.
 const (
 	ColorNone ColorCode = iota
 	ColorWild
@@ -14,6 +17,8 @@ const (
 	ColorYellow
 )
 
+// ColorCodeFromString tries to look up a ColorCode for any given
+// string.
 func ColorCodeFromString(color string) ColorCode {
 	switch color {
 	case "red":
@@ -78,7 +83,7 @@ type ColorChangeNotifier interface {
 	ColorChanged(*Game) []*Message
 }
 
-// BasicCard represents a 0-9
+// SimpleCard represents a 0-9
 type SimpleCard struct {
 	color  ColorCode
 	symbol string
@@ -97,10 +102,12 @@ func (c *SimpleCard) Play(g *Game) []*Message {
 	return nil
 }
 
+// Symbol implements (Card).Symbol
 func (c *SimpleCard) Symbol() string {
 	return c.symbol
 }
 
+// Color implements (Card).Color
 func (c *SimpleCard) Color() ColorCode {
 	return c.color
 }
@@ -114,6 +121,7 @@ type DrawTwoCard struct {
 	SimpleCard
 }
 
+// NewDrawTwoCard creates a new draw two given a color
 func NewDrawTwoCard(color ColorCode) *DrawTwoCard {
 	return &DrawTwoCard{
 		SimpleCard: SimpleCard{
@@ -140,6 +148,7 @@ type SkipCard struct {
 	SimpleCard
 }
 
+// NewSkipCard creates a new skip given a color
 func NewSkipCard(color ColorCode) *SkipCard {
 	return &SkipCard{
 		SimpleCard: SimpleCard{
@@ -167,6 +176,7 @@ type ReverseCard struct {
 	SimpleCard
 }
 
+// NewReverseCard creates a new reverse given a color
 func NewReverseCard(color ColorCode) *ReverseCard {
 	return &ReverseCard{
 		SimpleCard: SimpleCard{
@@ -192,6 +202,7 @@ type WildCard struct {
 	SimpleCard
 }
 
+// NewWildCard creates a new wild
 func NewWildCard() *WildCard {
 	return &WildCard{
 		SimpleCard: SimpleCard{
@@ -233,6 +244,7 @@ type DrawFourWildCard struct {
 	WildCard
 }
 
+// NewDrawFourWildCard creates a new draw four wild.
 func NewDrawFourWildCard() *DrawFourWildCard {
 	ret := &DrawFourWildCard{
 		WildCard: *NewWildCard(),
