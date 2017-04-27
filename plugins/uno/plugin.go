@@ -38,38 +38,33 @@ func newUnoPlugin(b *seabird.Bot, cm *seabird.CommandMux, tracker *plugins.Chann
 	// TODO: Track channel parts
 
 	cm.Channel("uno", p.unoCallback, &seabird.HelpInfo{
-		Usage:       "[create|join|start|stop]",
+		Usage:       "[create|join|start|state|stop]",
 		Description: "Flow control and stuff",
 	})
 
 	cm.Channel("hand", p.handCallback, &seabird.HelpInfo{
-		Usage:       "hand",
+		Usage:       "",
 		Description: "Messages you your hand in an UNO game",
 	})
 
 	cm.Channel("play", p.playCallback, &seabird.HelpInfo{
-		Usage:       "play <hand_index>",
-		Description: "Plays card from your hand at <hand_index> and ends your turn",
+		Usage:       "<card_name>",
+		Description: "Plays card from your hand matching the given card_name",
 	})
 
 	cm.Channel("draw", p.drawCallback, &seabird.HelpInfo{
-		Usage:       "draw",
+		Usage:       "",
 		Description: "Draws a card and possibly ends your turn",
 	})
 
 	cm.Channel("draw_play", p.drawPlayCallback, &seabird.HelpInfo{
-		Usage:       "draw_play [yes|no]",
+		Usage:       "[yes|no]",
 		Description: "Used after a call to <prefix>draw to possibly play a card",
 	})
 
 	cm.Channel("color", p.colorCallback, &seabird.HelpInfo{
-		Usage:       "color red|yellow|green|blue",
+		Usage:       "red|yellow|green|blue",
 		Description: "Selects next color to play",
-	})
-
-	cm.Channel("uno_state", p.stateCallback, &seabird.HelpInfo{
-		Usage:       "uno_state",
-		Description: "Return the top card and current player.",
 	})
 
 	return nil
@@ -130,8 +125,18 @@ func (p *unoPlugin) stateCallback(b *seabird.Bot, m *irc.Message) {
 
 	// TODO: This should pull from some State struct or similar from
 	// the Game
+	if game.state == stateNew {
+		b.MentionReply(m, "Game hasn't been started yet")
+		return
+	}
+
 	b.MentionReply(m, "Current Player: %s", game.currentPlayer().User.Nick)
-	b.MentionReply(m, "Top Card: %s", game.lastPlayed())
+
+	card := game.lastPlayed()
+	b.MentionReply(m, "Top Card: %s", card)
+	if card.Color() == ColorWild {
+		b.MentionReply(m, "Current Color: %s", game.currentColor)
+	}
 }
 
 func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
@@ -149,6 +154,8 @@ func (p *unoPlugin) unoCallback(b *seabird.Bot, m *irc.Message) {
 		p.joinCallback(b, m)
 	case "start":
 		p.startCallback(b, m)
+	case "state":
+		p.stateCallback(b, m)
 	case "stop":
 		p.stopCallback(b, m)
 	default:

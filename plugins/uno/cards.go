@@ -2,42 +2,52 @@ package uno
 
 import "fmt"
 
-// TODO: Unexport this
-type colorCode int
+// ColorCode represents the color of a card.
+type ColorCode int
 
+// Each color in here can be used on a card. ColorNone is a special
+// color mearning the color is unknown and ColorWild means the card
+// doesn't have a color.
 const (
-	colorNone colorCode = iota
-	colorRed
-	colorGreen
-	colorBlue
-	colorYellow
+	ColorNone ColorCode = iota
+	ColorWild
+	ColorRed
+	ColorGreen
+	ColorBlue
+	ColorYellow
 )
 
-func colorCodeFromString(color string) colorCode {
+// ColorCodeFromString tries to look up a ColorCode for any given
+// string.
+func ColorCodeFromString(color string) ColorCode {
 	switch color {
 	case "red":
-		return colorRed
+		return ColorRed
 	case "blue":
-		return colorBlue
+		return ColorBlue
 	case "green":
-		return colorGreen
+		return ColorGreen
 	case "yellow":
-		return colorYellow
+		return ColorYellow
+	case "wild":
+		return ColorWild
 	}
 
-	return colorNone
+	return ColorNone
 }
 
-func (cc colorCode) String() string {
+func (cc ColorCode) String() string {
 	switch cc {
-	case colorRed:
+	case ColorRed:
 		return "red"
-	case colorGreen:
+	case ColorGreen:
 		return "green"
-	case colorBlue:
+	case ColorBlue:
 		return "blue"
-	case colorYellow:
+	case ColorYellow:
 		return "yellow"
+	case ColorWild:
+		return "wild"
 	}
 
 	return "unknown"
@@ -56,6 +66,12 @@ type Card interface {
 	// played a [card]" and "It is now [user]'s turn" messages.
 	Play(*Game) []*Message
 
+	// Color returns the color of this card.
+	Color() ColorCode
+
+	// Symbol representing this card.
+	Symbol() string
+
 	// String returns how this card should be displayed to players.
 	String() string
 }
@@ -67,125 +83,143 @@ type ColorChangeNotifier interface {
 	ColorChanged(*Game) []*Message
 }
 
-// BasicCard represents a 0-9
-type BasicCard struct {
-	Color colorCode
-	Type  string
+// SimpleCard represents a 0-9
+type SimpleCard struct {
+	color  ColorCode
+	symbol string
 }
 
 // Playable implements (Card).Playable
-func (c *BasicCard) Playable(g *Game) bool {
-	last, ok := g.lastPlayed().(*BasicCard)
-	if ok && last.Type == c.Type {
-		return true
-	}
-
-	return g.currentColor == c.Color
+func (c *SimpleCard) Playable(g *Game) bool {
+	last := g.lastPlayed()
+	return last.Symbol() == c.Symbol() || g.currentColor == c.Color()
 }
 
 // Play implements (Card).Play
-func (c *BasicCard) Play(g *Game) []*Message {
-	g.currentColor = c.Color
+func (c *SimpleCard) Play(g *Game) []*Message {
+	g.currentColor = c.Color()
 	g.advancePlay()
 	return nil
 }
 
-func (c *BasicCard) String() string {
-	return c.Color.String() + " " + c.Type
+// Symbol implements (Card).Symbol
+func (c *SimpleCard) Symbol() string {
+	return c.symbol
+}
+
+// Color implements (Card).Color
+func (c *SimpleCard) Color() ColorCode {
+	return c.color
+}
+
+func (c *SimpleCard) String() string {
+	return c.Color().String() + " " + c.Symbol()
 }
 
 // DrawTwoCard represents a draw two
 type DrawTwoCard struct {
-	Color colorCode
+	SimpleCard
 }
 
-// Playable implements (Card).Playable
-func (c *DrawTwoCard) Playable(g *Game) bool {
-	_, ok := g.lastPlayed().(*DrawTwoCard)
-	return ok || g.currentColor == c.Color
+// NewDrawTwoCard creates a new draw two given a color
+func NewDrawTwoCard(color ColorCode) *DrawTwoCard {
+	return &DrawTwoCard{
+		SimpleCard: SimpleCard{
+			color:  color,
+			symbol: "draw two",
+		},
+	}
 }
 
 // Play implements (Card).Play
 func (c *DrawTwoCard) Play(g *Game) []*Message {
-	g.currentColor = c.Color
-	g.advancePlay()
-
 	// Move to the next player, draw two cards, then move on
+	g.advancePlay()
 	target := g.currentPlayer()
 	ret := g.drawN(2, target)
-	g.advancePlay()
+
+	c.SimpleCard.Play(g)
 
 	return ret
 }
 
-func (c *DrawTwoCard) String() string {
-	return c.Color.String() + " draw two"
-}
-
 // SkipCard represents a skip
 type SkipCard struct {
-	Color colorCode
+	SimpleCard
 }
 
-// Playable implements (Card).Playable
-func (c *SkipCard) Playable(g *Game) bool {
-	_, ok := g.lastPlayed().(*SkipCard)
-	return ok || g.currentColor == c.Color
+// NewSkipCard creates a new skip given a color
+func NewSkipCard(color ColorCode) *SkipCard {
+	return &SkipCard{
+		SimpleCard: SimpleCard{
+			color:  color,
+			symbol: "skip",
+		},
+	}
 }
 
 // Play implements (Card).Play
 func (c *SkipCard) Play(g *Game) []*Message {
-	g.currentColor = c.Color
 	g.advancePlay()
 
 	ret := []*Message{{
 		Message: fmt.Sprintf("%s was skipped.", g.currentPlayer().User.Nick),
 	}}
 
-	g.advancePlay()
+	c.SimpleCard.Play(g)
 
 	return ret
 }
 
-func (c *SkipCard) String() string {
-	return c.Color.String() + " skip"
-}
-
 // ReverseCard represents a reverse
 type ReverseCard struct {
-	Color colorCode
+	SimpleCard
 }
 
-// Playable implements (Card).Playable
-func (c *ReverseCard) Playable(g *Game) bool {
-	_, ok := g.lastPlayed().(*ReverseCard)
-	return ok || g.currentColor == c.Color
+// NewReverseCard creates a new reverse given a color
+func NewReverseCard(color ColorCode) *ReverseCard {
+	return &ReverseCard{
+		SimpleCard: SimpleCard{
+			color:  color,
+			symbol: "reverse",
+		},
+	}
 }
 
 // Play implements (Card).Play
 func (c *ReverseCard) Play(g *Game) []*Message {
-	g.currentColor = c.Color
 	g.reversed = !g.reversed
-	g.advancePlay()
+
+	c.SimpleCard.Play(g)
 
 	return []*Message{{
 		Message: "Play direction has reversed!",
 	}}
 }
 
-func (c *ReverseCard) String() string {
-	return c.Color.String() + " reverse"
+// WildCard represents a wild
+type WildCard struct {
+	SimpleCard
 }
 
-// WildCard represents a wild
-type WildCard struct{}
+// NewWildCard creates a new wild
+func NewWildCard() *WildCard {
+	return &WildCard{
+		SimpleCard: SimpleCard{
+			color:  ColorWild,
+			symbol: "wild",
+		},
+	}
+}
 
-// Playable implements (Card).Playable
+// Playable implements (Card).Playable. This overrides the embedded
+// (SimpleCard).Playable method.
 func (c *WildCard) Playable(g *Game) bool {
 	return true
 }
 
-// Play implements (Card).Play
+// Play implements (Card).Play. This overrides the embedded
+// (SimpleCard).Play method.
 func (c *WildCard) Play(g *Game) []*Message {
 	g.state = stateNeedsColor
 	return []*Message{{
@@ -198,54 +232,48 @@ func (c *WildCard) Play(g *Game) []*Message {
 func (c *WildCard) ColorChanged(g *Game) []*Message {
 	g.state = stateNeedsPlay
 	g.advancePlay()
-
 	return nil
 }
 
 func (c *WildCard) String() string {
-	return "wild"
+	return c.Symbol()
 }
 
 // DrawFourWildCard represents a draw four wild.
-type DrawFourWildCard struct{}
+type DrawFourWildCard struct {
+	WildCard
+}
 
-// Playable implements (Card).Playable
+// NewDrawFourWildCard creates a new draw four wild.
+func NewDrawFourWildCard() *DrawFourWildCard {
+	ret := &DrawFourWildCard{
+		WildCard: *NewWildCard(),
+	}
+	ret.symbol = "draw four wild"
+
+	return ret
+}
+
+// Playable implements (Card).Playable. This overrides the embedded
+// (WildCard).Playable method.
 func (c *DrawFourWildCard) Playable(g *Game) bool {
 	p := g.currentPlayer()
 	for _, rawHandCard := range p.Hand {
-		_, ok := rawHandCard.(*DrawFourWildCard)
-		if ok {
-			continue
-		}
-
-		if rawHandCard.Playable(g) {
+		if rawHandCard.Color() == g.currentColor {
 			return false
 		}
 	}
 	return true
 }
 
-// Play implements (Card).Play
-func (c *DrawFourWildCard) Play(g *Game) []*Message {
-	g.state = stateNeedsColor
-	return []*Message{{
-		Target:  g.currentPlayer().User,
-		Message: "What color?",
-	}}
-}
-
-// ColorChanged implements (ColorChangeNotifier).ColorChanged
+// ColorChanged implements (ColorChangeNotifier).Color. This overrides
+// the embedded (WildCard).ColorChanged method.
 func (c *DrawFourWildCard) ColorChanged(g *Game) []*Message {
-	g.state = stateNeedsPlay
 	g.advancePlay()
-
 	target := g.currentPlayer()
 	ret := g.drawN(4, target)
-	g.advancePlay()
+
+	c.WildCard.Play(g)
 
 	return ret
-}
-
-func (c *DrawFourWildCard) String() string {
-	return "draw four wild"
 }
