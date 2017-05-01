@@ -24,7 +24,7 @@ type KarmaTarget struct {
 	Score int
 }
 
-var regex = regexp.MustCompile(`([\w]{2,})(\+\+|--)(\+*|-*)(?:\s|$)`)
+var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\+|--)(\+*|-*)(?:\s|$)`)
 
 func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &karmaPlugin{db: db}
