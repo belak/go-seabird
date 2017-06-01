@@ -6,8 +6,8 @@ import (
 	"unicode"
 
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/belak/nut"
+	"github.com/go-irc/irc"
 )
 
 func init() {
@@ -24,7 +24,7 @@ type KarmaTarget struct {
 	Score int
 }
 
-var regex = regexp.MustCompile(`([^\s]+)(\+\+|--)(?:\s|$)`)
+var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
 func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &karmaPlugin{db: db}
@@ -36,7 +36,7 @@ func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux,
 
 	cm.Event("karma", p.karmaCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
-		Description: "Gives karma for given user",
+		Description: "Displays karma for given user",
 	})
 
 	/*
@@ -115,27 +115,38 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
+	var buzzkillTriggered bool
+
 	matches := regex.FindAllStringSubmatch(m.Trailing(), -1)
 	if len(matches) > 0 {
 		for _, v := range matches {
-			if len(v) < 3 {
-				continue
+			// If it starts with a ", we know it also ends with a quote so we
+			// can chop them off.
+			if strings.HasPrefix(v[1], "\"") {
+				v[1] = v[1][1 : len(v[1])-1]
 			}
 
-			var diff int
-			if v[2] == "++" {
-				diff = 1
-			} else {
-				diff = -1
+			diff := len(v[2]) - 1
+			if v[2][0] == '-' {
+				diff *= -1
+			}
+
+			if diff > 5 {
+				buzzkillTriggered = true
+				diff = 5
 			}
 
 			name := strings.ToLower(v[1])
 			if name == m.Prefix.Name {
 				// penalize self-karma
-				diff = -1
+				diff *= -1
 			}
 
 			b.Reply(m, "%s's karma is now %d", v[1], p.UpdateKarma(name, diff))
 		}
+	}
+
+	if buzzkillTriggered {
+		b.Reply(m, "Buzzkill Mode (tm) enforced a maximum karma change of 5")
 	}
 }
