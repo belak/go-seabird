@@ -24,7 +24,7 @@ type KarmaTarget struct {
 	Score int
 }
 
-var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\+|--)(\+*|-*)(?:\s|$)`)
+var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
 func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
 	p := &karmaPlugin{db: db}
@@ -120,32 +120,15 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 	matches := regex.FindAllStringSubmatch(m.Trailing(), -1)
 	if len(matches) > 0 {
 		for _, v := range matches {
-			if len(v) < 3 {
-				continue
-			}
-
 			// If it starts with a ", we know it also ends with a quote so we
 			// can chop them off.
 			if strings.HasPrefix(v[1], "\"") {
 				v[1] = v[1][1 : len(v[1])-1]
 			}
 
-			var diff int
-			if v[2] == "++" {
-				diff = 1
-			} else {
-				diff = -1
-			}
-
-			// Karma additions
-			if len(v[3]) > 0 {
-				// If the third match doesn't match the initial ++ or --, we
-				// skip this one.
-				if v[3][0] != v[2][0] {
-					continue
-				}
-
-				diff += len(v[3])
+			diff := len(v[2]) - 1
+			if v[2][0] == '-' {
+				diff *= -1
 			}
 
 			if diff > 5 {
