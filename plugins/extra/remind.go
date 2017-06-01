@@ -7,9 +7,11 @@ import (
 	"sync"
 	"time"
 
+	"github.com/belak/nut"
+	"github.com/go-xorm/xorm"
+
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"
-	"github.com/belak/nut"
 )
 
 func init() {
@@ -19,7 +21,7 @@ func init() {
 var timeRegexp = regexp.MustCompile(`\d+[smhd]`)
 
 type reminderPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 
 	roomLock *sync.Mutex
 	rooms    map[string]bool
@@ -36,14 +38,13 @@ const (
 )
 
 type reminder struct {
-	Key          string
 	Target       string
 	TargetType   targetType
 	Content      string
 	ReminderTime time.Time
 }
 
-func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
+func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, oldDB *nut.DB, db *xorm.Engine) error {
 	p := &reminderPlugin{
 		db:         db,
 		roomLock:   &sync.Mutex{},
@@ -51,10 +52,12 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) 
 		updateChan: make(chan struct{}, 1),
 	}
 
-	err := p.db.EnsureBucket("remind_reminders")
+	err := p.db.Sync(&reminder{})
 	if err != nil {
 		return err
 	}
+
+	// TODO: nutdb migration
 
 	m.Event("001", p.InitialDispatch)
 	m.Event("JOIN", p.joinHandler)
@@ -106,41 +109,36 @@ func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *reminderPlugin) nextReminder() (*reminder, error) {
-	// Find the next reminder we'll have to send
-	var r *reminder
+	channelResult := reminder{TargetType: channelTarget}
+	privateResult := reminder{TargetType: privateTarget}
 
-	err := p.db.View(func(tx *nut.Tx) error {
-		// Grab the room lock for this transaction
-		p.roomLock.Lock()
-		defer p.roomLock.Unlock()
+	foundChannel, err := p.db.OrderBy("reminder_time asc").Get(&channelResult)
+	if err != nil {
+		return nil, err
+	}
 
-		bucket := tx.Bucket("remind_reminders")
-		cursor := bucket.Cursor()
+	foundPrivate, err := p.db.OrderBy("reminder_time asc").Get(&privateResult)
+	if err != nil {
+		return nil, err
+	}
 
-		v := &reminder{}
-		for _, err := cursor.First(v); err == nil; _, err = cursor.Next(v) {
-			// If it's a channel target and we're not in the room,
-			// we need to skip it
-			if v.TargetType == channelTarget && !p.rooms[v.Target] {
-				continue
-			}
-
-			// If we don't currently have a reminder or the new
-			// reminder should be sent before our current one, we
-			// update it.
-			if r == nil || v.ReminderTime.Before(r.ReminderTime) {
-				// Make absolutely sure that we have a copy of the
-				// data because as soon as we call Next, it will go
-				// away.
-				tmp := *v
-				r = &tmp
-			}
+	if foundChannel && foundPrivate {
+		if channelResult.ReminderTime.Before(privateResult.ReminderTime) {
+			return &channelResult, nil
 		}
 
-		return nil
-	})
+		return &privateResult, nil
+	}
 
-	return r, err
+	if foundChannel {
+		return &channelResult, nil
+	}
+
+	if foundPrivate {
+		return &privateResult, nil
+	}
+
+	return nil, nil
 }
 
 func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
@@ -186,13 +184,9 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	})
 
 	// Nuke the reminder now that it's been sent
-	err := p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("remind_reminders")
-		return bucket.Delete(r.Key)
-	})
-
-	if err != nil {
+	if _, err := p.db.Delete(r); err != nil {
 		logger.WithError(err).Error("Failed to remove reminder")
+		return
 	}
 
 	logger.Debug("Dispatched reminder")
@@ -261,20 +255,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 		r.Content = m.Prefix.Name + ": " + r.Content
 	}
 
-	err = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("remind_reminders")
-
-		key, innerErr := bucket.NextID()
-		if innerErr != nil {
-			return innerErr
-		}
-
-		r.Key = key
-
-		return bucket.Put(r.Key, r)
-	})
-
-	if err != nil {
+	if _, err := p.db.Insert(r); err != nil {
 		b.MentionReply(m, "Failed to store reminder: %s", err)
 		return
 	}

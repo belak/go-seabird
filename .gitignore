@@ -3,5 +3,6 @@
 y.output
 
 *.db
+*.sqlite
 config.toml
 *.pem
