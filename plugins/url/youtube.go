@@ -129,6 +129,11 @@ func getVideo(id string, key string) (time string, title string) {
 
 	v := videos.Items[0]
 
+	switch v.Snippet.LiveBroadcastContent {
+	case "live", "upcoming":
+		return strings.Title(v.Snippet.LiveBroadcastContent), v.Snippet.Title
+	}
+
 	// Convert duration from ISO8601
 	d, err := duration.FromString(v.ContentDetails.Duration)
 	if err != nil {
