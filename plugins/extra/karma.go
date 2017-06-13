@@ -127,18 +127,16 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 			}
 
 			diff := len(v[2]) - 1
-			if v[2][0] == '-' {
-				diff *= -1
-			}
+			name := strings.ToLower(v[1])
 
 			if diff > 5 {
 				buzzkillTriggered = true
 				diff = 5
 			}
 
-			name := strings.ToLower(v[1])
-			if name == m.Prefix.Name {
-				// penalize self-karma
+			// If it's negative, or positive and someone is trying to change
+			// their own karma we need to reverse the sign.
+			if v[2][0] == '-' || name == m.Prefix.Name {
 				diff *= -1
 			}
 
