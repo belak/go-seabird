@@ -137,7 +137,7 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 			}
 
 			name := strings.ToLower(v[1])
-			if name == m.Prefix.Name {
+			if diff > 0 && name == m.Prefix.Name {
 				// penalize self-karma
 				diff *= -1
 			}
