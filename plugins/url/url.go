@@ -23,7 +23,10 @@ func init() {
 
 // NOTE: This isn't perfect in any sense of the word, but it's pretty close
 // and I don't know if it's worth the time to make it better.
-var urlRegex = regexp.MustCompile(`https?://[^ ]+`)
+var (
+	urlRegex     = regexp.MustCompile(`https?://[^ ]+`)
+	newlineRegex = regexp.MustCompile(`\s*\n\s*`)
+)
 
 // NOTE: This nasty work is done so we ignore invalid ssl certs
 var client = &http.Client{
@@ -130,7 +133,8 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 
 	// If we got a result, pull the text from it
 	if ok {
-		b.Reply(m, "Title: %s", scrape.Text(n))
+		title := newlineRegex.ReplaceAllLiteralString(scrape.Text(n), " ")
+		b.Reply(m, "Title: %s", title)
 	}
 
 	return ok
