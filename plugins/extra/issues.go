@@ -3,6 +3,7 @@ package extra
 import (
 	"context"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -16,30 +17,47 @@ func init() {
 	seabird.RegisterPlugin("issues", newIssuesPlugin)
 }
 
+var issueTagRegex = regexp.MustCompile(`^(.+)(?: ([@#].+)){0,2}$`)
+
 type issuesPlugin struct {
-	Token string
+	Token       string
+	DefaultRepo string
+	RepoTags    map[string]string
 
 	api *github.Client
 }
 
 func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
-	p := &issuesPlugin{}
+	p := &issuesPlugin{
+		DefaultRepo: "belak/go-seabird",
+		RepoTags: map[string]string{
+			"irc":     "go-irc/irc",
+			"seabird": "belak/go-seabird",
+			"uno":     "belak/go-seabird-uno",
+		},
+	}
 	err := b.Config("github", p)
 	if err != nil {
 		return err
+	}
+
+	for k, v := range p.RepoTags {
+		if strings.Count(v, "/") != 1 {
+			return fmt.Errorf("Invalid repo spec %q for key %q", v, k)
+		}
 	}
 
 	// Create an oauth2 client
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: p.Token},
 	)
-	tc := oauth2.NewClient(oauth2.NoContext, ts)
+	tc := oauth2.NewClient(context.TODO(), ts)
 
 	// Create a github client from the oauth2 client
 	p.api = github.NewClient(tc)
 
 	cm.Event("issue", p.CreateIssue, &seabird.HelpInfo{
-		Usage:       "<issue title>",
+		Usage:       "<issue title> [#repo_tag] [@user]",
 		Description: "Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
 	})
 
@@ -59,21 +77,32 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 		body := "Filed by " + m.Prefix.Name + " in " + m.Params[0]
 		r.Body = &body
 
-		// If the first character is an @, we assume it's a
-		// user so we grab it and update what we're setting
-		// the title to.
-		title := m.Trailing()
-		if strings.HasPrefix(title, "@") {
-			index := strings.Index(title, " ")
-			if index == -1 {
-				b.MentionReply(m, "Issue title required")
-				return
+		title := strings.TrimSpace(m.Trailing())
+		searchChars := "#@"
+		targetRepo := p.DefaultRepo
+		for idx := strings.LastIndexAny(title, searchChars); idx > -1; idx = strings.LastIndexAny(title, searchChars) {
+			if strings.Contains(title[idx+1:], " ") {
+				break
 			}
 
-			asignee := title[1:index]
-			r.Assignee = &asignee
+			char := title[idx]
+			data := title[idx+1:]
+			title = strings.TrimSpace(title[:idx])
 
-			title = title[index+1:]
+			switch char {
+			case '#':
+				if repoPath, ok := p.RepoTags[data]; ok {
+					targetRepo = repoPath
+				}
+			case '@':
+				r.Assignee = &data
+			}
+
+			searchChars = strings.Trim(searchChars, string(char))
+
+			if len(searchChars) == 0 {
+				break
+			}
 		}
 
 		if title == "" {
@@ -83,7 +112,9 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 
 		r.Title = &title
 
-		issue, _, err := p.api.Issues.Create(context.TODO(), "belak", "go-seabird", r)
+		pathSegments := strings.SplitN(targetRepo, "/", 2)
+
+		issue, _, err := p.api.Issues.Create(context.TODO(), pathSegments[0], pathSegments[1], r)
 		if err != nil {
 			b.MentionReply(m, "%s", err.Error())
 			return
@@ -107,6 +138,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	split = append(split, []string{
 		"repo:go-irc/irc",
 		"repo:belak/go-seabird",
+		"repo:belak/go-seabird-uno",
 	}...)
 
 	if !hasState {
