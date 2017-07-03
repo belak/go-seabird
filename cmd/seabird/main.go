@@ -8,9 +8,9 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	// Load plugins
+	_ "github.com/belak/go-seabird-uno"
 	_ "github.com/belak/go-seabird/plugins"
 	_ "github.com/belak/go-seabird/plugins/extra"
-	_ "github.com/belak/go-seabird/plugins/uno"
 	_ "github.com/belak/go-seabird/plugins/url"
 
 	// Load the core
