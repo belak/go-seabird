@@ -6,8 +6,8 @@ import (
 	"unicode"
 
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/belak/nut"
+	"github.com/go-irc/irc"
 )
 
 func init() {
@@ -48,7 +48,7 @@ func newPhrasesPlugin(cm *seabird.CommandMux, db *nut.DB) error {
 	})
 
 	cm.Event("give", p.giveCallback, &seabird.HelpInfo{
-		Usage:       "<key> <user>",
+		Usage:       "<user> <key>",
 		Description: "Mentions a user with a given phrase",
 	})
 
