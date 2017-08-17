@@ -125,6 +125,7 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 	// We search the first 1K and if a title isn't in there, we deal with it
 	z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
 	if err != nil {
+		b.GetLogger().WithError(err).Warn("Failed to grab URL")
 		return false
 	}
 
