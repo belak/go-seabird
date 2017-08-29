@@ -21,11 +21,11 @@ func init() {
 func newMetarPlugin(cm *seabird.CommandMux) {
 	cm.Event("metar", metarCallback, &seabird.HelpInfo{
 		Usage:       "<station>",
-		Description: "Gives METAR report for given airport code",
+		Description: "Gives METAR report for given station",
 	})
 	cm.Event("taf", tafCallback, &seabird.HelpInfo{
 		Usage:       "<station>",
-		Description: "Gives TAF report for given airport code",
+		Description: "Gives TAF report for given station",
 	})
 }
 
