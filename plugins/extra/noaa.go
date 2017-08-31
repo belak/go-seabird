@@ -49,6 +49,10 @@ func tafCallback(b *seabird.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s", r)
 }
 
+// NOAALookup takes the given formatted url and an airport code and tries to
+// look up the raw data. The first line is skipped, as that is generally the
+// date and the rest of the lines are joined together with a maximum of one
+// space between them.
 func NOAALookup(urlFormat, code string) (string, error) {
 	code = strings.ToUpper(code)
 
