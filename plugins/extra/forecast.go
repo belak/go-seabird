@@ -1,11 +1,14 @@
 package extra
 
 import (
+	"context"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
 
 	darksky "github.com/mlbright/darksky/v2"
+	"googlemaps.github.io/maps"
 
 	"github.com/belak/go-seabird"
 	"github.com/belak/nut"
@@ -30,15 +33,6 @@ type ForecastLocation struct {
 	Address string
 	Lat     float64
 	Lon     float64
-}
-
-// ToLocation converts a ForecastLocation to a generic location
-func (fl *ForecastLocation) ToLocation() *Location {
-	return &Location{
-		Address: fl.Address,
-		Lat:     fl.Lat,
-		Lon:     fl.Lon,
-	}
 }
 
 func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error {
@@ -68,7 +62,7 @@ func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error
 	return nil
 }
 
-func (p *forecastPlugin) forecastQuery(loc *Location) (*darksky.Forecast, error) {
+func (p *forecastPlugin) forecastQuery(loc *ForecastLocation) (*darksky.Forecast, error) {
 	return darksky.Get(
 		p.Key,
 		strconv.FormatFloat(loc.Lat, 'f', 4, 64),
@@ -79,7 +73,7 @@ func (p *forecastPlugin) forecastQuery(loc *Location) (*darksky.Forecast, error)
 	)
 }
 
-func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
+func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) {
 	l := m.Trailing()
 
 	target := &ForecastLocation{Nick: m.Prefix.Name}
@@ -93,21 +87,31 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
-		return target.ToLocation(), nil
+		return target, nil
 	}
 
 	// If it's not an empty string, we have to look up the location and store
 	// it.
-	loc, err := FetchLocation(l)
+	c, err := maps.NewClient()
 	if err != nil {
 		return nil, err
+	}
+	res, err := c.Geocode(context.TODO(), &maps.GeocodingRequest{
+		Address: l,
+	})
+	if err != nil {
+		return nil, err
+	} else if len(res) == 0 {
+		return nil, errors.New("No location results found")
+	} else if len(res) > 1 {
+		return nil, errors.New("More than 1 result")
 	}
 
 	newLocation := &ForecastLocation{
 		Nick:    m.Prefix.Name,
-		Address: loc.Address,
-		Lat:     loc.Lat,
-		Lon:     loc.Lon,
+		Address: res[0].FormattedAddress,
+		Lat:     res[0].Geometry.Location.Lat,
+		Lon:     res[0].Geometry.Location.Lng,
 	}
 
 	err = p.db.Update(func(tx *nut.Tx) error {
@@ -115,11 +119,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*Location, error) {
 		return bucket.Put(newLocation.Nick, newLocation)
 	})
 
-	if err != nil {
-		return nil, err
-	}
-
-	return loc, nil
+	return newLocation, err
 }
 
 func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
