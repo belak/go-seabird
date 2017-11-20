@@ -7,6 +7,7 @@ import (
 	"io"
 	"net"
 	"strings"
+	"time"
 
 	"github.com/BurntSushi/toml"
 	"github.com/Sirupsen/logrus"
@@ -22,6 +23,9 @@ type coreConfig struct {
 	Name string
 	Pass string
 
+	PingFrequency duration
+	PingTimeout   duration
+
 	Host        string
 	TLS         bool
 	TLSNoVerify bool
@@ -34,6 +38,16 @@ type coreConfig struct {
 	Plugins []string
 
 	Debug bool
+}
+
+type duration struct {
+	time.Duration
+}
+
+func (d *duration) UnmarshalText(text []byte) error {
+	var err error
+	d.Duration, err = time.ParseDuration(string(text))
+	return err
 }
 
 // A Bot is our wrapper around the irc.Client. It could be used for a general
@@ -301,8 +315,12 @@ func (b *Bot) Run(c io.ReadWriter) error {
 		User: b.config.User,
 		Name: b.config.Name,
 
+		PingFrequency: b.config.PingFrequency.Duration,
+		PingTimeout:   b.config.PingTimeout.Duration,
+
 		Handler: irc.HandlerFunc(b.handler),
 	}
+
 	b.client = irc.NewClient(c, rc)
 
 	// Now that we have a client, set up debug callbacks
