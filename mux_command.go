@@ -131,7 +131,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 
 	// Get the last arg and see if it starts with the command prefix
 	lastArg := msg.Trailing()
-	if !strings.HasPrefix(lastArg, m.prefix) {
+	if msg.FromChannel() && !strings.HasPrefix(lastArg, m.prefix) {
 		return
 	}
 
@@ -145,7 +145,10 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 		newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(msgParts[1])
 	}
 
-	newEvent.Command = msgParts[0][len(m.prefix):]
+	newEvent.Command = msgParts[0]
+	if strings.HasPrefix(newEvent.Command, m.prefix) {
+		newEvent.Command = newEvent.Command[len(m.prefix):]
+	}
 
 	if newEvent.FromChannel() {
 		m.public.HandleEvent(b, newEvent)
