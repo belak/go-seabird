@@ -20,6 +20,8 @@ func TestCommandMux(t *testing.T) {
 	assert.Equal(t, 1, mh.count)
 	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG bot :!hello"))
 	assert.Equal(t, 2, mh.count)
+	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG bot :hello"))
+	assert.Equal(t, 3, mh.count)
 
 	// Ensure private commands don't work publicly
 	mux = NewCommandMux("!")
@@ -29,6 +31,8 @@ func TestCommandMux(t *testing.T) {
 	assert.Equal(t, 0, mh.count)
 	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG bot :!hello"))
 	assert.Equal(t, 1, mh.count)
+	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG bot :hello"))
+	assert.Equal(t, 2, mh.count)
 
 	// Ensure public commands don't work publicly
 	mux = NewCommandMux("!")
@@ -37,6 +41,8 @@ func TestCommandMux(t *testing.T) {
 	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG #hello :!hello"))
 	assert.Equal(t, 1, mh.count)
 	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG bot :!hello"))
+	assert.Equal(t, 1, mh.count)
+	mux.HandleEvent(nil, irc.MustParseMessage(":belak PRIVMSG bot :hello"))
 	assert.Equal(t, 1, mh.count)
 
 	// Ensure commands are separate

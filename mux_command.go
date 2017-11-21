@@ -146,9 +146,11 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 	}
 
 	newEvent.Command = msgParts[0]
+	if strings.HasPrefix(newEvent.Command, m.prefix) {
+		newEvent.Command = newEvent.Command[len(m.prefix):]
+	}
 
 	if newEvent.FromChannel() {
-		newEvent.Command = newEvent.Command[len(m.prefix):]
 		m.public.HandleEvent(b, newEvent)
 	} else {
 		m.private.HandleEvent(b, newEvent)
