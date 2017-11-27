@@ -116,6 +116,7 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	var buzzkillTriggered bool
+	var changes = make(map[string]int)
 
 	matches := regex.FindAllStringSubmatch(m.Trailing(), -1)
 	if len(matches) > 0 {
@@ -127,7 +128,8 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 			}
 
 			diff := len(v[2]) - 1
-			name := strings.ToLower(v[1])
+			cleanedName := p.cleanedName(v[1])
+			cleanedNick := p.cleanedName(m.Prefix.Name)
 
 			if diff > 5 {
 				buzzkillTriggered = true
@@ -136,12 +138,16 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 
 			// If it's negative, or positive and someone is trying to change
 			// their own karma we need to reverse the sign.
-			if v[2][0] == '-' || name == m.Prefix.Name {
+			if v[2][0] == '-' || cleanedName == cleanedNick {
 				diff *= -1
 			}
 
-			b.Reply(m, "%s's karma is now %d", v[1], p.UpdateKarma(name, diff))
+			changes[v[1]] = changes[v[1]] + diff
 		}
+	}
+
+	for name, diff := range changes {
+		b.Reply(m, "%s's karma is now %d", name, p.UpdateKarma(name, diff))
 	}
 
 	if buzzkillTriggered {
