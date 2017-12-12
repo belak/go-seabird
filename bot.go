@@ -257,6 +257,14 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 		for _, v := range b.config.Cmds {
 			b.Write(v)
 		}
+	} else if m.Command == "PRIVMSG" {
+		// Clean up CTCP stuff so plugins don't need to parse it manually
+		lastArg := m.Trailing()
+		lastIdx := len(lastArg) - 1
+		if lastIdx > 0 && lastArg[0] == '\x01' && lastArg[lastIdx] == '\x01' {
+			m.Command = "CTCP"
+			m.Params[len(m.Params)-1] = lastArg[1:lastIdx]
+		}
 	}
 
 	b.mux.HandleEvent(b, m)
