@@ -7,5 +7,5 @@ before_install:
   - go get -t ./...
 
 script:
-  - gometalinter ./... --fast -D dupl -D gas
+  - gometalinter ./... --fast -D dupl -D gas -D goconst
   - go test -v ./...
