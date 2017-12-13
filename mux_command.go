@@ -54,7 +54,7 @@ func (m *CommandMux) help(b *Bot, msg *irc.Message) {
 		// Sort everything
 		sort.Strings(keys)
 
-		if msg.FromChannel() {
+		if b.FromChannel(msg) {
 			// If they said "!help" in a channel, list all available commands
 			b.Reply(msg, "Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
 		} else {
@@ -131,7 +131,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 
 	// Get the last arg and see if it starts with the command prefix
 	lastArg := msg.Trailing()
-	if msg.FromChannel() && !strings.HasPrefix(lastArg, m.prefix) {
+	if b.FromChannel(msg) && !strings.HasPrefix(lastArg, m.prefix) {
 		return
 	}
 
@@ -150,7 +150,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 		newEvent.Command = newEvent.Command[len(m.prefix):]
 	}
 
-	if newEvent.FromChannel() {
+	if b.FromChannel(newEvent) {
 		m.public.HandleEvent(b, newEvent)
 	} else {
 		m.private.HandleEvent(b, newEvent)

@@ -148,7 +148,7 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 	}
 
 	target := m.Prefix.Name
-	if m.FromChannel() {
+	if b.FromChannel(m) {
 		target = m.Params[0]
 	}
 
@@ -176,7 +176,7 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) erro
 
 	target := m.Prefix.Name
 	prefix := ""
-	if m.FromChannel() {
+	if b.FromChannel(m) {
 		target = m.Params[0]
 		prefix = m.Prefix.Name + ": "
 	}
@@ -242,9 +242,7 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 	b.client.Writef(format, args...)
 }
 
-// FromChannel is a wrapper around the irc package's FromChannel. It's
-// more accurate than Message.FromChannel so this should be used
-// whenever possible.
+// FromChannel is a wrapper around the irc package's FromChannel.
 func (b *Bot) FromChannel(m *irc.Message) bool {
 	return b.client.FromChannel(m)
 }

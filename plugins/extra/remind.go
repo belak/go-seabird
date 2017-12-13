@@ -254,7 +254,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 		ReminderTime: time.Now().Add(dur),
 	}
 
-	if m.FromChannel() {
+	if b.FromChannel(m) {
 		// If it was from a channel, we need to prepend the user's name.
 		r.Target = m.Params[0]
 		r.TargetType = channelTarget
