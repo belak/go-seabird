@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/belak/nut"
+	"github.com/go-irc/irc"
 )
 
 func init() {
@@ -86,7 +86,7 @@ func formatDate(t time.Time) string {
 }
 
 func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
-	if len(m.Params) < 2 || !m.FromChannel() || m.Prefix.Name == "" {
+	if len(m.Params) < 2 || !b.FromChannel(m) || m.Prefix.Name == "" {
 		return
 	}
 

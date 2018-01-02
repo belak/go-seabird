@@ -111,7 +111,7 @@ func (p *karmaPlugin) bottomKarmaCallback(b *seabird.Bot, m *irc.Message) {
 */
 
 func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
-	if len(m.Params) < 2 || !m.FromChannel() {
+	if len(m.Params) < 2 || !b.FromChannel(m) {
 		return
 	}
 

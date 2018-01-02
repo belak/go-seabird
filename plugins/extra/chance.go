@@ -39,7 +39,7 @@ func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
 }
 
 func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
-	if !m.FromChannel() {
+	if !b.FromChannel(m) {
 		return
 	}
 
@@ -68,7 +68,7 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
-	if !m.FromChannel() {
+	if !b.FromChannel(m) {
 		return
 	}
 
