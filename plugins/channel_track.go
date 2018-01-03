@@ -399,7 +399,7 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 	if u == nil {
 		u = &User{
 			Nick:     user,
-			UUID:     uuid.NewV4().String(),
+			UUID:     uuid.Must(uuid.NewV4()).String(),
 			channels: make(map[string]map[rune]bool),
 		}
 		p.users[u.UUID] = u
