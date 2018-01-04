@@ -9,3 +9,4 @@ before_install:
 script:
   - gometalinter ./... --fast -D dupl -D gas -D goconst
   - go test -v ./...
+  - cd ./cmd/seabird && go build

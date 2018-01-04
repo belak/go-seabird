@@ -20,8 +20,10 @@ func init() {
 }
 
 type forecastPlugin struct {
-	Key string
-	db  *nut.DB
+	Key        string
+	MapsKey    string
+	db         *nut.DB
+	mapsClient *maps.Client
 	// CacheDuration string
 }
 
@@ -59,6 +61,16 @@ func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error
 		Description: "Retrieves three-day forecast for given location",
 	})
 
+	options := []maps.ClientOption{}
+	if p.MapsKey != "" {
+		options = append(options, maps.WithAPIKey(p.MapsKey))
+	}
+
+	p.mapsClient, err = maps.NewClient(options...)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
@@ -92,11 +104,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 
 	// If it's not an empty string, we have to look up the location and store
 	// it.
-	c, err := maps.NewClient()
-	if err != nil {
-		return nil, err
-	}
-	res, err := c.Geocode(context.TODO(), &maps.GeocodingRequest{
+	res, err := p.mapsClient.Geocode(context.TODO(), &maps.GeocodingRequest{
 		Address: l,
 	})
 	if err != nil {
