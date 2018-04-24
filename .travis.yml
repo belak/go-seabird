@@ -7,6 +7,6 @@ before_install:
   - go get -t ./...
 
 script:
-  - gometalinter ./... --fast -D dupl -D gas -D goconst
+  - gometalinter ./... --fast -D dupl -D gas -D goconst --cyclo-over=12
   - go test -v ./...
   - cd ./cmd/seabird && go build
