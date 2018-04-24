@@ -27,4 +27,4 @@ SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
 
 # License
 
-[BSD](LICENSE)
+[MIT](LICENSE)
