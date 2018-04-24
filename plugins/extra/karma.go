@@ -116,6 +116,7 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	var buzzkillTriggered bool
+	var jerkModeTriggered bool
 	var changes = make(map[string]int)
 
 	matches := regex.FindAllStringSubmatch(m.Trailing(), -1)
@@ -145,10 +146,19 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 			diff = 5
 		}
 
+		if diff < -5 {
+			jerkModeTriggered = true
+			diff = -5
+		}
+
 		b.Reply(m, "%s's karma is now %d", name, p.UpdateKarma(name, diff))
 	}
 
 	if buzzkillTriggered {
 		b.Reply(m, "Buzzkill Mode (tm) enforced a maximum karma change of 5")
+	}
+
+	if jerkModeTriggered {
+		b.Reply(m, "Don't Be a Jerk Mode (tm) enforced a maximum karma change of 5")
 	}
 }
