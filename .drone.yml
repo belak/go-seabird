@@ -1,5 +1,5 @@
 pipeline:
-  master:
+  docker:
     image: plugins/docker
     repo: belak/seabird
     dockerfile: Dockerfile
