@@ -1,4 +1,4 @@
-FROM golang:1.7
+FROM golang:1.10
 
 ENV SEABIRD_CONFIG /data/seabird.toml
 VOLUME /data
