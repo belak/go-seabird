@@ -1,0 +1,11 @@
+pipeline:
+  master:
+    image: plugins/docker
+    repo: belak/seabird
+    dockerfile: Dockerfile
+    tag: latest
+    secrets: [ docker_username, docker_password ]
+    when:
+      branch: master
+      event: push
+
