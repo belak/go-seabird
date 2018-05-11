@@ -8,7 +8,7 @@ import (
 	"github.com/Sirupsen/logrus"
 
 	// Load plugins
-	_ "github.com/belak/go-seabird-bucket"
+	//_ "github.com/belak/go-seabird-bucket"
 	_ "github.com/belak/go-seabird-uno"
 	_ "github.com/belak/go-seabird/plugins"
 	_ "github.com/belak/go-seabird/plugins/extra"
