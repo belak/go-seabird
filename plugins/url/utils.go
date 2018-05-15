@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/bep/inflect"
 	"github.com/google/go-github/github"
 	"github.com/spf13/cast"
+
+	"github.com/belak/go-seabird"
+	"github.com/go-irc/irc"
 )
 
 // TemplateMustCompile will add all the helpers to a new template,
@@ -36,7 +37,7 @@ func TemplateMustCompile(name, data string) *template.Template {
 }
 
 // RenderTemplate is a wrapper to render a template to a string.
-func RenderTemplate(t *template.Template, vars map[string]interface{}) (string, error) {
+func RenderTemplate(t *template.Template, vars interface{}) (string, error) {
 	b := bytes.NewBuffer(nil)
 
 	err := t.Execute(b, vars)
@@ -50,7 +51,7 @@ func RenderTemplate(t *template.Template, vars map[string]interface{}) (string, 
 // RenderRespond is a wrapper around RenderTemplate which will render a template
 // and respond to the given message. It will return true on success and false on
 // failure.
-func RenderRespond(b *seabird.Bot, m *irc.Message, logger *logrus.Entry, t *template.Template, prefix string, vars map[string]interface{}) bool {
+func RenderRespond(b *seabird.Bot, m *irc.Message, logger *logrus.Entry, t *template.Template, prefix string, vars interface{}) bool {
 	out, err := RenderTemplate(t, vars)
 	if err != nil {
 		logger.WithError(err).Error("Failed to render template")
