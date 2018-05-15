@@ -1,6 +1,6 @@
 # Seabird
 
-[![Build Status](https://travis-ci.org/belak/go-seabird.svg?branch=master)](https://travis-ci.org/belak/go-seabird)
+[![Build Status](https://drone.coded.io/api/badges/belak/go-seabird/status.svg)](https://drone.coded.io/belak/go-seabird)
 
 ## Requirements
 
