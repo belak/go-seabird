@@ -1,0 +1,9 @@
+{
+  "Fast": true,
+  "Cyclo": 15,
+  "Disable": [
+    "dupl",
+    "gas",
+    "goconst"
+  ]
+}

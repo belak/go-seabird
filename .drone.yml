@@ -17,7 +17,7 @@ pipeline:
     commands:
       - go get github.com/alecthomas/gometalinter
       - gometalinter --install
-      - gometalinter ./... --fast -D dupl -D gas -D gconst --cyclo-over 15
+      - gometalinter ./...
 
   docker:
     image: plugins/docker
