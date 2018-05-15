@@ -1,4 +1,13 @@
 pipeline:
+  test:
+    image: golang:1.10
+    commands:
+      - go get github.com/alecthomas/gometalinter
+      - go get -t ./...
+      - gometalinter ./... --fast -D dupl -D gas -D gconst --cyclo-over 15
+      - go test -v ./...
+      - cd ./cmd/seabird && go build
+
   docker:
     image: plugins/docker
     repo: belak/seabird
