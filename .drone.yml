@@ -4,17 +4,11 @@ workspace:
 
 pipeline:
   test:
-    group: test
     image: golang:1.10
     commands:
       - go get -t ./...
       - go test -v ./...
       - cd ./cmd/seabird && go build
-
-  lint:
-    group: test
-    image: golang:1.10
-    commands:
       - go get github.com/alecthomas/gometalinter
       - gometalinter --install
       - gometalinter ./...
