@@ -4,13 +4,17 @@ workspace:
 
 pipeline:
   test:
+    group: test
     image: golang:1.10
     commands:
-      # Test first
       - go get -t ./...
       - go test -v ./...
       - cd ./cmd/seabird && go build
-      # Linting second
+
+  lint:
+    group: test
+    image: golang:1.10
+    commands:
       - go get github.com/alecthomas/gometalinter
       - gometalinter --install
       - gometalinter ./... --fast -D dupl -D gas -D gconst --cyclo-over 15
