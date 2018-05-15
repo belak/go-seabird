@@ -8,11 +8,12 @@ import (
 	"time"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
 	"github.com/bep/inflect"
 	"github.com/google/go-github/github"
 	"github.com/spf13/cast"
+
+	"github.com/belak/go-seabird"
+	"github.com/go-irc/irc"
 )
 
 // TemplateMustCompile will add all the helpers to a new template,
