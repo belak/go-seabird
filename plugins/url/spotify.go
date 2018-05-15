@@ -4,9 +4,11 @@ import (
 	"context"
 	"net/url"
 	"regexp"
+	"text/template"
 
 	"golang.org/x/oauth2/clientcredentials"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/zmb3/spotify"
 
 	"github.com/belak/go-seabird"
@@ -27,14 +29,33 @@ type spotifyProvider struct {
 }
 
 var spotifyPrefix = "[Spotify]"
-var spotifyAlbumRegex = regexp.MustCompile(`^/album/(.+)$`)
 
-var spotifyAlbumTemplate = TemplateMustCompile("spotifyAlbum", `
-{{- .album.Name }} by
-{{- range $index, $element := .album.Artists }}
-	{{- if $index }},{{ end }} {{ $element.Name -}}
-{{- end }}
-`)
+type spotifyMatch struct {
+	regex    *regexp.Regexp
+	template *template.Template
+	lookup   func(*spotifyProvider, *logrus.Entry, spotify.ID) interface{}
+}
+
+var spotifyMatchers = []spotifyMatch{
+	{
+		regex: regexp.MustCompile(`^/album/(.+)$`),
+		template: TemplateMustCompile("spotifyAlbum", `
+			{{- .Name }} by
+			{{- range $index, $element := .Artists }}
+			{{- if $index }},{{ end }} {{ $element.Name -}}
+			{{- end }}`),
+		lookup: func(s *spotifyProvider, logger *logrus.Entry, id spotify.ID) interface{} {
+			album, err := s.api.GetAlbum(id)
+			if err != nil {
+				logger.WithError(err).Error("Failed to get album info from Spotify")
+				return nil
+			}
+			return album
+		},
+	},
+}
+
+var spotifyAlbumRegex = regexp.MustCompile(`^/album/(.+)$`)
 
 func newSpotifyProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	s := &spotifyProvider{}
@@ -63,30 +84,25 @@ func newSpotifyProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 }
 
 func (s *spotifyProvider) Handle(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
-	if spotifyAlbumRegex.MatchString(u.Path) {
-		return s.getAlbum(b, m, u.Path)
-	}
-	return false
-}
-
-func (s *spotifyProvider) getAlbum(b *seabird.Bot, m *irc.Message, url string) bool {
 	logger := b.GetLogger()
 
-	matches := spotifyAlbumRegex.FindStringSubmatch(url)
-	if len(matches) != 2 {
-		return false
+	for _, matcher := range spotifyMatchers {
+		if !matcher.regex.MatchString(u.Path) {
+			continue
+		}
+
+		matches := matcher.regex.FindStringSubmatch(u.Path)
+		if len(matches) != 2 {
+			return false
+		}
+
+		data := matcher.lookup(s, logger, spotify.ID(matches[1]))
+		if data == nil {
+			return false
+		}
+
+		return RenderRespond(b, m, logger, matcher.template, spotifyPrefix, data)
 	}
 
-	album, err := s.api.GetAlbum(spotify.ID(matches[1]))
-	if err != nil {
-		logger.WithError(err).Error("Failed to get album from Spotify")
-		return false
-	}
-
-	return RenderRespond(
-		b, m, logger, spotifyAlbumTemplate, spotifyPrefix,
-		map[string]interface{}{
-			"album": album,
-		},
-	)
+	return false
 }
