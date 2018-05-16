@@ -19,6 +19,25 @@ func init() {
 	seabird.RegisterPlugin("forecast", newForecastPlugin)
 }
 
+const defaultUnitString = "°"
+
+var unitStrings = map[darksky.Units]string{
+	darksky.CA: "°C",
+	darksky.SI: "°C",
+	darksky.US: "°F",
+	darksky.UK: "°C",
+
+	// Documented by darksky, but not the library so we need to hack it in.
+	darksky.Units("uk2"): "°C",
+}
+
+func getUnit(unit darksky.Units) string {
+	if v, ok := unitStrings[unit]; ok {
+		return v
+	}
+	return defaultUnitString
+}
+
 type forecastPlugin struct {
 	Key        string
 	MapsKey    string
@@ -80,7 +99,7 @@ func (p *forecastPlugin) forecastQuery(loc *ForecastLocation) (*darksky.Forecast
 		strconv.FormatFloat(loc.Lat, 'f', 4, 64),
 		strconv.FormatFloat(loc.Lon, 'f', 4, 64),
 		"now",
-		darksky.US,
+		darksky.AUTO,
 		darksky.English,
 	)
 }
@@ -143,15 +162,19 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
+	unit := getUnit(darksky.Units(fc.Flags.Units))
+
 	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(int64(block.Time), 0).Weekday()
 
 		b.MentionReply(m,
-			"%s: High %.2f, Low %.2f, Humidity %.f%%. %s",
+			"%s: High %.2f%s, Low %.2f%s, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
+			unit,
 			block.TemperatureMin,
+			unit,
 			block.Humidity*100,
 			block.Summary)
 	}
@@ -170,13 +193,18 @@ func (p *forecastPlugin) weatherCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
+	unit := getUnit(darksky.Units(fc.Flags.Units))
+
 	today := fc.Daily.Data[0]
 	b.MentionReply(m,
-		"%s. Currently %.1f. High %.2f, Low %.2f, Humidity %.f%%. %s.",
+		"%s. Currently %.1f%s. High %.2f%s, Low %.2f%s, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,
+		unit,
 		today.TemperatureMax,
+		unit,
 		today.TemperatureMin,
+		unit,
 		fc.Currently.Humidity*100,
 		fc.Currently.Summary)
 }
