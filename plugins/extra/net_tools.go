@@ -129,7 +129,11 @@ func (p *netToolsPlugin) Ping(b *seabird.Bot, m *irc.Message) {
 			b.MentionReply(m, "%d bytes from %s: icmp_seq=%d time=%s",
 				pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 		}
-		pinger.Run()
+		err = pinger.Run()
+		if err != nil {
+			b.MentionReply(m, "%s", err)
+			return
+		}
 	}()
 }
 
