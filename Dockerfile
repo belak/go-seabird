@@ -1,7 +1,9 @@
-FROM golang:1.10
+FROM golang:1.10-alpine
 
 ENV SEABIRD_CONFIG /data/seabird.toml
 VOLUME /data
+
+RUN apk add --update libcap iputils git
 
 ADD . /go/src/github.com/belak/go-seabird
 
