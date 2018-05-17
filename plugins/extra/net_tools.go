@@ -6,8 +6,8 @@ import (
 	"net/http"
 	"net/url"
 	"os/exec"
-	"strings"
 
+	ping "github.com/belak/go-ping"
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"
 )
@@ -118,19 +118,18 @@ func (p *netToolsPlugin) Ping(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		out, err := exec.Command("ping", "-c1", m.Trailing()).Output()
+		pinger, err := ping.NewPinger(m.Trailing())
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return
 		}
+		pinger.Count = 1
 
-		arr := strings.Split(string(out), "\n")
-		if len(arr) < 2 {
-			b.MentionReply(m, "Error retrieving ping results")
-			return
+		pinger.OnRecv = func(pkt *ping.Packet) {
+			b.MentionReply(m, "%d bytes from %s: icmp_seq=%d time=%s",
+				pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 		}
-
-		b.MentionReply(m, arr[1])
+		pinger.Run()
 	}()
 }
 
