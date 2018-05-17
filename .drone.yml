@@ -6,6 +6,7 @@ pipeline:
   test:
     image: golang:1.10-alpine
     commands:
+      - apk add --update git
       - go get -t ./...
       - go test -v ./...
       - cd ./cmd/seabird && go build
