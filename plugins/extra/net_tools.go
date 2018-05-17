@@ -17,7 +17,8 @@ func init() {
 }
 
 type netToolsPlugin struct {
-	Key string
+	Key            string
+	PrivilegedPing bool
 }
 
 func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
@@ -124,6 +125,7 @@ func (p *netToolsPlugin) Ping(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 		pinger.Count = 1
+		pinger.SetPrivileged(p.PrivilegedPing)
 
 		pinger.OnRecv = func(pkt *ping.Packet) {
 			b.MentionReply(m, "%d bytes from %s: icmp_seq=%d time=%s",
