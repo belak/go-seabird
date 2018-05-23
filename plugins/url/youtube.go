@@ -6,8 +6,8 @@ import (
 	"net/url"
 	"strings"
 
-	duration "github.com/ChannelMeter/iso8601duration"
 	"github.com/Unknwon/com"
+	duration "github.com/channelmeter/iso8601duration"
 
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"

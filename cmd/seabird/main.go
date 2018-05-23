@@ -1,11 +1,11 @@
-package main // import "github.com/belak/go-seabird"
+package main // import "github.com/belak/go-seabird/cmd/seabird"
 
 import (
 	"math/rand"
 	"os"
 	"time"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 
 	// Load plugins
 	//_ "github.com/belak/go-seabird-bucket"

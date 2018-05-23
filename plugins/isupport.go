@@ -3,9 +3,9 @@ package plugins
 import (
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"
+	"github.com/sirupsen/logrus"
 )
 
 func init() {

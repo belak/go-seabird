@@ -8,7 +8,7 @@ import (
 
 	"golang.org/x/oauth2/clientcredentials"
 
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"github.com/zmb3/spotify"
 
 	"github.com/belak/go-seabird"

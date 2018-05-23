@@ -7,9 +7,9 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/bep/inflect"
 	"github.com/google/go-github/github"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
 	"github.com/belak/go-seabird"

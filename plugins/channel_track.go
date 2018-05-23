@@ -4,8 +4,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Sirupsen/logrus"
 	"github.com/google/uuid"
+	"github.com/sirupsen/logrus"
 
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"

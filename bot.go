@@ -10,8 +10,8 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/inject"
+	"github.com/sirupsen/logrus"
 
 	"github.com/belak/go-plugin"
 	"github.com/go-irc/irc"
