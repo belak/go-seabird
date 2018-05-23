@@ -8,7 +8,7 @@ pipeline:
     commands:
       - apk add --update git
       - go get -u golang.org/x/vgo
-      - vgo test
+      - vgo test ./...
       - vgo build ./cmd/seabird
       - go get github.com/alecthomas/gometalinter
       - gometalinter --install

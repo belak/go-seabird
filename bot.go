@@ -109,7 +109,7 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	b.mux.Event("PRIVMSG", mentionMux.HandleEvent)
 
 	// Register all the things we want with the plugin registry.
-	b.registry.RegisterProvider(func() (*Bot, *BasicMux, *CommandMux, *MentionMux) {
+	b.registry.RegisterProvider("seabird/core", func() (*Bot, *BasicMux, *CommandMux, *MentionMux) {
 		return b, b.mux, commandMux, mentionMux
 	})
 
