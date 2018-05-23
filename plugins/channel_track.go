@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/Sirupsen/logrus"
-	"github.com/satori/go.uuid"
+	"github.com/google/uuid"
 
 	"github.com/belak/go-seabird"
 	"github.com/go-irc/irc"
@@ -399,7 +399,7 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 	if u == nil {
 		u = &User{
 			Nick:     user,
-			UUID:     uuid.Must(uuid.NewV4()).String(),
+			UUID:     uuid.Must(uuid.NewRandom()).String(),
 			channels: make(map[string]map[rune]bool),
 		}
 		p.users[u.UUID] = u
