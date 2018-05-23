@@ -14,7 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	"github.com/belak/go-plugin"
-	"github.com/go-irc/irc"
+	irc "github.com/go-irc/irc/v2"
 )
 
 type coreConfig struct {

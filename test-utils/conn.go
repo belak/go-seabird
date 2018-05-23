@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/go-irc/irc"
+	irc "github.com/go-irc/irc/v2"
 	"github.com/stretchr/testify/assert"
 )
 

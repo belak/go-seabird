@@ -7,9 +7,9 @@ pipeline:
     image: golang:1.10-alpine
     commands:
       - apk add --update git
-      - go get -t ./...
-      - go test -v ./...
-      - cd ./cmd/seabird && go build
+      - go get -u golang.org/x/vgo
+      - vgo test
+      - vgo build ./cmd/seabird
       - go get github.com/alecthomas/gometalinter
       - gometalinter --install
       - gometalinter ./...

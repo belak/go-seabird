@@ -3,7 +3,7 @@ package seabird
 import (
 	"sync"
 
-	"github.com/go-irc/irc"
+	irc "github.com/go-irc/irc/v2"
 )
 
 // BasicMux is a simple IRC event multiplexer. It matches the command against

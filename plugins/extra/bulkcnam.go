@@ -1,15 +1,15 @@
 package extra
 
 import (
-	"io"
 	"bufio"
 	"fmt"
+	"io"
 	"net/http"
 	"strings"
 	"unicode"
 
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
+	irc "github.com/go-irc/irc/v2"
 )
 
 func init() {

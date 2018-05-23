@@ -4,10 +4,12 @@ ENV SEABIRD_CONFIG /data/seabird.toml
 VOLUME /data
 
 RUN apk add --update iputils git
+RUN go get -u golang.org/x/vgo
 
-ADD . /go/src/github.com/belak/go-seabird
+# Add the files and switch to that dir
+ADD . /src
+WORKDIR /src
 
-RUN go get -v -d github.com/belak/go-seabird/cmd/seabird
-RUN go install github.com/belak/go-seabird/cmd/seabird
+RUN vgo install -v ./cmd/seabird
 
 ENTRYPOINT ["/go/bin/seabird"]

@@ -5,7 +5,7 @@ import (
 	"sync"
 	"unicode"
 
-	"github.com/go-irc/irc"
+	irc "github.com/go-irc/irc/v2"
 )
 
 // MentionMux is a simple IRC event multiplexer, based on a slice of Handlers

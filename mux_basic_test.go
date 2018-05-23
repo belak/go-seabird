@@ -3,8 +3,9 @@ package seabird
 import (
 	"testing"
 
-	"github.com/go-irc/irc"
 	"github.com/stretchr/testify/require"
+
+	irc "github.com/go-irc/irc/v2"
 )
 
 type messageHandler struct {

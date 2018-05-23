@@ -2,7 +2,7 @@ package extra
 
 import (
 	"github.com/belak/go-seabird"
-	"github.com/go-irc/irc"
+	irc "github.com/go-irc/irc/v2"
 )
 
 func init() {
