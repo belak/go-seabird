@@ -1,9 +1,9 @@
-FROM golang:1.10-alpine
+FROM golang:1.10
 
 ENV SEABIRD_CONFIG /data/seabird.toml
 VOLUME /data
 
-RUN apk add --update iputils git
+RUN apt install traceroute
 RUN go get -u golang.org/x/vgo
 
 # Add the files and switch to that dir

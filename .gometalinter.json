@@ -4,6 +4,7 @@
   "Disable": [
     "dupl",
     "gas",
-    "goconst"
+    "goconst",
+    "gotype"
   ]
 }

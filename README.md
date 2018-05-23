@@ -6,6 +6,7 @@
 
 * go >= 1.7
 * gcc
+* [vgo](https://golang.org/x/vgo)
 
 ## Configuring
 
@@ -21,8 +22,7 @@ export SEABIRD_CONFIG=$HOME/config.toml
 # Running
 
 ```
-go get ./...
-SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
+SEABIRD_CONFIG=$HOME/config.toml vgo run cmd/seabird/main.go
 ```
 
 # License
