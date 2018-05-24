@@ -1,4 +1,4 @@
-FROM alpine:3.7
+FROM golang:1.10-alpine
 
 # Add any runtime dependencies
 RUN apk add -U --no-cache iputils
