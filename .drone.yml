@@ -4,12 +4,14 @@ workspace:
 
 pipeline:
   test:
-    image: golang:1.10
+    image: golang:1.10-alpine
     commands:
+      # Testing
+      - apk add -U --no-cache build-base git
       - go get -u golang.org/x/vgo
       - vgo test ./...
-      - vgo build ./cmd/seabird
-      - go get github.com/alecthomas/gometalinter
+      # Linting
+      - go get -u github.com/alecthomas/gometalinter
       - gometalinter --install
       # NOTE: This is a dirty hack until gometalinter gets better support for
       # running linters using vgo. Also note that gotype has been disabled (as
@@ -17,6 +19,13 @@ pipeline:
       # with vgo support.
       - ln -s `which vgo` /go/bin/go
       - gometalinter ./...
+      - rm -f /go/bin/go
+
+  build:
+    image: golang:1.10-alpine
+    commands:
+      - apk add -U --no-cache build-base git
+      - vgo build -o ./dist/seabird ./cmd/seabird
 
   docker:
     image: plugins/docker
