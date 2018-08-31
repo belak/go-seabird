@@ -3,7 +3,9 @@ module github.com/belak/go-seabird
 require (
 	github.com/BurntSushi/toml v0.3.0
 	github.com/ChimeraCoder/anaconda v1.0.0
+	github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7 // indirect
 	github.com/Unknwon/com v0.0.0-20170819223952-7677a1d7c113
+	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
 	github.com/belak/go-ping v0.0.0-20180517230102-86090cc6a4e2
 	github.com/belak/go-plugin v0.1.0
 	github.com/belak/go-resolve v0.1.0
@@ -13,12 +15,17 @@ require (
 	github.com/boltdb/bolt v1.3.1
 	github.com/channelmeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
+	github.com/davecgh/go-spew v1.1.1 // indirect
+	github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc // indirect
+	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad // indirect
+	github.com/garyburd/go-oauth v0.0.0-20180319155456-bca2e7f09a17 // indirect
 	github.com/go-irc/irc/v2 v2.1.2
 	github.com/gobwas/glob v0.2.3
 	github.com/google/go-github v0.0.0-20180509124334-8ea2e2657df8
 	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135
 	github.com/google/uuid v0.0.0-20171129191014-dec09d789f3d
 	github.com/mlbright/darksky v0.0.0-20170901160544-26159461bcba
+	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.0.5
 	github.com/soudy/mathcat v0.0.0-20161113211117-85db51cac9df
 	github.com/spf13/cast v1.2.0
