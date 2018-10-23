@@ -5,9 +5,12 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/go-xorm/xorm"
+
 	"github.com/belak/go-seabird"
-	"github.com/belak/nut"
 	irc "github.com/go-irc/irc/v2"
+
+	"github.com/belak/nut"
 )
 
 func init() {
@@ -15,23 +18,78 @@ func init() {
 }
 
 type karmaPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 }
 
-// KarmaTarget represents an item with a karma count
-type KarmaTarget struct {
-	Name  string
+// Karma represents an item with a karma count
+type Karma struct {
+	ID    int64
+	Name  string `xorm:"unique"`
 	Score int
 }
 
 var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
+func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, ndb *nut.DB, db *xorm.Engine) error {
+	l := b.GetLogger()
 	p := &karmaPlugin{db: db}
 
-	err := p.db.EnsureBucket("karma")
+	// Migrate any relevant tables
+	err := db.Sync(Karma{})
 	if err != nil {
 		return err
+	}
+
+	rowCount, err := db.Count(Karma{})
+	if err != nil {
+		return err
+	}
+
+	// If a nut DB exists, we need to migrate all the data
+	if ndb != nil && rowCount != 0 {
+		l.Info("Skipping karma migration because target table is non-empty")
+	} else if ndb != nil {
+		l.Info("Migrating karma from nut to xorm")
+
+		// This is a bit gross, but it's the simplest way to get a transaction for both nut and xorm.
+		err = ndb.View(func(tx *nut.Tx) error {
+			_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+				// We only need to migrate data if there's a karma bucket.
+				bucket := tx.Bucket("karma")
+				if bucket == nil {
+					l.Info("Skipping karma migration because of missing bucket")
+					return nil, nil
+				}
+
+				karma := &Karma{}
+
+				c := bucket.Cursor()
+				for k, err := c.First(&karma); err == nil; k, err = c.Next(&karma) {
+					l.Infof("Migrating karma entry for %s", karma.Name)
+
+					if karma.Name != k {
+						l.Warnf("Karma name (%s) does not match key (%s)", karma.Name, k)
+					}
+
+					// Reset the ID before inserting
+					karma.ID = 0
+
+					// Actually insert
+					_, err := s.InsertOne(karma)
+					if err != nil {
+						return nil, err
+					}
+				}
+
+				return nil, err
+			})
+
+			return err
+		})
+
+		if err != nil {
+			return err
+		}
 	}
 
 	cm.Event("karma", p.karmaCallback, &seabird.HelpInfo{
@@ -60,25 +118,22 @@ func (p *karmaPlugin) cleanedName(name string) string {
 
 // GetKarmaFor returns the karma for the given name.
 func (p *karmaPlugin) GetKarmaFor(name string) int {
-	out := &KarmaTarget{Name: p.cleanedName(name)}
-
-	_ = p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("karma")
-		return bucket.Get(out.Name, out)
-	})
-
+	out := &Karma{Name: p.cleanedName(name)}
+	_, _ = p.db.Get(out)
 	return out.Score
 }
 
 // UpdateKarma will update the karma for a given name and return the new karma value.
 func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
-	out := &KarmaTarget{Name: p.cleanedName(name)}
+	out := &Karma{Name: p.cleanedName(name)}
 
-	_ = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("karma")
-		bucket.Get(out.Name, out)
+	p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+		found, _ := s.Get(out)
+		if !found {
+			s.Insert(out)
+		}
 		out.Score += diff
-		return bucket.Put(out.Name, out)
+		return s.ID(out.ID).Update(out)
 	})
 
 	return out.Score

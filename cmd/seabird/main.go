@@ -7,6 +7,10 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	// Officially supported DB drivers
+	_ "github.com/lib/pq"
+	_ "github.com/mattn/go-sqlite3"
+
 	// Load plugins
 	//_ "github.com/belak/go-seabird-bucket"
 	_ "github.com/belak/go-seabird-uno"

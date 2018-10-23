@@ -8,6 +8,7 @@ import (
 	"github.com/belak/go-seabird"
 	"github.com/belak/nut"
 	irc "github.com/go-irc/irc/v2"
+	"github.com/go-xorm/xorm"
 )
 
 func init() {
@@ -15,9 +16,19 @@ func init() {
 }
 
 type phrasesPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 }
 
+// Phrase is an xorm model for phrases
+type Phrase struct {
+	ID        int64
+	Name      string `xorm:"index"`
+	Value     string
+	Submitter string
+	Deleted   bool
+}
+
+// phraseBucket is the old nut.DB phrase store, along with phrase
 type phraseBucket struct {
 	Key     string
 	Entries []phrase
@@ -29,12 +40,63 @@ type phrase struct {
 	Deleted   bool
 }
 
-func newPhrasesPlugin(cm *seabird.CommandMux, db *nut.DB) error {
+func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *xorm.Engine) error {
+	l := b.GetLogger()
 	p := &phrasesPlugin{db: db}
 
-	err := p.db.EnsureBucket("phrases")
+	err := db.Sync(Phrase{})
 	if err != nil {
 		return err
+	}
+
+	rowCount, err := db.Count(Phrase{})
+	if err != nil {
+		return err
+	}
+
+	if ndb != nil && rowCount != 0 {
+		l.Info("Skipping phrases migration because target table is non-empty")
+	} else if ndb != nil {
+		l.Info("Migrating phrases from nut to xorm")
+
+		// This is a bit gross, but it's the simplest way to get a transaction for both nut and xorm.
+		err = ndb.View(func(tx *nut.Tx) error {
+			_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+				bucket := tx.Bucket("phrases")
+				if bucket == nil {
+					l.Info("Skipping phrases migration because of missing bucket")
+					return nil, nil
+				}
+
+				data := &phraseBucket{}
+				c := bucket.Cursor()
+				for k, err := c.First(&data); err == nil; k, err = c.Next(&data) {
+					l.Infof("Migrating phrase entry for %s", data.Key)
+
+					if data.Key != k {
+						l.Warnf("Phrase name (%s) does not match key (%s)", data.Key, k)
+					}
+
+					for _, entry := range data.Entries {
+						phrase := Phrase{
+							Name:      data.Key,
+							Value:     entry.Value,
+							Submitter: entry.Submitter,
+							Deleted:   entry.Deleted,
+						}
+
+						_, err := s.InsertOne(phrase)
+						if err != nil {
+							return nil, err
+						}
+					}
+				}
+
+				return nil, err
+			})
+
+			return err
+		})
 	}
 
 	cm.Event("forget", p.forgetCallback, &seabird.HelpInfo{
@@ -69,60 +131,40 @@ func (p *phrasesPlugin) cleanedName(name string) string {
 	return strings.TrimFunc(strings.ToLower(name), unicode.IsSpace)
 }
 
-func (p *phrasesPlugin) getKey(key string) (*phrase, error) {
-	row := &phraseBucket{Key: p.cleanedName(key)}
-	if len(row.Key) == 0 {
+func (p *phrasesPlugin) getKey(key string) (*Phrase, error) {
+	out := &Phrase{Name: p.cleanedName(key)}
+	if len(out.Name) == 0 {
 		return nil, errors.New("No key provided")
 	}
 
-	err := p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("phrases")
-		return bucket.Get(row.Key, row)
-	})
-
+	_, err := p.db.Get(out)
 	if err != nil {
 		return nil, err
-	} else if len(row.Entries) == 0 {
+	} else if len(out.Value) == 0 {
 		return nil, errors.New("No results for given key")
 	}
 
-	entry := row.Entries[len(row.Entries)-1]
-	if entry.Deleted {
-		return nil, errors.New("Phrase was previously deleted")
-	}
-
-	return &entry, nil
+	return out, nil
 }
 
 func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, m *irc.Message) {
-	row := &phraseBucket{Key: p.cleanedName(m.Trailing())}
-	if len(row.Key) == 0 {
-		b.MentionReply(m, "No key supplied")
-	}
-
-	entry := phrase{
+	entry := Phrase{
+		Name:      p.cleanedName(m.Trailing()),
 		Submitter: m.Prefix.Name,
 		Deleted:   true,
 	}
 
-	err := p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("phrases")
-		err := bucket.Get(row.Key, row)
-		if err != nil {
-			return errors.New("No results for given key")
-		}
+	if len(entry.Name) == 0 {
+		b.MentionReply(m, "No key supplied")
+	}
 
-		row.Entries = append(row.Entries, entry)
-
-		return bucket.Put(row.Key, row)
-	})
-
+	_, err := p.db.InsertOne(entry)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "Forgot %s", row.Key)
+	b.MentionReply(m, "Forgot %s", entry.Name)
 }
 
 func (p *phrasesPlugin) getCallback(b *seabird.Bot, m *irc.Message) {
@@ -152,26 +194,24 @@ func (p *phrasesPlugin) giveCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *phrasesPlugin) historyCallback(b *seabird.Bot, m *irc.Message) {
-	row := &phraseBucket{Key: p.cleanedName(m.Trailing())}
-	if len(row.Key) == 0 {
+	search := &Phrase{Name: p.cleanedName(m.Trailing())}
+	if len(search.Name) == 0 {
 		b.MentionReply(m, "No key provided")
 		return
 	}
 
-	err := p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("phrases")
-		return bucket.Get(row.Key, row)
-	})
+	var data []Phrase
+	err := p.db.Find(&data, search)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	for _, entry := range row.Entries {
+	for _, entry := range data {
 		if entry.Deleted {
-			b.MentionReply(m, "%s deleted by %s", row.Key, entry.Submitter)
+			b.MentionReply(m, "%s deleted by %s", search.Name, entry.Submitter)
 		} else {
-			b.MentionReply(m, "%s set by %s to %s", row.Key, entry.Submitter, entry.Value)
+			b.MentionReply(m, "%s set by %s to %s", search.Name, entry.Submitter, entry.Value)
 		}
 	}
 }
@@ -183,30 +223,22 @@ func (p *phrasesPlugin) setCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	row := &phraseBucket{Key: p.cleanedName(split[0])}
-	if len(row.Key) == 0 {
-		b.MentionReply(m, "No key provided")
-		return
-	}
-
-	entry := phrase{
+	entry := Phrase{
+		Name:      p.cleanedName(split[0]),
 		Submitter: m.Prefix.Name,
 		Value:     split[1],
 	}
 
-	err := p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("phrases")
-		bucket.Get(row.Key, row)
+	if len(entry.Name) == 0 {
+		b.MentionReply(m, "No key provided")
+		return
+	}
 
-		row.Entries = append(row.Entries, entry)
-
-		return bucket.Put(row.Key, row)
-	})
-
+	_, err := p.db.InsertOne(entry)
 	if err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "%s set to %s", row.Key, entry.Value)
+	b.MentionReply(m, "%s set to %s", entry.Name, entry.Value)
 }

@@ -7,19 +7,20 @@ import (
 	"sync"
 	"time"
 
+	"github.com/go-xorm/xorm"
+
 	"github.com/belak/go-seabird"
-	"github.com/belak/nut"
 	irc "github.com/go-irc/irc/v2"
 )
 
 func init() {
-	seabird.RegisterPlugin("remind", newreminderPlugin)
+	seabird.RegisterPlugin("remind", newReminderPlugin)
 }
 
 var timeRegexp = regexp.MustCompile(`\d+[smhd]`)
 
 type reminderPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 
 	roomLock *sync.Mutex
 	rooms    map[string]bool
@@ -35,15 +36,16 @@ const (
 	privateTarget
 )
 
-type reminder struct {
-	Key          string
+// Reminder represents the xorm model for the reminder plugin
+type Reminder struct {
+	ID           int64
 	Target       string
 	TargetType   targetType
 	Content      string
 	ReminderTime time.Time
 }
 
-func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
+func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &reminderPlugin{
 		db:         db,
 		roomLock:   &sync.Mutex{},
@@ -51,7 +53,7 @@ func newreminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) 
 		updateChan: make(chan struct{}, 1),
 	}
 
-	err := p.db.EnsureBucket("remind_reminders")
+	err := p.db.Sync(Reminder{})
 	if err != nil {
 		return err
 	}
@@ -105,46 +107,20 @@ func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) nextReminder() (*reminder, error) {
+func (p *reminderPlugin) nextReminder() (*Reminder, error) {
 	// Find the next reminder we'll have to send
-	var r *reminder
-
-	err := p.db.View(func(tx *nut.Tx) error {
-		// Grab the room lock for this transaction
-		p.roomLock.Lock()
-		defer p.roomLock.Unlock()
-
-		bucket := tx.Bucket("remind_reminders")
-		cursor := bucket.Cursor()
-
-		v := &reminder{}
-		for _, err := cursor.First(v); err == nil; _, err = cursor.Next(v) {
-			// If it's a channel target and we're not in the room,
-			// we need to skip it
-			if v.TargetType == channelTarget && !p.rooms[v.Target] {
-				continue
-			}
-
-			// If we don't currently have a reminder or the new
-			// reminder should be sent before our current one, we
-			// update it.
-			if r == nil || v.ReminderTime.Before(r.ReminderTime) {
-				// Make absolutely sure that we have a copy of the
-				// data because as soon as we call Next, it will go
-				// away.
-				tmp := *v
-				r = &tmp
-			}
-		}
-
-		return nil
-	})
-
+	r := &Reminder{}
+	_, err := p.db.OrderBy("reminder_time ASC").Get(r)
+	if r.ID == 0 {
+		r = nil
+	}
 	return r, err
 }
 
 func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 	logger := b.GetLogger()
+
+	logger.Info("Starting reminder loop")
 
 	for {
 		r, err := p.nextReminder()
@@ -175,7 +151,7 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 	}
 }
 
-func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
+func (p *reminderPlugin) dispatch(b *seabird.Bot, r *Reminder) {
 	logger := b.GetLogger().WithField("reminder", r)
 
 	// Send the message
@@ -186,11 +162,7 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *reminder) {
 	})
 
 	// Nuke the reminder now that it's been sent
-	err := p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("remind_reminders")
-		return bucket.Delete(r.Key)
-	})
-
+	_, err := p.db.Delete(r)
 	if err != nil {
 		logger.WithError(err).Error("Failed to remove reminder")
 	}
@@ -247,7 +219,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	r := &reminder{
+	r := &Reminder{
 		Target:       m.Prefix.Name,
 		TargetType:   privateTarget,
 		Content:      split[1],
@@ -261,19 +233,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
 		r.Content = m.Prefix.Name + ": " + r.Content
 	}
 
-	err = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("remind_reminders")
-
-		key, innerErr := bucket.NextID()
-		if innerErr != nil {
-			return innerErr
-		}
-
-		r.Key = key
-
-		return bucket.Put(r.Key, r)
-	})
-
+	_, err = p.db.Insert(r)
 	if err != nil {
 		b.MentionReply(m, "Failed to store reminder: %s", err)
 		return
