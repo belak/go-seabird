@@ -8,8 +8,8 @@ pipeline:
     commands:
       # Testing
       - apk add -U --no-cache build-base git
-      - go get -u golang.org/x/vgo
-      - vgo test ./...
+      #- go get -u golang.org/x/vgo
+      #- vgo test ./...
       # Linting
       - go get -u github.com/alecthomas/gometalinter
       - gometalinter --install
@@ -17,7 +17,7 @@ pipeline:
       # running linters using vgo. Also note that gotype has been disabled (as
       # the same errors should be caught by the build above) until it's fixed
       # with vgo support.
-      - ln -s `which vgo` /go/bin/go
+      #- ln -s `which vgo` /go/bin/go
       - gometalinter ./...
       - rm -f /go/bin/go
 
@@ -25,7 +25,7 @@ pipeline:
     image: golang:1.11-alpine
     commands:
       - apk add -U --no-cache build-base git
-      - vgo build -o ./dist/seabird ./cmd/seabird
+      - go build -o ./dist/seabird ./cmd/seabird
 
   docker:
     image: plugins/docker
