@@ -4,7 +4,7 @@ workspace:
 
 pipeline:
   test:
-    image: golang:1.10-alpine
+    image: golang:1.11-alpine
     commands:
       # Testing
       - apk add -U --no-cache build-base git
@@ -22,7 +22,7 @@ pipeline:
       - rm -f /go/bin/go
 
   build:
-    image: golang:1.10-alpine
+    image: golang:1.11-alpine
     commands:
       - apk add -U --no-cache build-base git
       - vgo build -o ./dist/seabird ./cmd/seabird
