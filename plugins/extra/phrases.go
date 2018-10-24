@@ -61,7 +61,7 @@ func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *x
 
 		// This is a bit gross, but it's the simplest way to get a transaction for both nut and xorm.
 		err = ndb.View(func(tx *nut.Tx) error {
-			_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+			_, innerErr := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
 				bucket := tx.Bucket("phrases")
 				if bucket == nil {
 					l.Info("Skipping phrases migration because of missing bucket")
@@ -70,7 +70,7 @@ func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *x
 
 				data := &phraseBucket{}
 				c := bucket.Cursor()
-				for k, err := c.First(&data); err == nil; k, err = c.Next(&data) {
+				for k, e := c.First(&data); e == nil; k, e = c.Next(&data) {
 					l.Infof("Migrating phrase entry for %s", data.Key)
 
 					if data.Key != k {
@@ -85,7 +85,7 @@ func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *x
 							Deleted:   entry.Deleted,
 						}
 
-						_, err := s.InsertOne(phrase)
+						_, err = s.InsertOne(phrase)
 						if err != nil {
 							return nil, err
 						}
@@ -95,7 +95,7 @@ func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *x
 				return nil, err
 			})
 
-			return err
+			return innerErr
 		})
 	}
 

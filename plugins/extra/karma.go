@@ -53,7 +53,7 @@ func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux,
 
 		// This is a bit gross, but it's the simplest way to get a transaction for both nut and xorm.
 		err = ndb.View(func(tx *nut.Tx) error {
-			_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+			_, innerErr := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
 				// We only need to migrate data if there's a karma bucket.
 				bucket := tx.Bucket("karma")
 				if bucket == nil {
@@ -64,7 +64,7 @@ func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux,
 				karma := &Karma{}
 
 				c := bucket.Cursor()
-				for k, err := c.First(&karma); err == nil; k, err = c.Next(&karma) {
+				for k, e := c.First(&karma); e == nil; k, e = c.Next(&karma) {
 					l.Infof("Migrating karma entry for %s", karma.Name)
 
 					if karma.Name != k {
@@ -75,7 +75,7 @@ func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux,
 					karma.ID = 0
 
 					// Actually insert
-					_, err := s.InsertOne(karma)
+					_, err = s.InsertOne(karma)
 					if err != nil {
 						return nil, err
 					}
@@ -84,7 +84,7 @@ func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux,
 				return nil, err
 			})
 
-			return err
+			return innerErr
 		})
 
 		if err != nil {

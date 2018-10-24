@@ -8,3 +8,4 @@ y.output
 config.toml
 *.pem
 go.sum
+dist

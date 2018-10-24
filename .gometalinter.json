@@ -5,6 +5,9 @@
     "dupl",
     "gas",
     "goconst",
-    "gotype"
+    "gotype",
+
+    "vet",
+    "vetshadow"
   ]
 }

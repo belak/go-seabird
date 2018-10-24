@@ -1,6 +1,6 @@
 workspace:
   base: /go
-  path: src/github.com/belak/go-seabird
+  path: /seabird
 
 pipeline:
   test:
@@ -8,23 +8,20 @@ pipeline:
     commands:
       # Testing
       - apk add -U --no-cache build-base git
-      #- go get -u golang.org/x/vgo
-      #- vgo test ./...
+      # Linting Prep
+      - GO111MODULE=off go get -u github.com/alecthomas/gometalinter
+      - GO111MODULE=off gometalinter --install
+      - go get -d ./...
       # Linting
-      - go get -u github.com/alecthomas/gometalinter
-      - gometalinter --install
-      # NOTE: This is a dirty hack until gometalinter gets better support for
-      # running linters using vgo. Also note that gotype has been disabled (as
-      # the same errors should be caught by the build above) until it's fixed
-      # with vgo support.
-      #- ln -s `which vgo` /go/bin/go
+      - go vet ./...
+      - go vet --shadow ./...
       - gometalinter ./...
-      - rm -f /go/bin/go
 
   build:
     image: golang:1.11-alpine
     commands:
       - apk add -U --no-cache build-base git
+      - go get -d ./...
       - go build -o ./dist/seabird ./cmd/seabird
 
   docker:
