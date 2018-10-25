@@ -6,7 +6,6 @@ import (
 	"unicode"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/nut"
 	irc "github.com/go-irc/irc/v2"
 	"github.com/go-xorm/xorm"
 )
@@ -40,7 +39,7 @@ type phrase struct {
 	Deleted   bool
 }
 
-func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *xorm.Engine) error {
+func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &phrasesPlugin{db: db}
 
 	err := db.Sync(Phrase{})
