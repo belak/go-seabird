@@ -5,7 +5,7 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/go-seabird"
+	seabird "github.com/belak/go-seabird"
 	"github.com/belak/nut"
 	irc "github.com/go-irc/irc/v2"
 	"github.com/go-xorm/xorm"
@@ -41,62 +41,11 @@ type phrase struct {
 }
 
 func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, ndb *nut.DB, db *xorm.Engine) error {
-	l := b.GetLogger()
 	p := &phrasesPlugin{db: db}
 
 	err := db.Sync(Phrase{})
 	if err != nil {
 		return err
-	}
-
-	rowCount, err := db.Count(Phrase{})
-	if err != nil {
-		return err
-	}
-
-	if ndb != nil && rowCount != 0 {
-		l.Info("Skipping phrases migration because target table is non-empty")
-	} else if ndb != nil {
-		l.Info("Migrating phrases from nut to xorm")
-
-		// This is a bit gross, but it's the simplest way to get a transaction for both nut and xorm.
-		err = ndb.View(func(tx *nut.Tx) error {
-			_, innerErr := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
-				bucket := tx.Bucket("phrases")
-				if bucket == nil {
-					l.Info("Skipping phrases migration because of missing bucket")
-					return nil, nil
-				}
-
-				data := &phraseBucket{}
-				c := bucket.Cursor()
-				for k, e := c.First(&data); e == nil; k, e = c.Next(&data) {
-					l.Infof("Migrating phrase entry for %s", data.Key)
-
-					if data.Key != k {
-						l.Warnf("Phrase name (%s) does not match key (%s)", data.Key, k)
-					}
-
-					for _, entry := range data.Entries {
-						phrase := Phrase{
-							Name:      data.Key,
-							Value:     entry.Value,
-							Submitter: entry.Submitter,
-							Deleted:   entry.Deleted,
-						}
-
-						_, err = s.InsertOne(phrase)
-						if err != nil {
-							return nil, err
-						}
-					}
-				}
-
-				return nil, err
-			})
-
-			return innerErr
-		})
 	}
 
 	cm.Event("forget", p.forgetCallback, &seabird.HelpInfo{

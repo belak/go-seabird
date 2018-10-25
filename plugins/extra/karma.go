@@ -7,10 +7,8 @@ import (
 
 	"github.com/go-xorm/xorm"
 
-	"github.com/belak/go-seabird"
+	seabird "github.com/belak/go-seabird"
 	irc "github.com/go-irc/irc/v2"
-
-	"github.com/belak/nut"
 )
 
 func init() {
@@ -30,66 +28,13 @@ type Karma struct {
 
 var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, ndb *nut.DB, db *xorm.Engine) error {
-	l := b.GetLogger()
+func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &karmaPlugin{db: db}
 
 	// Migrate any relevant tables
 	err := db.Sync(Karma{})
 	if err != nil {
 		return err
-	}
-
-	rowCount, err := db.Count(Karma{})
-	if err != nil {
-		return err
-	}
-
-	// If a nut DB exists, we need to migrate all the data
-	if ndb != nil && rowCount != 0 {
-		l.Info("Skipping karma migration because target table is non-empty")
-	} else if ndb != nil {
-		l.Info("Migrating karma from nut to xorm")
-
-		// This is a bit gross, but it's the simplest way to get a transaction for both nut and xorm.
-		err = ndb.View(func(tx *nut.Tx) error {
-			_, innerErr := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
-				// We only need to migrate data if there's a karma bucket.
-				bucket := tx.Bucket("karma")
-				if bucket == nil {
-					l.Info("Skipping karma migration because of missing bucket")
-					return nil, nil
-				}
-
-				karma := &Karma{}
-
-				c := bucket.Cursor()
-				for k, e := c.First(&karma); e == nil; k, e = c.Next(&karma) {
-					l.Infof("Migrating karma entry for %s", karma.Name)
-
-					if karma.Name != k {
-						l.Warnf("Karma name (%s) does not match key (%s)", karma.Name, k)
-					}
-
-					// Reset the ID before inserting
-					karma.ID = 0
-
-					// Actually insert
-					_, err = s.InsertOne(karma)
-					if err != nil {
-						return nil, err
-					}
-				}
-
-				return nil, err
-			})
-
-			return innerErr
-		})
-
-		if err != nil {
-			return err
-		}
 	}
 
 	cm.Event("karma", p.karmaCallback, &seabird.HelpInfo{
