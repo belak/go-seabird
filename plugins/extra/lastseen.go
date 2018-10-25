@@ -63,8 +63,8 @@ func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
 		Nick:    strings.ToLower(rawNick),
 	}
 
-	_, err := p.db.Get(&search)
-	if err != nil {
+	found, err := p.db.Get(&search)
+	if err != nil || !found {
 		return rawNick + " has not been seen in" + rawChannel
 	}
 
