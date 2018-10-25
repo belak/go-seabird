@@ -23,6 +23,7 @@ pipeline:
       - apk add -U --no-cache build-base git
       - go get -d ./...
       - go build -o ./dist/seabird ./cmd/seabird
+      - go build -o ./dist/tmp-seabird-migrate ./cmd/tmp-seabird-migrate
 
   docker:
     image: plugins/docker

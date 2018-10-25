@@ -64,6 +64,9 @@ func (p *karmaPlugin) cleanedName(name string) string {
 // GetKarmaFor returns the karma for the given name.
 func (p *karmaPlugin) GetKarmaFor(name string) int {
 	out := &Karma{Name: p.cleanedName(name)}
+
+	// Note that we're explicitly ignoring an error here because it's not a
+	// problem when this returns zero results.
 	_, _ = p.db.Get(out)
 	return out.Score
 }
