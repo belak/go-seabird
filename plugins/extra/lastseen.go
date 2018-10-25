@@ -87,17 +87,19 @@ func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
 	nick := m.Prefix.Name
 	channel := m.Params[0]
 
-	p.updateLastSeen(nick, channel)
+	p.updateLastSeen(b, nick, channel)
 }
 
 // Thanks to @belak for the comments
-func (p *lastSeenPlugin) updateLastSeen(rawNick, rawChannel string) {
+func (p *lastSeenPlugin) updateLastSeen(b *seabird.Bot, rawNick, rawChannel string) {
+	l := b.GetLogger()
+
 	search := LastSeen{
 		Channel: strings.ToLower(rawChannel),
 		Nick:    strings.ToLower(rawNick),
 	}
 
-	_, _ = p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+	_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
 		found, _ := s.Get(&search)
 		if !found {
 			search.Time = time.Now()
@@ -106,4 +108,8 @@ func (p *lastSeenPlugin) updateLastSeen(rawNick, rawChannel string) {
 
 		return s.ID(search.ID).Update(search)
 	})
+
+	if err != nil {
+		l.WithError(err).Warnf("Failed to update lastseen data for %s in %s", rawNick, rawChannel)
+	}
 }
