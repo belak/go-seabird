@@ -5,8 +5,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/belak/go-seabird"
-	"github.com/belak/nut"
+	"github.com/go-xorm/xorm"
+
+	seabird "github.com/belak/go-seabird"
 	irc "github.com/go-irc/irc/v2"
 )
 
@@ -15,18 +16,21 @@ func init() {
 }
 
 type lastSeenPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 }
 
-type lastSeenChannelBucket struct {
-	Key   string
-	Nicks map[string]time.Time
+// LastSeen is the xorm model for the lastseen plugin
+type LastSeen struct {
+	ID      int64
+	Channel string
+	Nick    string
+	Time    time.Time
 }
 
-func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
+func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &lastSeenPlugin{db: db}
 
-	err := p.db.EnsureBucket("lastseen")
+	err := p.db.Sync(LastSeen{})
 	if err != nil {
 		return err
 	}
@@ -54,27 +58,17 @@ func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
-	nick := strings.ToLower(rawNick)
-
-	channelBucket := &lastSeenChannelBucket{
-		Key: strings.ToLower(rawChannel),
+	search := LastSeen{
+		Channel: strings.ToLower(rawChannel),
+		Nick:    strings.ToLower(rawNick),
 	}
 
-	err := p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("lastseen")
-		return bucket.Get(channelBucket.Key, channelBucket)
-	})
+	_, err := p.db.Get(&search)
 	if err != nil {
-		return "Unknown channel"
+		return rawNick + " has not been seen in" + rawChannel
 	}
 
-	var tm time.Time
-	var ok bool
-	if tm, ok = channelBucket.Nicks[nick]; !ok {
-		return "Unknown user"
-	}
-
-	return rawNick + " was last active on " + formatDate(tm) + " at " + formatTime(tm)
+	return rawNick + " was last active on " + formatDate(search.Time) + " at " + formatTime(search.Time)
 }
 
 func formatTime(t time.Time) string {
@@ -93,23 +87,29 @@ func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
 	nick := m.Prefix.Name
 	channel := m.Params[0]
 
-	p.updateLastSeen(nick, channel)
+	p.updateLastSeen(b, nick, channel)
 }
 
 // Thanks to @belak for the comments
-func (p *lastSeenPlugin) updateLastSeen(rawNick, rawChannel string) {
-	nick := strings.ToLower(rawNick)
+func (p *lastSeenPlugin) updateLastSeen(b *seabird.Bot, rawNick, rawChannel string) {
+	l := b.GetLogger()
 
-	channelBucket := &lastSeenChannelBucket{
-		Key:   strings.ToLower(rawChannel),
-		Nicks: make(map[string]time.Time),
+	search := LastSeen{
+		Channel: strings.ToLower(rawChannel),
+		Nick:    strings.ToLower(rawNick),
 	}
 
-	_ = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("lastseen")
+	_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+		found, _ := s.Get(&search)
+		if !found {
+			search.Time = time.Now()
+			return s.Insert(search)
+		}
 
-		bucket.Get(channelBucket.Key, channelBucket)
-		channelBucket.Nicks[nick] = time.Now()
-		return bucket.Put(channelBucket.Key, channelBucket)
+		return s.ID(search.ID).Update(search)
 	})
+
+	if err != nil {
+		l.WithError(err).Warnf("Failed to update lastseen data for %s in %s", rawNick, rawChannel)
+	}
 }

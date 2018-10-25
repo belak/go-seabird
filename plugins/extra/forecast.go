@@ -7,11 +7,11 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/go-xorm/xorm"
 	darksky "github.com/mlbright/darksky/v2"
 	"googlemaps.github.io/maps"
 
-	"github.com/belak/go-seabird"
-	"github.com/belak/nut"
+	seabird "github.com/belak/go-seabird"
 	irc "github.com/go-irc/irc/v2"
 )
 
@@ -41,7 +41,7 @@ func getUnit(unit darksky.Units) string {
 type forecastPlugin struct {
 	Key        string
 	MapsKey    string
-	db         *nut.DB
+	db         *xorm.Engine
 	mapsClient *maps.Client
 	// CacheDuration string
 }
@@ -50,17 +50,18 @@ type forecastPlugin struct {
 // geocoded location, along with the user who requested this be their home
 // location.
 type ForecastLocation struct {
-	Nick    string
+	ID      int64
+	Nick    string `xorm:"unique"`
 	Address string
 	Lat     float64
 	Lon     float64
 }
 
-func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *nut.DB) error {
+func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &forecastPlugin{db: db}
 
-	// Ensure the table is created if it doesn't exist
-	err := p.db.EnsureBucket("forecast_location")
+	// Ensure DB tables are up to date
+	err := p.db.Sync(ForecastLocation{})
 	if err != nil {
 		return err
 	}
@@ -111,11 +112,8 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 
 	// If it's an empty string, check the cache
 	if l == "" {
-		err := p.db.View(func(tx *nut.Tx) error {
-			bucket := tx.Bucket("forecast_location")
-			return bucket.Get(target.Nick, target)
-		})
-		if err != nil {
+		found, err := p.db.Get(target)
+		if err != nil || !found {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
 		return target, nil
@@ -141,9 +139,13 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 		Lon:     res[0].Geometry.Location.Lng,
 	}
 
-	err = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("forecast_location")
-		return bucket.Put(newLocation.Nick, newLocation)
+	_, err = p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+		found, _ := s.Get(target)
+		if !found {
+			return s.Insert(newLocation)
+		}
+
+		return s.ID(target.ID).Update(newLocation)
 	})
 
 	return newLocation, err

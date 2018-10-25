@@ -19,7 +19,7 @@ import (
 	_ "github.com/belak/go-seabird/plugins/url"
 
 	// Load the core
-	"github.com/belak/go-seabird"
+	seabird "github.com/belak/go-seabird"
 )
 
 func failIfErr(err error, desc string) {
@@ -46,7 +46,15 @@ func main() {
 	b, err := seabird.NewBot(confReader)
 	failIfErr(err, "Failed to create new bot")
 
-	// Run the bot
-	err = b.ConnectAndRun()
-	failIfErr(err, "Failed to create run bot")
+	// Load the relevant databases
+	nutdb, xormdb, err := openDBs(b)
+	failIfErr(err, "Failed to open databases")
+
+	// Migrate karma
+	err = migrateKarma(b, nutdb, xormdb)
+	failIfErr(err, "Failed to migrate karma")
+
+	// Migrate phrases
+	err = migratePhrases(b, nutdb, xormdb)
+	failIfErr(err, "Failed to migrate phrases")
 }

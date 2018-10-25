@@ -5,8 +5,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/belak/go-seabird"
-	"github.com/belak/nut"
+	"github.com/go-xorm/xorm"
+
+	seabird "github.com/belak/go-seabird"
 	irc "github.com/go-irc/irc/v2"
 )
 
@@ -15,21 +16,23 @@ func init() {
 }
 
 type karmaPlugin struct {
-	db *nut.DB
+	db *xorm.Engine
 }
 
-// KarmaTarget represents an item with a karma count
-type KarmaTarget struct {
-	Name  string
+// Karma represents an item with a karma count
+type Karma struct {
+	ID    int64
+	Name  string `xorm:"unique"`
 	Score int
 }
 
 var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *nut.DB) error {
+func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &karmaPlugin{db: db}
 
-	err := p.db.EnsureBucket("karma")
+	// Migrate any relevant tables
+	err := db.Sync(Karma{})
 	if err != nil {
 		return err
 	}
@@ -60,25 +63,25 @@ func (p *karmaPlugin) cleanedName(name string) string {
 
 // GetKarmaFor returns the karma for the given name.
 func (p *karmaPlugin) GetKarmaFor(name string) int {
-	out := &KarmaTarget{Name: p.cleanedName(name)}
+	out := &Karma{Name: p.cleanedName(name)}
 
-	_ = p.db.View(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("karma")
-		return bucket.Get(out.Name, out)
-	})
-
+	// Note that we're explicitly ignoring an error here because it's not a
+	// problem when this returns zero results.
+	_, _ = p.db.Get(out)
 	return out.Score
 }
 
 // UpdateKarma will update the karma for a given name and return the new karma value.
 func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
-	out := &KarmaTarget{Name: p.cleanedName(name)}
+	out := &Karma{Name: p.cleanedName(name)}
 
-	_ = p.db.Update(func(tx *nut.Tx) error {
-		bucket := tx.Bucket("karma")
-		bucket.Get(out.Name, out)
+	p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+		found, _ := s.Get(out)
+		if !found {
+			s.Insert(out)
+		}
 		out.Score += diff
-		return bucket.Put(out.Name, out)
+		return s.ID(out.ID).Update(out)
 	})
 
 	return out.Score
