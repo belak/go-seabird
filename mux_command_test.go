@@ -33,6 +33,15 @@ func TestCommandMux(t *testing.T) {
 	mux.HandleEvent(b, irc.MustParseMessage(":belak PRIVMSG bot :hello"))
 	assert.Equal(t, 3, mh.count)
 
+	// Ensure command names are case insensitive
+	mux = NewCommandMux("!")
+	mh = &messageHandler{}
+	mux.Event("hello", mh.Handle, nil)
+	mux.HandleEvent(b, irc.MustParseMessage(":belak PRIVMSG #hello :!hello"))
+	assert.Equal(t, 1, mh.count)
+	mux.HandleEvent(b, irc.MustParseMessage(":belak PRIVMSG #hello :!Hello"))
+	assert.Equal(t, 2, mh.count)
+
 	// Ensure private commands don't work publicly
 	mux = NewCommandMux("!")
 	mh = &messageHandler{}

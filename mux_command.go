@@ -12,6 +12,7 @@ import (
 // HelpInfo is a collection of instructions for command usage that
 // is formatted with <prefix>help
 type HelpInfo struct {
+	name        string
 	Usage       string
 	Description string
 }
@@ -36,6 +37,7 @@ func NewCommandMux(prefix string) *CommandMux {
 	}
 
 	m.Event("help", m.help, &HelpInfo{
+		"help",
 		"<command>",
 		"Displays help messages for a given command",
 	})
@@ -89,7 +91,7 @@ func (h *HelpInfo) format(prefix, command string) []string {
 	ret := []string{}
 
 	if h.Usage != "" {
-		ret = append(ret, "Usage: "+prefix+command+" "+h.Usage)
+		ret = append(ret, "Usage: "+prefix+h.name+" "+h.Usage)
 	}
 
 	if h.Description != "" {
@@ -101,6 +103,11 @@ func (h *HelpInfo) format(prefix, command string) []string {
 
 // Event will register a Handler as both a private and public command
 func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
+	if help != nil {
+		help.name = c
+	}
+	c = strings.ToLower(c)
+
 	m.private.Event(c, h)
 	m.public.Event(c, h)
 
@@ -109,6 +116,11 @@ func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
 
 // Channel will register a handler as a public command
 func (m *CommandMux) Channel(c string, h HandlerFunc, help *HelpInfo) {
+	if help != nil {
+		help.name = c
+	}
+	c = strings.ToLower(c)
+
 	m.public.Event(c, h)
 
 	m.cmdHelp[c] = help
@@ -116,6 +128,11 @@ func (m *CommandMux) Channel(c string, h HandlerFunc, help *HelpInfo) {
 
 // Private will register a handler as a private command
 func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
+	if help != nil {
+		help.name = c
+	}
+	c = strings.ToLower(c)
+
 	m.private.Event(c, h)
 
 	m.cmdHelp[c] = help
@@ -145,7 +162,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 		newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(msgParts[1])
 	}
 
-	newEvent.Command = msgParts[0]
+	newEvent.Command = strings.ToLower(msgParts[0])
 	if strings.HasPrefix(newEvent.Command, m.prefix) {
 		newEvent.Command = newEvent.Command[len(m.prefix):]
 	}
