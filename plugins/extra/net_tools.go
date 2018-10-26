@@ -7,6 +7,7 @@ import (
 	"net/url"
 	"os/exec"
 
+	"github.com/Unknwon/com"
 	ping "github.com/belak/go-ping"
 	"github.com/belak/go-seabird"
 	irc "github.com/go-irc/irc/v2"
@@ -52,6 +53,10 @@ func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	cm.Event("dnscheck", p.DNSCheck, &seabird.HelpInfo{
 		Usage:       "<domain>",
 		Description: "Returns DNSCheck URL for domain",
+	})
+	cm.Event("asn", p.ASNLookup, &seabird.HelpInfo{
+		Usage:       "<ip>",
+		Description: "Return subnet info for a given IP",
 	})
 
 	return nil
@@ -194,4 +199,45 @@ func (p *netToolsPlugin) DNSCheck(b *seabird.Bot, m *irc.Message) {
 	}
 
 	b.MentionReply(m, "https://www.whatsmydns.net/#A/"+m.Trailing())
+}
+
+type asnResponse struct {
+	Announced     bool
+	AsCountryCode string `json:"as_country_code"`
+	AsDescription string `json:"as_description"`
+	AsNumber      int    `json:"as_number"`
+	FirstIP       string `json:"first_ip"`
+	LastIP        string `json:"last_ip"`
+}
+
+func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, m *irc.Message) {
+	if m.Trailing() == "" {
+		b.MentionReply(m, "IP required")
+		return
+	}
+
+	asnResp := asnResponse{}
+
+	err := com.HttpGetJSON(
+		&http.Client{},
+		"https://api.iptoasn.com/v1/as/ip/"+m.Trailing(),
+		&asnResp)
+	if err != nil {
+		b.MentionReply(m, "%s", err)
+		return
+	}
+
+	if !asnResp.Announced {
+		b.MentionReply(m, "ASN information not available")
+		return
+	}
+
+	b.MentionReply(
+		m,
+		"#%d (%s - %s) - %s (%s)",
+		asnResp.AsNumber,
+		asnResp.FirstIP,
+		asnResp.LastIP,
+		asnResp.AsDescription,
+		asnResp.AsCountryCode)
 }
