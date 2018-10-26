@@ -65,7 +65,7 @@ func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
 
 	found, err := p.db.Get(&search)
 	if err != nil || !found {
-		return rawNick + " has not been seen in" + rawChannel
+		return rawNick + " has not been seen in " + rawChannel
 	}
 
 	return rawNick + " was last active on " + formatDate(search.Time) + " at " + formatTime(search.Time)
