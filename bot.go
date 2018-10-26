@@ -39,6 +39,9 @@ type coreConfig struct {
 
 	Debug    bool
 	LogLevel string
+
+	SendLimit duration
+	SendBurst int
 }
 
 type duration struct {
@@ -330,6 +333,9 @@ func (b *Bot) Run(c io.ReadWriter) error {
 
 		PingFrequency: b.config.PingFrequency.Duration,
 		PingTimeout:   b.config.PingTimeout.Duration,
+
+		SendLimit: b.config.SendLimit.Duration,
+		SendBurst: b.config.SendBurst,
 
 		Handler: irc.HandlerFunc(b.handler),
 	}
