@@ -37,7 +37,8 @@ type coreConfig struct {
 
 	Plugins []string
 
-	Debug bool
+	Debug    bool
+	LogLevel string
 }
 
 type duration struct {
@@ -96,10 +97,16 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	// Set up logging/debugging
 	b.log = logrus.NewEntry(logrus.New())
 
-	if b.config.Debug {
+	b.log.Logger.Level = logrus.InfoLevel
+	if b.config.LogLevel != "" {
+		level, err := logrus.ParseLevel(b.config.LogLevel)
+		if err != nil {
+			return nil, err
+		}
+		b.log.Logger.Level = level
+	} else if b.config.Debug {
+		b.log.Warn("The Debug config option has been replaced with LogLevel")
 		b.log.Logger.Level = logrus.DebugLevel
-	} else {
-		b.log.Logger.Level = logrus.InfoLevel
 	}
 
 	commandMux := NewCommandMux(b.config.Prefix)
