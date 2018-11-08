@@ -1,6 +1,6 @@
 package seabird
 
-import irc "github.com/go-irc/irc/v2"
+import irc "github.com/go-irc/irc"
 
 // Handler is an interface representing objects which can be registered to serve
 // a particular Event.Command or subcommand in the IRC client.

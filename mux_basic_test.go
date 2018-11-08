@@ -5,7 +5,7 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	irc "github.com/go-irc/irc/v2"
+	irc "github.com/go-irc/irc"
 )
 
 type messageHandler struct {

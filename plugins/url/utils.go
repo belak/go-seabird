@@ -13,7 +13,7 @@ import (
 	"github.com/spf13/cast"
 
 	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc/v2"
+	irc "github.com/go-irc/irc"
 )
 
 // TemplateMustCompile will add all the helpers to a new template,

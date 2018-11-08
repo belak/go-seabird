@@ -4,7 +4,7 @@ import (
 	"sync"
 
 	seabird "github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc/v2"
+	irc "github.com/go-irc/irc"
 )
 
 // TestHandler is meant to be inserted as a Handler somewhere to

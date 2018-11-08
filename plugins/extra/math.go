@@ -6,7 +6,7 @@ import (
 	"github.com/soudy/mathcat"
 
 	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc/v2"
+	irc "github.com/go-irc/irc"
 )
 
 func init() {
