@@ -13,8 +13,8 @@ import (
 	"github.com/codegangsta/inject"
 	"github.com/sirupsen/logrus"
 
-	"github.com/belak/go-plugin"
-	irc "github.com/go-irc/irc"
+	plugin "github.com/belak/go-plugin"
+	irc "gopkg.in/irc.v3"
 )
 
 type coreConfig struct {

@@ -7,8 +7,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 
-	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc"
+	irc "gopkg.in/irc.v3"
 )
 
 func init() {

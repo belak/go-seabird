@@ -9,12 +9,12 @@ import (
 	"strings"
 	"time"
 
+	seabird "github.com/belak/go-seabird"
 	"github.com/yhat/scrape"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc"
+	irc "gopkg.in/irc.v3"
 )
 
 func init() {

@@ -4,8 +4,8 @@ import (
 	"bytes"
 	"testing"
 
-	irc "github.com/go-irc/irc"
 	"github.com/stretchr/testify/assert"
+	irc "gopkg.in/irc.v3"
 )
 
 func TestCommandMux(t *testing.T) {

@@ -4,7 +4,7 @@ import (
 	"sort"
 	"strings"
 
-	irc "github.com/go-irc/irc"
+	irc "gopkg.in/irc.v3"
 )
 
 // CommandMux is a simple IRC event multiplexer, based on the BasicMux.

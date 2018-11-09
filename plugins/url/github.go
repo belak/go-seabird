@@ -7,11 +7,11 @@ import (
 	"regexp"
 	"strconv"
 
+	seabird "github.com/belak/go-seabird"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
-	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc"
+	irc "gopkg.in/irc.v3"
 )
 
 func init() {

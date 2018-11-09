@@ -6,8 +6,8 @@ import (
 	"unicode"
 
 	seabird "github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc"
 	"github.com/go-xorm/xorm"
+	irc "gopkg.in/irc.v3"
 )
 
 func init() {

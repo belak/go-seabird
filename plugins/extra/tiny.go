@@ -5,9 +5,9 @@ import (
 	"net/http"
 
 	"github.com/Unknwon/com"
+	seabird "github.com/belak/go-seabird"
 
-	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc"
+	irc "gopkg.in/irc.v3"
 )
 
 func init() {

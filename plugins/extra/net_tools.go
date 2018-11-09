@@ -9,8 +9,8 @@ import (
 
 	"github.com/Unknwon/com"
 	ping "github.com/belak/go-ping"
-	"github.com/belak/go-seabird"
-	irc "github.com/go-irc/irc"
+	seabird "github.com/belak/go-seabird"
+	irc "gopkg.in/irc.v3"
 )
 
 func init() {
