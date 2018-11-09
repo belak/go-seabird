@@ -5,6 +5,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 

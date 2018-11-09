@@ -10,7 +10,7 @@ require (
 	github.com/belak/go-ping v0.0.0-20180517230102-86090cc6a4e2
 	github.com/belak/go-plugin v0.1.0
 	github.com/belak/go-resolve v0.1.0 // indirect
-	github.com/belak/go-seabird-uno v0.0.0-20181108001246-b4a6645b9141
+	github.com/belak/go-seabird-uno v0.0.0-20181109223654-d5120018e9c1 // indirect
 	github.com/belak/nut v0.0.1
 	github.com/bep/inflect v0.0.0-20160408190323-b896c45f5af9
 	github.com/boltdb/bolt v1.3.1 // indirect
