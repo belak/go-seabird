@@ -54,20 +54,46 @@ func init() {
 	seabird.RegisterPlugin("runescape", newRunescapePlugin)
 }
 
+func newRunescapeLevelMetadata(name, player, line string) (*runescapeLevelMetadata, error) {
+	levelData := strings.Split(line, ",")
+	if len(levelData) < 3 {
+		return nil, fmt.Errorf("Invalid data")
+	}
+	rank, err := strconv.Atoi(levelData[0])
+	if err != nil {
+		return nil, err
+	}
+	level, err := strconv.Atoi(levelData[1])
+	if err != nil {
+		return nil, err
+	}
+	exp, err := strconv.Atoi(levelData[2])
+	if err != nil {
+		return nil, err
+	}
+	return &runescapeLevelMetadata{
+		Rank:   rank,
+		Level:  level,
+		Exp:    exp,
+		Player: player,
+		Skill:  name,
+	}, nil
+}
+
 func newRunescapePlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &runescapePlugin{}
 
-	cm.Event("rlevel", p.levelCallback, &seabird.HelpInfo{
+	cm.Event("rlvl", p.levelCallback, &seabird.HelpInfo{
 		Usage:       "<player> <skill>",
-		Description: "Returns a player's old school runescape skill level",
+		Description: "Returns a player's Old-School Runescape skill level",
 	})
 	cm.Event("rexp", p.expCallback, &seabird.HelpInfo{
 		Usage:       "<player> <skill>",
-		Description: "Returns a player's old school runescape skill exp",
+		Description: "Returns a player's Old-School Runescape skill exp",
 	})
 	cm.Event("rrank", p.rankCallback, &seabird.HelpInfo{
 		Usage:       "<player> <skill>",
-		Description: "Returns a player's old school runescape skill rank",
+		Description: "Returns a player's Old-School Runescape skill rank",
 	})
 
 	return nil
@@ -93,45 +119,27 @@ func (p *runescapePlugin) getPlayerSkills(search string) (*runescapeLevelMetadat
 	data := strings.Split(strings.TrimSpace(string(bytes)), "\n")
 
 	// It's not strictly needed to build all this up, but it may be useful later.
-	ret := map[string]runescapeLevelMetadata{}
+	ret := map[string]*runescapeLevelMetadata{}
 	if len(data) < len(runescapeOldSchoolSkillNames) {
 		return nil, fmt.Errorf("Invalid data")
 	}
 
 	for i, name := range runescapeOldSchoolSkillNames {
-		line := data[i]
-		levelData := strings.Split(line, ",")
-		if len(levelData) < 3 {
-			return nil, fmt.Errorf("Invalid data")
-		}
-		rank, err := strconv.Atoi(levelData[0])
+		md, err := newRunescapeLevelMetadata(name, player, data[i])
 		if err != nil {
 			return nil, err
 		}
-		level, err := strconv.Atoi(levelData[1])
-		if err != nil {
-			return nil, err
-		}
-		exp, err := strconv.Atoi(levelData[2])
-		if err != nil {
-			return nil, err
-		}
-		ret[name] = runescapeLevelMetadata{
-			Rank:   rank,
-			Level:  level,
-			Exp:    exp,
-			Player: player,
-			Skill:  name,
-		}
+
+		ret[md.Skill] = md
 	}
 
 	// Pull out the proper data
-	md, ok := ret[skill]
-	if !ok {
+	md := ret[skill]
+	if md == nil {
 		return nil, fmt.Errorf("Unknown skill %q", skill)
 	}
 
-	return &md, nil
+	return md, nil
 }
 
 func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
