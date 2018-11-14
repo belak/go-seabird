@@ -155,6 +155,37 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 	}()
 }
 
+func prettySuffix(number float64) string {
+	threshold := 1000000000.0
+	for _, suffix := range [...]string{"B", "M", "K"} {
+		if number >= threshold {
+			return fmt.Sprintf("%.1f%s", number/threshold, suffix)
+		}
+		threshold /= 1000
+	}
+	return fmt.Sprintf("%.0f", number)
+}
+
+func prettyThousands(number int) string {
+	ret := ""
+	for number >= 1000 {
+		if ret != "" {
+			ret = "," + ret
+		}
+		ret = fmt.Sprintf("%03d", number%1000)
+		number /= 1000
+	}
+
+	if number > 0 {
+		if ret != "" {
+			ret = "," + ret
+		}
+		ret = fmt.Sprintf("%d%s", number, ret)
+	}
+
+	return ret
+}
+
 func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := m.Trailing()
 	go func() {
@@ -164,7 +195,7 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, "%s has %d experience in %s", data.Player, data.Exp, data.Skill)
+		b.MentionReply(m, "%s has %s experience in %s", data.Player, prettySuffix(float64(data.Exp)), data.Skill)
 	}()
 }
 
@@ -177,6 +208,6 @@ func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, "%s has rank %d in %s", data.Player, data.Rank, data.Skill)
+		b.MentionReply(m, "%s has rank %s in %s", data.Player, prettyThousands(data.Rank), data.Skill)
 	}()
 }
