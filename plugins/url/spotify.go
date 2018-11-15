@@ -61,7 +61,7 @@ var spotifyMatchers = []spotifyMatch{
 			{{- .Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name -}}
-			{{- end }} ({{ .Tracks.Total }} {{ pluralize .Tracks.Total "track" }})`),
+			{{- end }} ({{ pluralize .Tracks.Total "track" }})`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
 			album, err := s.api.GetAlbum(spotify.ID(matches[0]))
 			if err != nil {
@@ -94,7 +94,7 @@ var spotifyMatchers = []spotifyMatch{
 		regex:      regexp.MustCompile(`^/user/([^/]*)/playlist/([^/]*)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:user:(\w+):playlist:(\w+)\b`),
 		template: TemplateMustCompile("spotifyPlaylist", `
-			"{{- .Name }}" playlist by {{ .Owner.DisplayName }} ({{ .Tracks.Total }} {{ pluralize .Tracks.Total "track" }})`),
+			"{{- .Name }}" playlist by {{ .Owner.DisplayName }} ({{ pluralize .Tracks.Total "track" }})`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
 			playlist, err := s.api.GetPlaylist(matches[0], spotify.ID(matches[1]))
 			if err != nil {

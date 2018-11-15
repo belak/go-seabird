@@ -2,17 +2,16 @@ package url
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"text/template"
 	"time"
 
-	seabird "github.com/belak/go-seabird"
-	"github.com/bep/inflect"
+	"github.com/dustin/go-humanize/english"
 	"github.com/google/go-github/github"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cast"
 
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -28,7 +27,7 @@ func TemplateMustCompile(name, data string) *template.Template {
 	ret := template.New(name)
 	ret.Funcs(template.FuncMap{
 		"dateFormat": dateFormat,
-		"pluralize":  pluralize,
+		"pluralize":  templatePluralize,
 	})
 
 	template.Must(ret.Parse(strings.TrimSpace(data)))
@@ -78,23 +77,15 @@ func dateFormat(layout string, v interface{}) (string, error) {
 	return t.Format(layout), nil
 }
 
-func pluralize(count int, in interface{}) (string, error) {
+func templatePluralize(count int, in interface{}) (string, error) {
 	word, err := cast.ToStringE(in)
 	if err != nil {
 		return "", err
 	}
 
-	if count == 1 {
-		return word, nil
-	}
-
-	return inflect.Pluralize(word), nil
+	return pluralize(count, word), nil
 }
 
-func lazyPluralize(count int, word string) string {
-	if count != 1 {
-		return fmt.Sprintf("%d %s", count, word+"s")
-	}
-
-	return fmt.Sprintf("%d %s", count, word)
+func pluralize(count int, word string) string {
+	return english.Plural(count, word, "")
 }

@@ -9,11 +9,11 @@ import (
 	"strings"
 	"time"
 
-	seabird "github.com/belak/go-seabird"
 	"github.com/yhat/scrape"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 

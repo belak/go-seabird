@@ -10,12 +10,12 @@ require (
 	github.com/belak/go-ping v0.0.0-20180517230102-86090cc6a4e2
 	github.com/belak/go-plugin v0.1.0
 	github.com/belak/go-resolve v0.1.0 // indirect
-	github.com/belak/go-seabird-uno v0.0.0-20181109223654-d5120018e9c1 // indirect
+	github.com/belak/go-seabird-uno v0.0.0-20181109223654-d5120018e9c1
 	github.com/belak/nut v0.0.1
-	github.com/bep/inflect v0.0.0-20160408190323-b896c45f5af9
 	github.com/boltdb/bolt v1.3.1 // indirect
 	github.com/channelmeter/iso8601duration v0.0.0-20150204201828-8da3af7a2a61
 	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0
+	github.com/dustin/go-humanize v1.0.0
 	github.com/dustin/go-jsonpointer v0.0.0-20160814072949-ba0abeacc3dc // indirect
 	github.com/dustin/gojson v0.0.0-20160307161227-2e71ec9dd5ad // indirect
 	github.com/garyburd/go-oauth v0.0.0-20180319155456-bca2e7f09a17 // indirect

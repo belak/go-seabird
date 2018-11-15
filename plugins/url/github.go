@@ -136,9 +136,9 @@ var repoTemplate = TemplateMustCompile("githubRepo", `
 {{- if and .repo.Fork .repo.Parent }} (forked from {{ .repo.Parent.FullName }}){{ end }}
 {{- with .repo.PushedAt }} Last pushed to {{ . | dateFormat "2 Jan 2006" }}{{ end }}
 {{- with .repo.Description }} - {{ . }}{{ end }}
-{{- with .repo.ForksCount }}, {{ . }} {{ pluralize . "fork" }}{{ end }}
-{{- with .repo.OpenIssuesCount }}, {{ . }} {{ pluralize . "open issue" }}{{ end }}
-{{- with .repo.StargazersCount }}, {{ . }} {{ pluralize . "star" }}{{ end }}
+{{- with .repo.ForksCount }}, {{ pluralize . "fork" }}{{ end }}
+{{- with .repo.OpenIssuesCount }}, {{ pluralize . "open issue" }}{{ end }}
+{{- with .repo.StargazersCount }}, {{ pluralize . "star" }}{{ end }}
 `)
 
 func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) bool {
@@ -214,9 +214,9 @@ Pull request #{{ .pull.Number }} on {{ .user }}/{{ .repo }} [{{ .pull.State }}]
 {{- with .pull.User.Login }} created by {{ . }}{{ end }}
 {{- with .pull.Title }} - {{ . }}{{ end }}
 {{- with .pull.CreatedAt }} [created {{ . | dateFormat "2 Jan 2006" }}]{{ end }}
-{{- with .pull.Commits }}, {{ . }} {{ pluralize . "commit" }}{{ end }}
-{{- with .pull.Comments }}, {{ . }} {{ pluralize . "comment" }}{{ end }}
-{{- with .pull.ChangedFiles }}, {{ . }} {{ pluralize . "changed file" }}{{ end }}
+{{- with .pull.Commits }}, {{ pluralize . "commit" }}{{ end }}
+{{- with .pull.Comments }}, {{ pluralize . "comment" }}{{ end }}
+{{- with .pull.ChangedFiles }}, {{ pluralize . "changed file" }}{{ end }}
 `)
 
 func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) bool {
@@ -250,7 +250,7 @@ var gistTemplate = TemplateMustCompile("gist", `
 Created {{ .gist.CreatedAt | dateFormat "2 Jan 2006" }}
 {{- with .gist.Owner.Login }} by {{ . }}{{ end }}
 {{- with .gist.Description }} - {{ . }}{{ end }}
-{{- with .gist.Comments }}, {{ . }} {{ pluralize . "comment" }}{{ end }}
+{{- with .gist.Comments }}, {{ pluralize . "comment" }}{{ end }}
 `)
 
 func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) bool {
