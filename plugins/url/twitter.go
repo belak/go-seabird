@@ -6,8 +6,8 @@ import (
 	"strconv"
 
 	"github.com/ChimeraCoder/anaconda"
-	seabird "github.com/belak/go-seabird"
 
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 

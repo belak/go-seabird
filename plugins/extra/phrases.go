@@ -5,8 +5,9 @@ import (
 	"strings"
 	"unicode"
 
-	seabird "github.com/belak/go-seabird"
 	"github.com/go-xorm/xorm"
+
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 

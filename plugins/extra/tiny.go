@@ -2,11 +2,9 @@ package extra
 
 import (
 	"fmt"
-	"net/http"
 
-	"github.com/Unknwon/com"
 	seabird "github.com/belak/go-seabird"
-
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -50,7 +48,7 @@ func (t *tinyPlugin) Shorten(b *seabird.Bot, m *irc.Message) {
 
 		data := map[string]string{"longUrl": m.Trailing()}
 		sr := &shortenResult{}
-		err := com.HttpPostJSON(&http.Client{}, url, data, sr)
+		err := utils.PostJSON(url, data, sr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return

@@ -1,10 +1,10 @@
 package extra
 
 import (
-	seabird "github.com/belak/go-seabird"
-
 	"github.com/go-xorm/core"
 	"github.com/go-xorm/xorm"
+
+	seabird "github.com/belak/go-seabird"
 )
 
 func init() {

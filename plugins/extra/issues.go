@@ -6,10 +6,10 @@ import (
 	"regexp"
 	"strings"
 
-	seabird "github.com/belak/go-seabird"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 

@@ -3,9 +3,9 @@ package extra
 import (
 	"strings"
 
-	seabird "github.com/belak/go-seabird"
 	"github.com/soudy/mathcat"
 
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 
