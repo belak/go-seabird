@@ -22,8 +22,10 @@ import (
 func TemplateMustCompile(name, data string) *template.Template {
 	ret := template.New(name)
 	ret.Funcs(template.FuncMap{
-		"dateFormat": dateFormat,
-		"pluralize":  templatePluralize,
+		"dateFormat":     dateFormat,
+		"pluralize":      templatePluralize,
+		"pluralizeWord":  templatePluralizeWord,
+		"prettifySuffix": templatePrettifySuffix,
 	})
 
 	template.Must(ret.Parse(strings.TrimSpace(data)))

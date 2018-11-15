@@ -137,9 +137,9 @@ var repoTemplate = utils.TemplateMustCompile("githubRepo", `
 {{- if and .repo.Fork .repo.Parent }} (forked from {{ .repo.Parent.FullName }}){{ end }}
 {{- with .repo.PushedAt }} Last pushed to {{ . | dateFormat "2 Jan 2006" }}{{ end }}
 {{- with .repo.Description }} - {{ . }}{{ end }}
-{{- with .repo.ForksCount }}, {{ pluralize . "fork" }}{{ end }}
-{{- with .repo.OpenIssuesCount }}, {{ pluralize . "open issue" }}{{ end }}
-{{- with .repo.StargazersCount }}, {{ pluralize . "star" }}{{ end }}
+{{- with .repo.ForksCount }}, {{ prettifySuffix . }} {{ pluralizeWord . "fork" }}{{ end }}
+{{- with .repo.OpenIssuesCount }}, {{ prettifySuffix . }} {{ pluralizeWord . "open issue" }}{{ end }}
+{{- with .repo.StargazersCount }}, {{ prettifySuffix . }} {{ pluralizeWord . "star" }}{{ end }}
 `)
 
 func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) bool {

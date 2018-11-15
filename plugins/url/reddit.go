@@ -124,7 +124,14 @@ func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
 	}
 
 	// /r/vim - Description description (1 subscriber, 2 actives)
-	b.Reply(m, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.URL, rs.Data.Description, utils.Pluralize(rs.Data.Subscribers, "subscriber"), utils.Pluralize(rs.Data.Actives, "active"))
+	b.Reply(m, "%s %s - %s (%s %s, %s %s)",
+		redditPrefix,
+		rs.Data.URL,
+		rs.Data.Description,
+		utils.PrettifySuffix(rs.Data.Subscribers),
+		utils.PluralizeWord(rs.Data.Subscribers, "subscriber"),
+		utils.PrettifySuffix(rs.Data.Actives),
+		utils.PluralizeWord(rs.Data.Actives, "active"))
 
 	return true
 }
