@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -151,7 +152,7 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, "%s has level %d %s", data.Player, data.Level, data.Skill)
+		b.MentionReply(m, "%s has level %s %s", data.Player, utils.PrettifyNumber(data.Level), data.Skill)
 	}()
 }
 
@@ -164,7 +165,7 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, "%s has %d experience in %s", data.Player, data.Exp, data.Skill)
+		b.MentionReply(m, "%s has %s experience in %s", data.Player, utils.PrettifyNumber(data.Exp), data.Skill)
 	}()
 }
 
@@ -177,6 +178,6 @@ func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, "%s has rank %d in %s", data.Player, data.Rank, data.Skill)
+		b.MentionReply(m, "%s has rank %s in %s", data.Player, utils.PrettifyNumber(data.Rank), data.Skill)
 	}()
 }
