@@ -2,14 +2,13 @@ package url
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"strings"
 
-	"github.com/Unknwon/com"
-	seabird "github.com/belak/go-seabird"
 	duration "github.com/channelmeter/iso8601duration"
 
+	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -117,7 +116,7 @@ func getVideo(id string, key string) (time string, title string) {
 	api := fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?part=contentDetails%%2Csnippet&id=%s&fields=items(contentDetails%%2Csnippet)&key=%s", id, key)
 
 	var videos ytVideos
-	err := com.HttpGetJSON(&http.Client{}, api, &videos)
+	err := utils.GetJSON(api, &videos)
 	if err != nil {
 		return "", ""
 	}

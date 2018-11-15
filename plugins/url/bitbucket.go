@@ -2,14 +2,13 @@ package url
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 	"strings"
 	"time"
 
-	"github.com/Unknwon/com"
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -91,7 +90,7 @@ func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	user := matches[1]
 
 	bu := &bitbucketUser{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(userURL, user), bu)
+	err := utils.GetJSON(fmt.Sprintf(userURL, user), bu)
 	if err != nil {
 		return false
 	}
@@ -112,7 +111,7 @@ func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	repo := matches[2]
 
 	br := &bitbucketRepo{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(repoURL, user, repo), br)
+	err := utils.GetJSON(fmt.Sprintf(repoURL, user, repo), br)
 	if err != nil {
 		return false
 	}
@@ -143,7 +142,7 @@ func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	issueNum := matches[3]
 
 	bi := &bitbucketIssue{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi)
+	err := utils.GetJSON(fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi)
 	if err != nil {
 		return false
 	}
@@ -183,7 +182,7 @@ func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	pullNum := matches[3]
 
 	bpr := &bitbucketPullRequest{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr)
+	err := utils.GetJSON(fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr)
 	if err != nil {
 		return false
 	}

@@ -6,12 +6,12 @@ import (
 	"regexp"
 	"text/template"
 
-	"golang.org/x/oauth2/clientcredentials"
-
 	"github.com/sirupsen/logrus"
 	"github.com/zmb3/spotify"
+	"golang.org/x/oauth2/clientcredentials"
 
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -43,7 +43,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 1,
 		regex:      regexp.MustCompile(`^/artist/(.+)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:artist:(\w+)\b`),
-		template:   TemplateMustCompile("spotifyArtist", `{{- .Name -}}`),
+		template:   utils.TemplateMustCompile("spotifyArtist", `{{- .Name -}}`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
 			artist, err := s.api.GetArtist(spotify.ID(matches[0]))
 			if err != nil {
@@ -57,7 +57,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 1,
 		regex:      regexp.MustCompile(`^/album/(.+)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:album:(\w+)\b`),
-		template: TemplateMustCompile("spotifyAlbum", `
+		template: utils.TemplateMustCompile("spotifyAlbum", `
 			{{- .Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name -}}
@@ -75,7 +75,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 1,
 		regex:      regexp.MustCompile(`^/track/(.+)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:track:(\w+)\b`),
-		template: TemplateMustCompile("spotifyTrack", `
+		template: utils.TemplateMustCompile("spotifyTrack", `
 			"{{ .Name }}" from {{ .Album.Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name }}
@@ -93,7 +93,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 2,
 		regex:      regexp.MustCompile(`^/user/([^/]*)/playlist/([^/]*)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:user:(\w+):playlist:(\w+)\b`),
-		template: TemplateMustCompile("spotifyPlaylist", `
+		template: utils.TemplateMustCompile("spotifyPlaylist", `
 			"{{- .Name }}" playlist by {{ .Owner.DisplayName }} ({{ pluralize .Tracks.Total "track" }})`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
 			playlist, err := s.api.GetPlaylist(matches[0], spotify.ID(matches[1]))
@@ -168,5 +168,5 @@ func (s *spotifyProvider) handleTarget(b *seabird.Bot, m *irc.Message, matcher s
 		return false
 	}
 
-	return RenderRespond(b, m, logger, matcher.template, spotifyPrefix, data)
+	return utils.RenderRespond(b, m, logger, matcher.template, spotifyPrefix, data)
 }

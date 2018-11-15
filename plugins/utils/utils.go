@@ -1,15 +1,11 @@
-package url
+package utils
 
 import (
 	"bytes"
 	"strings"
 	"text/template"
-	"time"
 
-	"github.com/dustin/go-humanize/english"
-	"github.com/google/go-github/github"
 	"github.com/sirupsen/logrus"
-	"github.com/spf13/cast"
 
 	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
@@ -60,32 +56,4 @@ func RenderRespond(b *seabird.Bot, m *irc.Message, logger *logrus.Entry, t *temp
 	b.Reply(m, "%s %s", prefix, out)
 
 	return true
-}
-
-func dateFormat(layout string, v interface{}) (string, error) {
-	var t time.Time
-	var err error
-
-	if gt, ok := v.(*github.Timestamp); ok {
-		t = gt.Time
-	} else {
-		t, err = cast.ToTimeE(v)
-		if err != nil {
-			return "", err
-		}
-	}
-	return t.Format(layout), nil
-}
-
-func templatePluralize(count int, in interface{}) (string, error) {
-	word, err := cast.ToStringE(in)
-	if err != nil {
-		return "", err
-	}
-
-	return pluralize(count, word), nil
-}
-
-func pluralize(count int, word string) string {
-	return english.Plural(count, word, "")
 }

@@ -7,10 +7,11 @@ import (
 	"regexp"
 	"strconv"
 
-	seabird "github.com/belak/go-seabird"
 	"github.com/google/go-github/github"
 	"golang.org/x/oauth2"
 
+	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -96,7 +97,7 @@ func (t *githubProvider) gistCallback(b *seabird.Bot, m *irc.Message, url *url.U
 }
 
 // Jay Vana (@jsvana) at Facebook - Bio bio bio
-var userTemplate = TemplateMustCompile("githubUser", `
+var userTemplate = utils.TemplateMustCompile("githubUser", `
 {{- if .user.Name -}}
 {{ .user.Name }}
 {{- with .user.Login }}(@{{ . }}){{ end -}}
@@ -121,7 +122,7 @@ func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	return RenderRespond(
+	return utils.RenderRespond(
 		b, m, logger, userTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
@@ -130,7 +131,7 @@ func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) boo
 }
 
 // jsvana/alfred [PHP] (forked from belak/alfred) Last pushed to 2 Jan 2015 - Description, 1 fork, 2 open issues, 4 stars
-var repoTemplate = TemplateMustCompile("githubRepo", `
+var repoTemplate = utils.TemplateMustCompile("githubRepo", `
 {{- .repo.FullName -}}
 {{- with .repo.Language }} [{{ . }}]{{ end -}}
 {{- if and .repo.Fork .repo.Parent }} (forked from {{ .repo.Parent.FullName }}){{ end }}
@@ -166,7 +167,7 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	return RenderRespond(
+	return utils.RenderRespond(
 		b, m, logger, repoTemplate, githubPrefix,
 		map[string]interface{}{
 			"repo": repo,
@@ -175,7 +176,7 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 }
 
 // Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
-var issueTemplate = TemplateMustCompile("githubIssue", `
+var issueTemplate = utils.TemplateMustCompile("githubIssue", `
 Issue #{{ .issue.Number }} on {{ .user }}/{{ .repo }} [{{ .issue.State }}]
 {{- with .issue.Assignee }} (assigned to {{ .Login }}){{ end }}
 {{- with .issue.Title }} - {{ . }}{{ end }}
@@ -198,7 +199,7 @@ func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bo
 		return false
 	}
 
-	return RenderRespond(
+	return utils.RenderRespond(
 		b, m, logger, issueTemplate, githubPrefix,
 		map[string]interface{}{
 			"issue": issue,
@@ -209,7 +210,7 @@ func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bo
 }
 
 // Pull request #59 on belak/go-seabird [open] - Title title title [created 4 Jan 2015], 1 commit, 4 comments, 2 changed files
-var prTemplate = TemplateMustCompile("githubPRTemplate", `
+var prTemplate = utils.TemplateMustCompile("githubPRTemplate", `
 Pull request #{{ .pull.Number }} on {{ .user }}/{{ .repo }} [{{ .pull.State }}]
 {{- with .pull.User.Login }} created by {{ . }}{{ end }}
 {{- with .pull.Title }} - {{ . }}{{ end }}
@@ -235,7 +236,7 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	return RenderRespond(
+	return utils.RenderRespond(
 		b, m, logger, prTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
@@ -246,7 +247,7 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 }
 
 // Created 3 Jan 2015 by belak - Description description, 1 file, 3 comments
-var gistTemplate = TemplateMustCompile("gist", `
+var gistTemplate = utils.TemplateMustCompile("gist", `
 Created {{ .gist.CreatedAt | dateFormat "2 Jan 2006" }}
 {{- with .gist.Owner.Login }} by {{ . }}{{ end }}
 {{- with .gist.Description }} - {{ . }}{{ end }}
@@ -268,7 +269,7 @@ func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	return RenderRespond(
+	return utils.RenderRespond(
 		b, m, logger, gistTemplate, githubPrefix,
 		map[string]interface{}{
 			"gist": gist,

@@ -1,16 +1,14 @@
 package extra
 
 import (
-	"net/http"
 	"strings"
 
+	"github.com/yhat/scrape"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
-	"github.com/Unknwon/com"
 	seabird "github.com/belak/go-seabird"
-	"github.com/yhat/scrape"
-
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -46,8 +44,7 @@ func wikiCallback(b *seabird.Bot, m *irc.Message) {
 		}
 
 		wr := &wikiResponse{}
-		err := com.HttpGetJSON(
-			&http.Client{},
+		err := utils.GetJSON(
 			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(m.Trailing()),
 			wr,
 		)

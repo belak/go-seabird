@@ -2,12 +2,10 @@ package extra
 
 import (
 	"html"
-	"net/http"
 	"net/url"
 
-	"github.com/Unknwon/com"
 	seabird "github.com/belak/go-seabird"
-
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -53,8 +51,7 @@ func googleSearch(b *seabird.Bot, m *irc.Message, service, query string) {
 		}
 
 		gr := &googleResponse{}
-		err := com.HttpGetJSON(
-			&http.Client{},
+		err := utils.GetJSON(
 			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(m.Trailing()),
 			gr,
 		)

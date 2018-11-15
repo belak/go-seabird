@@ -1,11 +1,10 @@
 package extra
 
 import (
-	"net/http"
 	"net/url"
 
-	"github.com/Unknwon/com"
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -61,7 +60,7 @@ func (p *fccPlugin) Search(b *seabird.Bot, m *irc.Message) {
 		url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(m.Trailing())
 
 		fr := &fccResponse{}
-		err := com.HttpGetJSON(&http.Client{}, url, fr)
+		err := utils.GetJSON(url, fr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return

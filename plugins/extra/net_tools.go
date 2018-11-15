@@ -7,9 +7,9 @@ import (
 	"net/url"
 	"os/exec"
 
-	"github.com/Unknwon/com"
 	ping "github.com/belak/go-ping"
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -218,8 +218,7 @@ func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, m *irc.Message) {
 
 	asnResp := asnResponse{}
 
-	err := com.HttpGetJSON(
-		&http.Client{},
+	err := utils.GetJSON(
 		"https://api.iptoasn.com/v1/as/ip/"+m.Trailing(),
 		&asnResp)
 	if err != nil {

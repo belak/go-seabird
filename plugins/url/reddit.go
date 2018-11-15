@@ -2,13 +2,11 @@ package url
 
 import (
 	"fmt"
-	"net/http"
 	"net/url"
 	"regexp"
 
-	"github.com/Unknwon/com"
 	seabird "github.com/belak/go-seabird"
-
+	"github.com/belak/go-seabird/plugins/utils"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -77,7 +75,7 @@ func redditGetUser(b *seabird.Bot, m *irc.Message, url string) bool {
 	}
 
 	ru := &redditUser{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/user/%s/about.json", matches[2]), ru)
+	err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/user/%s/about.json", matches[2]), ru)
 	if err != nil {
 		return false
 	}
@@ -100,7 +98,7 @@ func redditGetComment(b *seabird.Bot, m *irc.Message, url string) bool {
 	}
 
 	rc := []redditComment{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/comments/%s.json", matches[1]), rc)
+	err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/comments/%s.json", matches[1]), rc)
 	if err != nil || len(rc) < 1 {
 		return false
 	}
@@ -120,13 +118,13 @@ func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
 	}
 
 	rs := &redditSub{}
-	err := com.HttpGetJSON(&http.Client{}, fmt.Sprintf("https://www.reddit.com/r/%s/about.json", matches[1]), rs)
+	err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/r/%s/about.json", matches[1]), rs)
 	if err != nil {
 		return false
 	}
 
 	// /r/vim - Description description (1 subscriber, 2 actives)
-	b.Reply(m, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.URL, rs.Data.Description, pluralize(rs.Data.Subscribers, "subscriber"), pluralize(rs.Data.Actives, "active"))
+	b.Reply(m, "%s %s - %s (%s, %s)", redditPrefix, rs.Data.URL, rs.Data.Description, utils.Pluralize(rs.Data.Subscribers, "subscriber"), utils.Pluralize(rs.Data.Actives, "active"))
 
 	return true
 }
