@@ -53,8 +53,7 @@ func googleSearch(b *seabird.Bot, m *irc.Message, service, query string) {
 		gr := &googleResponse{}
 		err := utils.GetJSON(
 			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(m.Trailing()),
-			gr,
-		)
+			gr)
 
 		if err != nil {
 			b.MentionReply(m, "%s", err)

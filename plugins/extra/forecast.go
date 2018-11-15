@@ -101,8 +101,7 @@ func (p *forecastPlugin) forecastQuery(loc *ForecastLocation) (*darksky.Forecast
 		strconv.FormatFloat(loc.Lon, 'f', 4, 64),
 		"now",
 		darksky.AUTO,
-		darksky.English,
-	)
+		darksky.English)
 }
 
 func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) {

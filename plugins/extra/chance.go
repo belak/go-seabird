@@ -86,8 +86,7 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 			"KICK %s %s :That's not a valid coin side. Options are: %s",
 			m.Params[0],
 			m.Prefix.Name,
-			strings.Join(coinNames, ", "),
-		)
+			strings.Join(coinNames, ", "))
 		return
 	}
 

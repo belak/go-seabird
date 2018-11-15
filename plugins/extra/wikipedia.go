@@ -46,8 +46,7 @@ func wikiCallback(b *seabird.Bot, m *irc.Message) {
 		wr := &wikiResponse{}
 		err := utils.GetJSON(
 			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(m.Trailing()),
-			wr,
-		)
+			wr)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return

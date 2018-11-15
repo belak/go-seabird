@@ -120,7 +120,7 @@ func (p *runescapePlugin) getPlayerSkills(search string) (*runescapeLevelMetadat
 	data := strings.Split(strings.TrimSpace(string(bytes)), "\n")
 
 	// It's not strictly needed to build all this up, but it may be useful later.
-	ret := map[string]*runescapeLevelMetadata{}
+	var ret = make(map[string]*runescapeLevelMetadata)
 	if len(data) < len(runescapeOldSchoolSkillNames) {
 		return nil, fmt.Errorf("Invalid data")
 	}
