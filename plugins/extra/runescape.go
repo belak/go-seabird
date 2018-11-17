@@ -165,7 +165,7 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 			return
 		}
 
-		b.MentionReply(m, "%s has %s experience in %s", data.Player, utils.PrettifyNumber(data.Exp), data.Skill)
+		b.MentionReply(m, "%s has %s experience in %s", data.Player, utils.PrettifySuffix(data.Exp), data.Skill)
 	}()
 }
 
