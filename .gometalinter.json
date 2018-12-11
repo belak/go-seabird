@@ -3,8 +3,8 @@
   "Cyclo": 15,
   "Disable": [
     "dupl",
-    "gas",
     "goconst",
+    "gosec",
     "gotype",
 
     "vet",
