@@ -1,34 +1,4 @@
-workspace:
-  base: /go
-  path: /seabird
-
 pipeline:
-  test:
-    image: golang:1.11-alpine
-    commands:
-      # Testing
-      - apk add -U --no-cache build-base git
-      # Linting Prep
-      - GO111MODULE=off go get -u github.com/Quasilyte/go-consistent
-      - GO111MODULE=off go get -u github.com/alecthomas/gometalinter
-      - GO111MODULE=off gometalinter --install
-      - go get -d ./...
-      # Testing
-      - go test ./...
-      # Linting
-      - gometalinter ./...
-      - go vet ./...
-      - go vet --shadow ./...
-      - go-consistent ./...
-
-  build:
-    image: golang:1.11-alpine
-    commands:
-      - apk add -U --no-cache build-base git
-      - go get -d ./...
-      - go build -o ./dist/seabird ./cmd/seabird
-      - go build -o ./dist/seabird-migrate ./cmd/seabird-migrate
-
   docker:
     image: plugins/docker
     repo: belak/seabird
