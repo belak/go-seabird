@@ -17,7 +17,7 @@ RUN go get -d ./... && \
 FROM alpine:latest
 
 # Add runtime dependencies
-RUN apk add -U --no-cache iputils
+RUN apk add -U --no-cache iputils ca-certificates
 
 # Copy the built seabird into the container
 COPY --from=builder /build /bin
