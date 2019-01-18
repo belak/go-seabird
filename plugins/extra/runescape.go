@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -100,6 +101,17 @@ func newRunescapePlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
+func getCombatLevel(attack, defence, strength, hitpoints, ranged, prayer, magic int) int {
+	base := 0.25 * (float64(defence) + float64(hitpoints) + math.Floor(float64(prayer)/2))
+	melee_option := 0.325 * (float64(attack) + float64(strength))
+	ranged_float := float64(ranged)
+	ranged_option := 0.325 * (math.Floor(ranged_float/2) + ranged_float)
+	magic_float := float64(magic)
+	magic_option := 0.325 * (math.Floor(magic_float/2) + magic_float)
+
+	return int(math.Floor(base + math.Max(melee_option, math.Max(ranged_option, magic_option))))
+}
+
 func (p *runescapePlugin) getPlayerSkills(search string) (*runescapeLevelMetadata, error) {
 	args := strings.SplitN(search, " ", 2)
 	if len(args) != 2 {
@@ -132,6 +144,25 @@ func (p *runescapePlugin) getPlayerSkills(search string) (*runescapeLevelMetadat
 		}
 
 		ret[md.Skill] = md
+	}
+
+	if skill == "combat" {
+		combat := getCombatLevel(
+			ret["attack"].Level,
+			ret["defence"].Level,
+			ret["strength"].Level,
+			ret["hitpoints"].Level,
+			ret["ranged"].Level,
+			ret["prayer"].Level,
+			ret["magic"].Level,
+		)
+		return &runescapeLevelMetadata{
+			Rank:   -1,
+			Level:  combat,
+			Exp:    -1,
+			Player: player,
+			Skill:  skill,
+		}, nil
 	}
 
 	// Pull out the proper data
