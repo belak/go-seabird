@@ -158,8 +158,7 @@ func (p *runescapePlugin) getPlayerSkills(search string) (runescapeLevelMetadata
 			ret["hitpoints"].Level,
 			ret["ranged"].Level,
 			ret["prayer"].Level,
-			ret["magic"].Level,
-		)
+			ret["magic"].Level)
 		return runescapeLevelMetadata{
 			Rank:   -1,
 			Level:  combat,
