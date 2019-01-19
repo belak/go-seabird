@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -55,24 +56,26 @@ func init() {
 	seabird.RegisterPlugin("runescape", newRunescapePlugin)
 }
 
-func newRunescapeLevelMetadata(name, player, line string) (*runescapeLevelMetadata, error) {
+func newRunescapeLevelMetadata(name, player, line string) (runescapeLevelMetadata, error) {
+	var emptySkill runescapeLevelMetadata
+
 	levelData := strings.Split(line, ",")
 	if len(levelData) < 3 {
-		return nil, fmt.Errorf("Invalid data")
+		return emptySkill, fmt.Errorf("Invalid data")
 	}
 	rank, err := strconv.Atoi(levelData[0])
 	if err != nil {
-		return nil, err
+		return emptySkill, err
 	}
 	level, err := strconv.Atoi(levelData[1])
 	if err != nil {
-		return nil, err
+		return emptySkill, err
 	}
 	exp, err := strconv.Atoi(levelData[2])
 	if err != nil {
-		return nil, err
+		return emptySkill, err
 	}
-	return &runescapeLevelMetadata{
+	return runescapeLevelMetadata{
 		Rank:   rank,
 		Level:  level,
 		Exp:    exp,
@@ -100,44 +103,75 @@ func newRunescapePlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *runescapePlugin) getPlayerSkills(search string) (*runescapeLevelMetadata, error) {
+func getCombatLevel(attack, defence, strength, hitpoints, ranged, prayer, magic int) int {
+	// Formula was taken from https://oldschool.runescape.wiki/w/Combat_level#Mathematics
+	base := 0.25 * (float64(defence) + float64(hitpoints) + math.Floor(float64(prayer)/2))
+	meleeOption := 0.325 * (float64(attack) + float64(strength))
+	rangedFloat := float64(ranged)
+	rangedOption := 0.325 * (math.Floor(rangedFloat/2) + rangedFloat)
+	magicFloat := float64(magic)
+	magicOption := 0.325 * (math.Floor(magicFloat/2) + magicFloat)
+
+	return int(math.Floor(base + math.Max(meleeOption, math.Max(rangedOption, magicOption))))
+}
+
+func (p *runescapePlugin) getPlayerSkills(search string) (runescapeLevelMetadata, error) {
+	var emptySkill runescapeLevelMetadata
 	args := strings.SplitN(search, " ", 2)
 	if len(args) != 2 {
-		return nil, errors.New("Wrong number of args")
+		return emptySkill, errors.New("Wrong number of args")
 	}
 	player := args[0]
 	skill := args[1]
 
 	resp, err := http.Get("https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player=" + player)
 	if err != nil {
-		return nil, err
+		return emptySkill, err
 	}
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return nil, err
+		return emptySkill, err
 	}
 	data := strings.Split(strings.TrimSpace(string(bytes)), "\n")
 
 	// It's not strictly needed to build all this up, but it may be useful later.
-	var ret = make(map[string]*runescapeLevelMetadata)
+	var ret = make(map[string]runescapeLevelMetadata)
 	if len(data) < len(runescapeOldSchoolSkillNames) {
-		return nil, fmt.Errorf("Invalid data")
+		return emptySkill, fmt.Errorf("Invalid data")
 	}
 
 	for i, name := range runescapeOldSchoolSkillNames {
 		md, err := newRunescapeLevelMetadata(name, player, data[i])
 		if err != nil {
-			return nil, err
+			return emptySkill, err
 		}
 
 		ret[md.Skill] = md
 	}
 
+	if skill == "combat" {
+		combat := getCombatLevel(
+			ret["attack"].Level,
+			ret["defence"].Level,
+			ret["strength"].Level,
+			ret["hitpoints"].Level,
+			ret["ranged"].Level,
+			ret["prayer"].Level,
+			ret["magic"].Level)
+		return runescapeLevelMetadata{
+			Rank:   -1,
+			Level:  combat,
+			Exp:    -1,
+			Player: player,
+			Skill:  skill,
+		}, nil
+	}
+
 	// Pull out the proper data
-	md := ret[skill]
-	if md == nil {
-		return nil, fmt.Errorf("Unknown skill %q", skill)
+	md, ok := ret[skill]
+	if !ok {
+		return emptySkill, fmt.Errorf("Unknown skill %q", skill)
 	}
 
 	return md, nil
