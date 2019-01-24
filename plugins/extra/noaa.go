@@ -10,14 +10,15 @@ import (
 	"strings"
 	"unicode"
 
-	seabird "github.com/belak/go-seabird"
 	"github.com/go-xorm/xorm"
+
+	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 
 // NOAAStation is a simple cache which will store a user's last-requested
 // NOAA station.
-type NoaaStation struct {
+type NOAAStation struct {
 	ID      int64
 	Nick    string `xorm:"unique"`
 	Station string
@@ -35,7 +36,7 @@ func newMetarPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) err
 	p := &noaaPlugin{db: db}
 
 	// Ensure DB tables are up to date
-	err := p.db.Sync(NoaaStation{})
+	err := p.db.Sync(NOAAStation{})
 	if err != nil {
 		return err
 	}
@@ -55,7 +56,7 @@ func newMetarPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) err
 func (p *noaaPlugin) getStation(b *seabird.Bot, m *irc.Message) (string, error) {
 	l := m.Trailing()
 
-	target := &NoaaStation{Nick: m.Prefix.Name}
+	target := &NOAAStation{Nick: m.Prefix.Name}
 
 	// If it's an empty string, check the cache
 	if l == "" {
@@ -66,7 +67,7 @@ func (p *noaaPlugin) getStation(b *seabird.Bot, m *irc.Message) (string, error) 
 		return target.Station, nil
 	}
 
-	newStation := &NoaaStation{
+	newStation := &NOAAStation{
 		Nick:    m.Prefix.Name,
 		Station: m.Trailing(),
 	}
@@ -90,7 +91,7 @@ func (p *noaaPlugin) metarCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	r, err := p.NOAALookup("http://tgftp.nws.noaa.gov/data/observations/metar/stations/%s.TXT", station)
+	r, err := NOAALookup("http://tgftp.nws.noaa.gov/data/observations/metar/stations/%s.TXT", station)
 	if err != nil {
 		b.MentionReply(m, "Error: %s", err)
 		return
@@ -106,7 +107,7 @@ func (p *noaaPlugin) tafCallback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	r, err := p.NOAALookup("http://tgftp.nws.noaa.gov/data/forecasts/taf/stations/%s.TXT", station)
+	r, err := NOAALookup("http://tgftp.nws.noaa.gov/data/forecasts/taf/stations/%s.TXT", station)
 	if err != nil {
 		b.MentionReply(m, "Error: %s", err)
 		return
@@ -119,7 +120,7 @@ func (p *noaaPlugin) tafCallback(b *seabird.Bot, m *irc.Message) {
 // look up the raw data. The first line is skipped, as that is generally the
 // date and the rest of the lines are joined together with a maximum of one
 // space between them.
-func (p *noaaPlugin) NOAALookup(urlFormat, code string) (string, error) {
+func NOAALookup(urlFormat, code string) (string, error) {
 	code = strings.ToUpper(code)
 
 	for _, letter := range code {
