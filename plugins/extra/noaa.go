@@ -69,7 +69,7 @@ func (p *noaaPlugin) getStation(b *seabird.Bot, m *irc.Message) (string, error) 
 
 	newStation := &NOAAStation{
 		Nick:    m.Prefix.Name,
-		Station: m.Trailing(),
+		Station: strings.ToUpper(l),
 	}
 
 	_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
