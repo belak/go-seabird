@@ -10,27 +10,88 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/go-xorm/xorm"
+
 	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
+
+// NOAAStation is a simple cache which will store a user's last-requested
+// NOAA station.
+type NOAAStation struct {
+	ID      int64
+	Nick    string `xorm:"unique"`
+	Station string
+}
+
+type noaaPlugin struct {
+	db *xorm.Engine
+}
 
 func init() {
 	seabird.RegisterPlugin("noaa", newMetarPlugin)
 }
 
-func newMetarPlugin(cm *seabird.CommandMux) {
-	cm.Event("metar", metarCallback, &seabird.HelpInfo{
+func newMetarPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
+	p := &noaaPlugin{db: db}
+
+	// Ensure DB tables are up to date
+	err := p.db.Sync(NOAAStation{})
+	if err != nil {
+		return err
+	}
+
+	cm.Event("metar", p.metarCallback, &seabird.HelpInfo{
 		Usage:       "<station>",
 		Description: "Gives METAR report for given station",
 	})
-	cm.Event("taf", tafCallback, &seabird.HelpInfo{
+	cm.Event("taf", p.tafCallback, &seabird.HelpInfo{
 		Usage:       "<station>",
 		Description: "Gives TAF report for given station",
 	})
+
+	return nil
 }
 
-func metarCallback(b *seabird.Bot, m *irc.Message) {
-	r, err := NOAALookup("http://tgftp.nws.noaa.gov/data/observations/metar/stations/%s.TXT", m.Trailing())
+func (p *noaaPlugin) getStation(b *seabird.Bot, m *irc.Message) (string, error) {
+	l := m.Trailing()
+
+	target := &NOAAStation{Nick: m.Prefix.Name}
+
+	// If it's an empty string, check the cache
+	if l == "" {
+		found, err := p.db.Get(target)
+		if err != nil || !found {
+			return "", fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
+		}
+		return target.Station, nil
+	}
+
+	newStation := &NOAAStation{
+		Nick:    m.Prefix.Name,
+		Station: strings.ToUpper(l),
+	}
+
+	_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
+		found, _ := s.Get(target)
+		if !found {
+			return s.Insert(newStation)
+		}
+
+		return s.ID(target.ID).Update(newStation)
+	})
+
+	return newStation.Station, err
+}
+
+func (p *noaaPlugin) metarCallback(b *seabird.Bot, m *irc.Message) {
+	station, err := p.getStation(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	r, err := NOAALookup("http://tgftp.nws.noaa.gov/data/observations/metar/stations/%s.TXT", station)
 	if err != nil {
 		b.MentionReply(m, "Error: %s", err)
 		return
@@ -39,8 +100,14 @@ func metarCallback(b *seabird.Bot, m *irc.Message) {
 	b.MentionReply(m, "%s", r)
 }
 
-func tafCallback(b *seabird.Bot, m *irc.Message) {
-	r, err := NOAALookup("http://tgftp.nws.noaa.gov/data/forecasts/taf/stations/%s.TXT", m.Trailing())
+func (p *noaaPlugin) tafCallback(b *seabird.Bot, m *irc.Message) {
+	station, err := p.getStation(b, m)
+	if err != nil {
+		b.MentionReply(m, "%s", err.Error())
+		return
+	}
+
+	r, err := NOAALookup("http://tgftp.nws.noaa.gov/data/forecasts/taf/stations/%s.TXT", station)
 	if err != nil {
 		b.MentionReply(m, "Error: %s", err)
 		return
