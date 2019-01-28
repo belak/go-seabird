@@ -178,7 +178,7 @@ func (p *runescapePlugin) getPlayerSkills(search string) (runescapeLevelMetadata
 }
 
 func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := m.Trailing()
+	trailing := strings.ToLower(m.Trailing())
 	go func() {
 		data, err := p.getPlayerSkills(trailing)
 		if err != nil {
@@ -191,7 +191,7 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := m.Trailing()
+	trailing := strings.ToLower(m.Trailing())
 	go func() {
 		data, err := p.getPlayerSkills(trailing)
 		if err != nil {
@@ -204,7 +204,7 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 }
 
 func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := m.Trailing()
+	trailing := strings.ToLower(m.Trailing())
 	go func() {
 		data, err := p.getPlayerSkills(trailing)
 		if err != nil {
