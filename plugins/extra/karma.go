@@ -81,7 +81,7 @@ func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
 			s.Insert(out)
 		}
 		out.Score += diff
-		return s.ID(out.ID).Update(out)
+		return s.ID(out.ID).Cols("score").Update(out)
 	})
 
 	return out.Score
