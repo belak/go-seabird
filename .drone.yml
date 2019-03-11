@@ -1,11 +1,18 @@
-pipeline:
-  docker:
-    image: plugins/docker
+kind: pipeline
+name: default
+
+steps:
+- name: docker
+  depends_on: [ clone ]
+  image: plugins/docker
+  settings:
     repo: belak/seabird
     dockerfile: Dockerfile
-    tag: latest
-    secrets: [ docker_username, docker_password ]
-    when:
-      branch: master
-      event: push
-
+    tags: latest
+    username:
+      from_secret: docker_username
+    password:
+      from_secret: docker_password
+  when:
+    branch:
+    - master
