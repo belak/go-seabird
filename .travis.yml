@@ -1,11 +1,12 @@
 language: go
 go:
-  - '1.11'
+  #- '1.12'
   - stable
 env:
   - GO111MODULE=on
 
 before_install:
+  - GO111MODULE=off go get -u golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
   - GO111MODULE=off go get -u github.com/Quasilyte/go-consistent
   - GO111MODULE=off go get -u github.com/alecthomas/gometalinter
   - GO111MODULE=off gometalinter --install
@@ -17,7 +18,7 @@ script:
    # Linting
   - $HOME/gopath/bin/gometalinter ./...
   - go vet ./...
-  - go vet --shadow ./...
+  - go vet -vettool=$(which shadow) ./...
   - go-consistent ./...
 
   # Build
