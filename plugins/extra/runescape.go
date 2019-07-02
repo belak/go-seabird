@@ -6,6 +6,7 @@ import (
 	"io/ioutil"
 	"math"
 	"net/http"
+	"regexp"
 	"strconv"
 	"strings"
 
@@ -51,6 +52,8 @@ type runescapeLevelMetadata struct {
 }
 
 type runescapePlugin struct{}
+
+var levelRegex = regexp.MustCompile(`(\w{2,}|".+?")\s+(\w+)$`)
 
 func init() {
 	seabird.RegisterPlugin("runescape", newRunescapePlugin)
@@ -117,12 +120,24 @@ func getCombatLevel(attack, defence, strength, hitpoints, ranged, prayer, magic 
 
 func (p *runescapePlugin) getPlayerSkills(search string) (runescapeLevelMetadata, error) {
 	var emptySkill runescapeLevelMetadata
-	args := strings.SplitN(search, " ", 2)
-	if len(args) != 2 {
-		return emptySkill, errors.New("Wrong number of args")
+
+	found := false
+	player := ""
+	skill := ""
+
+	matches := levelRegex.FindAllStringSubmatch(search, -1)
+	for _, v := range matches {
+		if strings.HasPrefix(v[1], "\"") {
+			v[1] = v[1][1 : len(v[1])-1]
+		}
+		player = v[1]
+		skill = v[2]
+		found = true
 	}
-	player := args[0]
-	skill := args[1]
+
+	if !found {
+		return emptySkill, errors.New("Unable to parse player or skill")
+	}
 
 	resp, err := http.Get("https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player=" + player)
 	if err != nil {
