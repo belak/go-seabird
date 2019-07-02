@@ -26,7 +26,7 @@ type Karma struct {
 	Score int
 }
 
-var regex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
+var karmaRegex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
 func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &karmaPlugin{db: db}
@@ -122,7 +122,7 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 	var jerkModeTriggered bool
 	var changes = make(map[string]int)
 
-	matches := regex.FindAllStringSubmatch(m.Trailing(), -1)
+	matches := karmaRegex.FindAllStringSubmatch(m.Trailing(), -1)
 	for _, v := range matches {
 		// If it starts with a ", we know it also ends with a quote so we
 		// can chop them off.
