@@ -2,7 +2,7 @@ module github.com/belak/go-seabird
 
 require (
 	cloud.google.com/go v0.31.0 // indirect
-	github.com/BurntSushi/toml v0.3.0
+	github.com/BurntSushi/toml v0.3.1
 	github.com/ChimeraCoder/anaconda v1.0.0
 	github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7 // indirect
 	github.com/Unknwon/com v0.0.0-20170819223952-7677a1d7c113
@@ -22,9 +22,9 @@ require (
 	github.com/go-xorm/core v0.6.0
 	github.com/go-xorm/xorm v0.7.1
 	github.com/gobwas/glob v0.2.3 // indirect
+	github.com/goinvest/iexcloud v0.0.0-20190701113315-23a9c29c8587
 	github.com/google/go-cmp v0.2.0 // indirect
 	github.com/google/go-github v0.0.0-20180509124334-8ea2e2657df8
-	github.com/google/go-querystring v0.0.0-20170111101155-53e6ce116135 // indirect
 	github.com/google/uuid v0.0.0-20171129191014-dec09d789f3d
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
