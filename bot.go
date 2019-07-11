@@ -112,7 +112,7 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		b.log.Logger.Level = logrus.DebugLevel
 	}
 
-	commandMux := NewCommandMux(b.config.Prefix)
+	commandMux := NewCommandMux(b.config.Prefix, true)
 	mentionMux := NewMentionMux()
 
 	b.mux.Event("PRIVMSG", commandMux.HandleEvent)

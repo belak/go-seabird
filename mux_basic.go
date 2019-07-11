@@ -33,6 +33,16 @@ func (mux *BasicMux) Event(c string, h HandlerFunc) {
 	mux.m[c] = append(mux.m[c], h)
 }
 
+// eventNames is an internal function for the CommandMux so it can look up the
+// Levenshtein distance between typed commands and actual commands.
+func (mux *BasicMux) eventNames() []string {
+	var ret []string
+	for k := range mux.m {
+		ret = append(ret, k)
+	}
+	return ret
+}
+
 // HandleEvent allows us to be a Handler so we can nest Handlers
 //
 // The BasicMux simply dispatches all the Handler commands as needed

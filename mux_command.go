@@ -4,6 +4,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/agnivade/levenshtein"
+
 	irc "gopkg.in/irc.v3"
 )
 
@@ -21,21 +23,22 @@ type HelpInfo struct {
 // events which start with it. The first word after the string is
 // moved into the Event.Command.
 type CommandMux struct {
-	private *BasicMux
-	public  *BasicMux
-	prefix  string
-	cmdHelp map[string]*HelpInfo
+	private        *BasicMux
+	public         *BasicMux
+	prefix         string
+	cmdHelp        map[string]*HelpInfo
+	displaySimilar bool
 }
 
 // NewCommandMux will create an initialized BasicMux with no handlers.
-func NewCommandMux(prefix string) *CommandMux {
+func NewCommandMux(prefix string, displaySimilar bool) *CommandMux {
 	m := &CommandMux{
 		NewBasicMux(),
 		NewBasicMux(),
 		prefix,
 		make(map[string]*HelpInfo),
+		displaySimilar,
 	}
-
 	m.Event("help", m.help, &HelpInfo{
 		"help",
 		"<command>",
@@ -167,9 +170,39 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 		newEvent.Command = newEvent.Command[len(m.prefix):]
 	}
 
+	var commands []string
+	var distances []int
 	if b.FromChannel(newEvent) {
 		m.public.HandleEvent(b, newEvent)
+		commands = m.public.eventNames()
 	} else {
 		m.private.HandleEvent(b, newEvent)
+		commands = m.public.eventNames()
+	}
+
+	if m.displaySimilar {
+		for _, v := range commands {
+			distances = append(distances, levenshtein.ComputeDistance(newEvent.Command, v))
+		}
+
+		minDistance := minIntSlice(distances)
+
+		// 0 means it matched exactly so we don't need recommendations
+		if minDistance == 0 {
+			return
+		}
+
+		var similarCommands []string
+		for k, v := range distances {
+			if v-minDistance < 1 {
+				similarCommands = append(similarCommands, commands[k])
+			}
+		}
+
+		sort.Strings(similarCommands)
+
+		if len(similarCommands) > 0 {
+			b.MentionReply(msg, "Did you mean one of the following: %s", strings.Join(similarCommands, ", "))
+		}
 	}
 }

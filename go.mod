@@ -3,9 +3,10 @@ module github.com/belak/go-seabird
 require (
 	cloud.google.com/go v0.31.0 // indirect
 	github.com/BurntSushi/toml v0.3.1
-	github.com/ChimeraCoder/anaconda v1.0.0
+	github.com/ChimeraCoder/anaconda v2.0.0+incompatible
 	github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7 // indirect
 	github.com/Unknwon/com v0.0.0-20170819223952-7677a1d7c113
+	github.com/agnivade/levenshtein v1.0.2
 	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
 	github.com/belak/go-ping v0.0.0-20180517230102-86090cc6a4e2
 	github.com/belak/go-plugin v0.1.0
