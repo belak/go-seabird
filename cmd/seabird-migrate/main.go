@@ -13,10 +13,10 @@ import (
 
 	// Load plugins
 	//_ "github.com/belak/go-seabird-bucket"
-	_ "github.com/belak/go-seabird-uno"
-	_ "github.com/belak/go-seabird/plugins"
+	//_ "github.com/belak/go-seabird-uno"
+	//_ "github.com/belak/go-seabird/plugins"
 	_ "github.com/belak/go-seabird/plugins/extra"
-	_ "github.com/belak/go-seabird/plugins/url"
+	//_ "github.com/belak/go-seabird/plugins/url"
 
 	// Load the core
 	seabird "github.com/belak/go-seabird"
