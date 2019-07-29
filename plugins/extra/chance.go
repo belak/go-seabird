@@ -4,8 +4,9 @@ import (
 	"math/rand"
 	"strings"
 
+	"github.com/lrstanley/girc"
+
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -22,33 +23,33 @@ type chancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
+func newChancePlugin(b *seabird.Bot, c *girc.Client) {
 	p := &chancePlugin{
 		6,
 		make(map[string]int),
 	}
 
-	cm.Event("roulette", p.rouletteCallback, &seabird.HelpInfo{
-		Description: "Click... click... BANG!",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("roulette"), p.rouletteCallback)
+	c.Handlers.AddBg(seabird.PrefixCommand("coin"), p.coinCallback)
 
-	cm.Event("coin", p.coinCallback, &seabird.HelpInfo{
-		Usage:       "[heads|tails]",
-		Description: "Guess the coin flip. If you guess wrong, you're out!",
-	})
+	/*
+		cm.Event("roulette", p.rouletteCallback, &seabird.HelpInfo{
+			Description: "Click... click... BANG!",
+		})
+
+		cm.Event("coin", p.coinCallback, &seabird.HelpInfo{
+			Usage:       "[heads|tails]",
+			Description: "Guess the coin flip. If you guess wrong, you're out!",
+		})
+	*/
 }
 
-func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
-	if !b.FromChannel(m) {
+func (p *chancePlugin) rouletteCallback(c *girc.Client, e girc.Event) {
+	if !e.IsFromChannel() {
 		return
 	}
 
-	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
-		// Invalid message
-		return
-	}
-
-	shotsLeft := p.rouletteShotsLeft[m.Params[0]]
+	shotsLeft := p.rouletteShotsLeft[e.Params[0]]
 
 	var msg string
 	if shotsLeft < 1 {
@@ -58,22 +59,23 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
 
 	shotsLeft--
 	if shotsLeft < 1 {
-		b.MentionReply(m, "%sBANG!", msg)
-		b.Writef("KICK %s %s", m.Params[0], m.Prefix.Name)
+		c.Cmd.ReplyTof(e, "%sBANG!", msg)
+		c.Cmd.SendRawf("KICK %s %s", e.Params[0], e.Source.Name)
 	} else {
-		b.MentionReply(m, "%sClick.", msg)
+		c.Cmd.ReplyTof(e, "%sClick.", msg)
 	}
 
-	p.rouletteShotsLeft[m.Params[0]] = shotsLeft
+	p.rouletteShotsLeft[e.Params[0]] = shotsLeft
 }
 
-func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
-	if !b.FromChannel(m) {
+func (p *chancePlugin) coinCallback(c *girc.Client, e girc.Event) {
+	c.Cmd.ReplyTo(e, "test")
+	if !e.IsFromChannel() {
 		return
 	}
 
 	guess := -1
-	guessStr := m.Trailing()
+	guessStr := e.Last()
 	for k, v := range coinNames {
 		if guessStr == v {
 			guess = k
@@ -82,10 +84,10 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	if guess == -1 {
-		b.Writef(
+		c.Cmd.SendRawf(
 			"KICK %s %s :That's not a valid coin side. Options are: %s",
-			m.Params[0],
-			m.Prefix.Name,
+			e.Params[0],
+			e.Source.Name,
 			strings.Join(coinNames, ", "))
 		return
 	}
@@ -93,8 +95,8 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 	flip := rand.Intn(2)
 
 	if flip == guess {
-		b.MentionReply(m, "Lucky guess!")
+		c.Cmd.ReplyTo(e, "Lucky guess!")
 	} else {
-		b.Writef("KICK %s %s :%s", m.Params[0], m.Prefix.Name, "Sorry! Better luck next time!")
+		c.Cmd.SendRawf("KICK %s %s :%s", e.Params[0], e.Source.Name, "Sorry! Better luck next time!")
 	}
 }

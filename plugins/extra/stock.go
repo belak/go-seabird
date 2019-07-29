@@ -1,3 +1,5 @@
+// +build ignore
+
 package extra
 
 import (
@@ -17,7 +19,7 @@ func init() {
 const stockBaseURL = "https://cloud.iexapis.com/v1/"
 
 type stockPlugin struct {
-	Key string
+	Key    string
 	Client *iex.Client
 }
 

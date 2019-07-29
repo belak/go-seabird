@@ -29,6 +29,7 @@ require (
 	github.com/gopherjs/gopherjs v0.0.0-20181017120253-0766667cb4d1 // indirect
 	github.com/jtolds/gls v4.2.1+incompatible // indirect
 	github.com/lib/pq v1.0.0
+	github.com/lrstanley/girc v0.0.0-20190727045607-33f2d454a54d
 	github.com/mattn/go-sqlite3 v1.9.0
 	github.com/mlbright/darksky v0.0.0-20170901160544-26159461bcba
 	github.com/onsi/ginkgo v0.0.0-20170829012221-11459a886d9c // indirect

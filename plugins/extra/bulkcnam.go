@@ -8,8 +8,9 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/lrstanley/girc"
+
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -20,7 +21,7 @@ type bulkCNAMPlugin struct {
 	Key string
 }
 
-func newBulkCNAMPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newBulkCNAMPlugin(b *seabird.Bot, c *girc.Client) error {
 	p := &bulkCNAMPlugin{}
 
 	err := b.Config("bulkcnam", p)
@@ -28,43 +29,47 @@ func newBulkCNAMPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 		return err
 	}
 
-	cm.Event("cnam", p.bulkCNAMCallback, &seabird.HelpInfo{
-		Usage:       "<phone #>",
-		Description: "Returns the CNAM of a phone number",
-	})
+	/*
+		cm.Event("cnam", p.bulkCNAMCallback, &seabird.HelpInfo{
+			Usage:       "<phone #>",
+			Description: "Returns the CNAM of a phone number",
+		})
+	*/
+
+	c.Handlers.AddBg(seabird.PrefixCommand("cnam"), p.bulkCNAMCallback)
 
 	return nil
 }
 
 // This function queries the BulkCNAM API for a Phone #'s
 // corresponding CNAM, and returns it
-func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, m *irc.Message) {
-	number := m.Trailing()
+func (p *bulkCNAMPlugin) bulkCNAMCallback(c *girc.Client, e girc.Event) {
+	number := e.Last()
 
 	for _, digit := range number {
 		if !unicode.IsDigit(digit) {
-			b.MentionReply(m, "Error: Not a phone number")
+			c.Cmd.ReplyTo(e, "Error: Not a phone number")
 			return
 		}
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://cnam.bulkcnam.com/?id=%s&did=%s", p.Key, number))
 	if err != nil {
-		b.MentionReply(m, "Error: BulkCNAM appears to be down")
+		c.Cmd.ReplyTo(e, "Error: BulkCNAM appears to be down")
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		b.MentionReply(m, "Error: Server side error occurred")
+		c.Cmd.ReplyTo(e, "Error: Server side error occurred")
 		return
 	}
 
 	in := bufio.NewReader(resp.Body)
 	line, err := in.ReadString('\n')
 	if err != nil || err == io.EOF {
-		b.MentionReply(m, "%s", strings.TrimSpace(line))
+		c.Cmd.ReplyTof(e, "%s", strings.TrimSpace(line))
 	} else {
-		b.MentionReply(m, "Error: Something happened when parsing the response.")
+		c.Cmd.ReplyTo(e, "Error: Something happened when parsing the response.")
 	}
 }
