@@ -7,6 +7,7 @@ import (
 	"math"
 	"net/http"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -53,7 +54,7 @@ type runescapeLevelMetadata struct {
 
 type runescapePlugin struct{}
 
-var levelRegex = regexp.MustCompile(`(\w{2,}|".+?")\s+(\w+)$`)
+var levelRegex = regexp.MustCompile(`(\w{2,}|".+?")\s+((\w+\s*)+)$`)
 
 func init() {
 	seabird.RegisterPlugin("runescape", newRunescapePlugin)
@@ -118,12 +119,13 @@ func getCombatLevel(attack, defence, strength, hitpoints, ranged, prayer, magic 
 	return int(math.Floor(base + math.Max(meleeOption, math.Max(rangedOption, magicOption))))
 }
 
-func (p *runescapePlugin) getPlayerSkills(search string) (runescapeLevelMetadata, error) {
-	var emptySkill runescapeLevelMetadata
+func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLevelMetadata, error) {
+	var emptySkills map[string]runescapeLevelMetadata
 
 	found := false
 	player := ""
-	skill := ""
+	skillsString := ""
+	var skills []string
 
 	matches := levelRegex.FindAllStringSubmatch(search, -1)
 	for _, v := range matches {
@@ -131,102 +133,152 @@ func (p *runescapePlugin) getPlayerSkills(search string) (runescapeLevelMetadata
 			v[1] = v[1][1 : len(v[1])-1]
 		}
 		player = v[1]
-		skill = v[2]
+		skillsString = v[2]
+		skills = strings.Fields(skillsString)
 		found = true
 	}
 
 	if !found {
-		return emptySkill, errors.New("Unable to parse player or skill")
+		return emptySkills, errors.New("Unable to parse player or skill")
 	}
 
 	resp, err := http.Get("https://secure.runescape.com/m=hiscore_oldschool/index_lite.ws?player=" + player)
 	if err != nil {
-		return emptySkill, err
+		return emptySkills, err
 	}
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {
-		return emptySkill, err
+		return emptySkills, err
 	}
 	data := strings.Split(strings.TrimSpace(string(bytes)), "\n")
 
 	// It's not strictly needed to build all this up, but it may be useful later.
 	var ret = make(map[string]runescapeLevelMetadata)
 	if len(data) < len(runescapeOldSchoolSkillNames) {
-		return emptySkill, fmt.Errorf("Invalid data")
+		return emptySkills, fmt.Errorf("Invalid data")
 	}
 
 	for i, name := range runescapeOldSchoolSkillNames {
 		md, err := newRunescapeLevelMetadata(name, player, data[i])
 		if err != nil {
-			return emptySkill, err
+			return emptySkills, err
 		}
 
 		ret[md.Skill] = md
 	}
 
-	if skill == "combat" {
-		combat := getCombatLevel(
-			ret["attack"].Level,
-			ret["defence"].Level,
-			ret["strength"].Level,
-			ret["hitpoints"].Level,
-			ret["ranged"].Level,
-			ret["prayer"].Level,
-			ret["magic"].Level)
-		return runescapeLevelMetadata{
-			Rank:   -1,
-			Level:  combat,
-			Exp:    -1,
-			Player: player,
-			Skill:  skill,
-		}, nil
+	returnedSkills := make(map[string]runescapeLevelMetadata)
+
+	for _, skill := range skills {
+		if skill == "combat" {
+			combat := getCombatLevel(
+				ret["attack"].Level,
+				ret["defence"].Level,
+				ret["strength"].Level,
+				ret["hitpoints"].Level,
+				ret["ranged"].Level,
+				ret["prayer"].Level,
+				ret["magic"].Level)
+			returnedSkills["combat"] = runescapeLevelMetadata{
+				Rank:   -1,
+				Level:  combat,
+				Exp:    -1,
+				Player: player,
+				Skill:  skill,
+			}
+			continue
+		}
+
+		// Pull out the proper data
+		md, ok := ret[skill]
+		if !ok {
+			return emptySkills, fmt.Errorf("Unknown skill %q", skill)
+		}
+
+		returnedSkills[skill] = md
 	}
 
-	// Pull out the proper data
-	md, ok := ret[skill]
-	if !ok {
-		return emptySkill, fmt.Errorf("Unknown skill %q", skill)
-	}
+	return returnedSkills, nil
+}
 
-	return md, nil
+func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
+	var names []string
+	for name := range skills {
+		names = append(names, name)
+	}
+	sort.Strings(names)
+	return names
 }
 
 func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := strings.ToLower(m.Trailing())
 	go func() {
-		data, err := p.getPlayerSkills(trailing)
+		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return
 		}
 
-		b.MentionReply(m, "%s has level %s %s", data.Player, utils.PrettifyNumber(data.Level), data.Skill)
+		playerName := ""
+		names := sortedSkillNames(skills)
+
+		var responses []string
+		var skill runescapeLevelMetadata
+		for _, name := range names {
+			skill = skills[name]
+			playerName = skill.Player
+			responses = append(responses, fmt.Sprintf("level %s %s", utils.PrettifyNumber(skill.Level), skill.Skill))
+		}
+
+		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
 func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := strings.ToLower(m.Trailing())
 	go func() {
-		data, err := p.getPlayerSkills(trailing)
+		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return
 		}
 
-		b.MentionReply(m, "%s has %s experience in %s", data.Player, utils.PrettifySuffix(data.Exp), data.Skill)
+		playerName := ""
+		names := sortedSkillNames(skills)
+
+		var responses []string
+		var skill runescapeLevelMetadata
+		for _, name := range names {
+			skill = skills[name]
+			playerName = skill.Player
+			responses = append(responses, fmt.Sprintf("%s experience in %s", utils.PrettifySuffix(skill.Exp), skill.Skill))
+		}
+
+		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
 func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := strings.ToLower(m.Trailing())
 	go func() {
-		data, err := p.getPlayerSkills(trailing)
+		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
 			b.MentionReply(m, "%s", err)
 			return
 		}
 
-		b.MentionReply(m, "%s has rank %s in %s", data.Player, utils.PrettifyNumber(data.Rank), data.Skill)
+		playerName := ""
+		names := sortedSkillNames(skills)
+
+		var responses []string
+		var skill runescapeLevelMetadata
+		for _, name := range names {
+			skill = skills[name]
+			playerName = skill.Player
+			responses = append(responses, fmt.Sprintf("rank %s in %s", utils.PrettifyNumber(skill.Rank), skill.Skill))
+		}
+
+		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
