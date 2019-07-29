@@ -55,7 +55,6 @@ type runescapeLevelMetadata struct {
 type runescapePlugin struct{}
 
 var levelRegex = regexp.MustCompile(`(\w{2,}|".+?")\s+((\w+\s*)+)$`)
-var whitespaceRegex = regexp.MustCompile(`\s+`)
 
 func init() {
 	seabird.RegisterPlugin("runescape", newRunescapePlugin)
@@ -135,7 +134,7 @@ func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLe
 		}
 		player = v[1]
 		skillsString = v[2]
-		skills = whitespaceRegex.Split(skillsString, -1)
+		skills = strings.Fields(skillsString)
 		found = true
 	}
 
