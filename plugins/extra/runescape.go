@@ -43,6 +43,32 @@ var runescapeOldSchoolSkillNames = []string{
 	"construction",
 }
 
+var runescapeOldSchoolSkillAliases = map[string]string{
+	"overall":      "total",
+	"atk":          "attack",
+	"att":          "attack",
+	"def":          "defence",
+	"defense":      "defence",
+	"str":          "strength",
+	"hp":           "hitpoints",
+	"range":        "ranged",
+	"ranging":      "ranged",
+	"pray":         "prayer",
+	"mage":         "magic",
+	"cook":         "cooking",
+	"wc":           "woodcutting",
+	"fletch":       "fletching",
+	"fish":         "fishing",
+	"fm":           "firemaking",
+	"craft":        "crafting",
+	"herb":         "herblore",
+	"agi":          "agility",
+	"farm":         "farming",
+	"runecrafting": "runecraft",
+	"rc":           "runecraft",
+	"con":          "construction",
+}
+
 type runescapeLevelMetadata struct {
 	Rank  int
 	Level int
@@ -119,6 +145,14 @@ func getCombatLevel(attack, defence, strength, hitpoints, ranged, prayer, magic 
 	return int(math.Floor(base + math.Max(meleeOption, math.Max(rangedOption, magicOption))))
 }
 
+func resolveAlias(possibleAlias string) string {
+	if val, ok := runescapeOldSchoolSkillAliases[possibleAlias]; ok {
+		return val
+	}
+
+	return possibleAlias
+}
+
 func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLevelMetadata, error) {
 	var emptySkills map[string]runescapeLevelMetadata
 
@@ -135,6 +169,11 @@ func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLe
 		player = v[1]
 		skillsString = v[2]
 		skills = strings.Fields(skillsString)
+
+		for i, skill := range skills {
+			skills[i] = resolveAlias(skill)
+		}
+
 		found = true
 	}
 
