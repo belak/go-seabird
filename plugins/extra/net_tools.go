@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -12,7 +10,7 @@ import (
 	ping "github.com/belak/go-ping"
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
+	"github.com/lrstanley/girc"
 )
 
 func init() {
@@ -24,7 +22,7 @@ type netToolsPlugin struct {
 	PrivilegedPing bool
 }
 
-func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newNetToolsPlugin(b *seabird.Bot, c *girc.Client) error {
 	p := &netToolsPlugin{}
 
 	err := b.Config("net_tools", p)
@@ -32,115 +30,125 @@ func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 		return err
 	}
 
-	cm.Event("rdns", p.RDNS, &seabird.HelpInfo{
-		Usage:       "<ip>",
-		Description: "Does a reverse DNS lookup on the given IP",
-	})
-	cm.Event("dig", p.Dig, &seabird.HelpInfo{
-		Usage:       "<domain>",
-		Description: "Retrieves IP records for given domain",
-	})
-	cm.Event("ping", p.Ping, &seabird.HelpInfo{
-		Usage:       "<host>",
-		Description: "Pings given host once",
-	})
-	cm.Event("traceroute", p.Traceroute, &seabird.HelpInfo{
-		Usage:       "<host>",
-		Description: "Runs traceroute on given host and returns pastebin URL for results",
-	})
-	cm.Event("whois", p.Whois, &seabird.HelpInfo{
-		Usage:       "<domain>",
-		Description: "Runs whois on given domain and returns pastebin URL for results",
-	})
-	cm.Event("dnscheck", p.DNSCheck, &seabird.HelpInfo{
-		Usage:       "<domain>",
-		Description: "Returns DNSCheck URL for domain",
-	})
-	cm.Event("asn", p.ASNLookup, &seabird.HelpInfo{
-		Usage:       "<ip>",
-		Description: "Return subnet info for a given IP",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("rdns"), p.RDNS)
+	c.Handlers.AddBg(seabird.PrefixCommand("dig"), p.Dig)
+	c.Handlers.AddBg(seabird.PrefixCommand("ping"), p.Ping)
+	c.Handlers.AddBg(seabird.PrefixCommand("traceroute"), p.Traceroute)
+	c.Handlers.AddBg(seabird.PrefixCommand("whois"), p.Whois)
+	c.Handlers.AddBg(seabird.PrefixCommand("dnscheck"), p.DNSCheck)
+	c.Handlers.AddBg(seabird.PrefixCommand("asn"), p.ASNLookup)
+
+	/*
+		cm.Event("rdns", p.RDNS, &seabird.HelpInfo{
+			Usage:       "<ip>",
+			Description: "Does a reverse DNS lookup on the given IP",
+		})
+		cm.Event("dig", p.Dig, &seabird.HelpInfo{
+			Usage:       "<domain>",
+			Description: "Retrieves IP records for given domain",
+		})
+		cm.Event("ping", p.Ping, &seabird.HelpInfo{
+			Usage:       "<host>",
+			Description: "Pings given host once",
+		})
+		cm.Event("traceroute", p.Traceroute, &seabird.HelpInfo{
+			Usage:       "<host>",
+			Description: "Runs traceroute on given host and returns pastebin URL for results",
+		})
+		cm.Event("whois", p.Whois, &seabird.HelpInfo{
+			Usage:       "<domain>",
+			Description: "Runs whois on given domain and returns pastebin URL for results",
+		})
+		cm.Event("dnscheck", p.DNSCheck, &seabird.HelpInfo{
+			Usage:       "<domain>",
+			Description: "Returns DNSCheck URL for domain",
+		})
+		cm.Event("asn", p.ASNLookup, &seabird.HelpInfo{
+			Usage:       "<ip>",
+			Description: "Return subnet info for a given IP",
+		})
+	*/
 
 	return nil
 }
 
-func (p *netToolsPlugin) RDNS(b *seabird.Bot, m *irc.Message) {
+func (p *netToolsPlugin) RDNS(c *girc.Client, e girc.Event) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Argument required")
+		if e.Last() == "" {
+			c.Cmd.ReplyTof(e, "Argument required")
 			return
 		}
-		names, err := net.LookupAddr(m.Trailing())
+		names, err := net.LookupAddr(e.Last())
 		if err != nil {
-			b.MentionReply(m, err.Error())
+			c.Cmd.ReplyTof(e, err.Error())
 			return
 		}
 
 		if len(names) == 0 {
-			b.MentionReply(m, "No results found")
+			c.Cmd.ReplyTof(e, "No results found")
 			return
 		}
 
-		b.MentionReply(m, names[0])
+		c.Cmd.ReplyTof(e, names[0])
 
 		if len(names) > 1 {
 			for _, name := range names[1:] {
-				b.Writef("NOTICE %s :%s", m.Prefix.Name, name)
+				c.Cmd.Notice(e.Source.Name, name)
 			}
 		}
 	}()
 }
 
-func (p *netToolsPlugin) Dig(b *seabird.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Dig(c *girc.Client, e girc.Event) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Domain required")
+		if e.Last() == "" {
+			c.Cmd.ReplyTof(e, "Domain required")
 			return
 		}
 
-		addrs, err := net.LookupHost(m.Trailing())
+		addrs, err := net.LookupHost(e.Last())
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			c.Cmd.ReplyTof(e, "%s", err)
 			return
 		}
 
 		if len(addrs) == 0 {
-			b.MentionReply(m, "No results found")
+			c.Cmd.ReplyTof(e, "No results found")
 			return
 		}
 
-		b.MentionReply(m, addrs[0])
+		c.Cmd.ReplyTof(e, addrs[0])
 
 		if len(addrs) > 1 {
 			for _, addr := range addrs[1:] {
-				b.Writef("NOTICE %s :%s", m.Prefix.Name, addr)
+				c.Cmd.Notice(e.Source.Name, addr)
 			}
 		}
 	}()
 }
 
-func (p *netToolsPlugin) Ping(b *seabird.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Ping(c *girc.Client, e girc.Event) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Host required")
+		if e.Last() == "" {
+			c.Cmd.ReplyTof(e, "Host required")
 			return
 		}
 
-		pinger, err := ping.NewPinger(m.Trailing())
+		pinger, err := ping.NewPinger(e.Last())
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			c.Cmd.ReplyTof(e, "%s", err)
 			return
 		}
 		pinger.Count = 1
 		pinger.SetPrivileged(p.PrivilegedPing)
 
 		pinger.OnRecv = func(pkt *ping.Packet) {
-			b.MentionReply(m, "%d bytes from %s: icmp_seq=%d time=%s",
+			c.Cmd.ReplyTof(e, "%d bytes from %s: icmp_seq=%d time=%s",
 				pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 		}
 		err = pinger.Run()
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			c.Cmd.ReplyTof(e, "%s", err)
 			return
 		}
 	}()
@@ -170,37 +178,36 @@ func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) 
 	return p.pasteData(string(out))
 }
 
-func (p *netToolsPlugin) handleCommand(b *seabird.Bot, m *irc.Message, command string, emptyMsg string) {
-	if m.Trailing() == "" {
-		b.MentionReply(m, "Host required")
+func (p *netToolsPlugin) handleCommand(c *girc.Client, e girc.Event, command string, emptyMsg string) {
+	if e.Last() == "" {
+		c.Cmd.ReplyTof(e, "Host required")
 		return
 	}
 
-	url, err := p.runCommand("traceroute", m.Trailing())
+	url, err := p.runCommand("traceroute", e.Last())
 	if err != nil {
-		b.MentionReply(m, "%s", err)
+		c.Cmd.ReplyTof(e, "%s", err)
 		return
 	}
 
-	b.MentionReply(m, "%s", url)
-
+	c.Cmd.ReplyTof(e, "%s", url)
 }
 
-func (p *netToolsPlugin) Traceroute(b *seabird.Bot, m *irc.Message) {
-	go p.handleCommand(b, m, "traceroute", "Host required")
+func (p *netToolsPlugin) Traceroute(c *girc.Client, e girc.Event) {
+	go p.handleCommand(c, e, "traceroute", "Host required")
 }
 
-func (p *netToolsPlugin) Whois(b *seabird.Bot, m *irc.Message) {
-	go p.handleCommand(b, m, "whois", "Domain required")
+func (p *netToolsPlugin) Whois(c *girc.Client, e girc.Event) {
+	go p.handleCommand(c, e, "whois", "Domain required")
 }
 
-func (p *netToolsPlugin) DNSCheck(b *seabird.Bot, m *irc.Message) {
-	if m.Trailing() == "" {
-		b.MentionReply(m, "Domain required")
+func (p *netToolsPlugin) DNSCheck(c *girc.Client, e girc.Event) {
+	if e.Last() == "" {
+		c.Cmd.ReplyTof(e, "Domain required")
 		return
 	}
 
-	b.MentionReply(m, "https://www.whatsmydns.net/#A/"+m.Trailing())
+	c.Cmd.ReplyTof(e, "https://www.whatsmydns.net/#A/"+e.Last())
 }
 
 type asnResponse struct {
@@ -212,29 +219,28 @@ type asnResponse struct {
 	LastIP        string `json:"last_ip"`
 }
 
-func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, m *irc.Message) {
-	if m.Trailing() == "" {
-		b.MentionReply(m, "IP required")
+func (p *netToolsPlugin) ASNLookup(c *girc.Client, e girc.Event) {
+	if e.Last() == "" {
+		c.Cmd.ReplyTof(e, "IP required")
 		return
 	}
 
 	asnResp := asnResponse{}
 
 	err := utils.GetJSON(
-		"https://api.iptoasn.com/v1/as/ip/"+m.Trailing(),
+		"https://api.iptoasn.com/v1/as/ip/"+e.Last(),
 		&asnResp)
 	if err != nil {
-		b.MentionReply(m, "%s", err)
+		c.Cmd.ReplyTof(e, "%s", err)
 		return
 	}
 
 	if !asnResp.Announced {
-		b.MentionReply(m, "ASN information not available")
+		c.Cmd.ReplyTof(e, "ASN information not available")
 		return
 	}
 
-	b.MentionReply(
-		m,
+	c.Cmd.ReplyTof(e,
 		"#%d (%s - %s) - %s (%s)",
 		asnResp.AsNumber,
 		asnResp.FirstIP,

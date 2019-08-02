@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -7,10 +5,11 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/go-xorm/xorm"
+	"github.com/lrstanley/girc"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -18,7 +17,8 @@ func init() {
 }
 
 type lastSeenPlugin struct {
-	db *xorm.Engine
+	db     *xorm.Engine
+	logger *logrus.Entry
 }
 
 // LastSeen is the xorm model for the lastseen plugin
@@ -29,34 +29,39 @@ type LastSeen struct {
 	Time    time.Time
 }
 
-func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &lastSeenPlugin{db: db}
+func newLastSeenPlugin(b *seabird.Bot, c *girc.Client, db *xorm.Engine) error {
+	p := &lastSeenPlugin{db: db, logger: b.GetLogger()}
 
 	err := p.db.Sync(LastSeen{})
 	if err != nil {
 		return err
 	}
 
-	cm.Event("active", p.activeCallback, &seabird.HelpInfo{
-		Usage:       "<nick>",
-		Description: "Reports the last time user was seen",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("active"), p.activeCallback)
+	c.Handlers.Add(girc.PRIVMSG, p.msgCallback)
 
-	m.Event("PRIVMSG", p.msgCallback)
+	/*
+		cm.Event("active", p.activeCallback, &seabird.HelpInfo{
+			Usage:       "<nick>",
+			Description: "Reports the last time user was seen",
+		})
+
+		m.Event("PRIVMSG", p.msgCallback)
+	*/
 
 	return nil
 }
 
-func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, m *irc.Message) {
-	nick := m.Trailing()
+func (p *lastSeenPlugin) activeCallback(c *girc.Client, e girc.Event) {
+	nick := e.Last()
 	if nick == "" {
-		b.MentionReply(m, "Nick required")
+		c.Cmd.ReplyTof(e, "Nick required")
 		return
 	}
 
-	channel := m.Params[0]
+	channel := e.Params[0]
 
-	b.MentionReply(m, "%s", p.getLastSeen(nick, channel))
+	c.Cmd.ReplyTof(e, "%s", p.getLastSeen(nick, channel))
 }
 
 func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
@@ -81,21 +86,19 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), t.Month().String(), t.Year())
 }
 
-func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
-	if len(m.Params) < 2 || !b.FromChannel(m) || m.Prefix.Name == "" {
+func (p *lastSeenPlugin) msgCallback(c *girc.Client, e girc.Event) {
+	if len(e.Params) < 2 || !e.IsFromChannel() || e.Source.Name == "" {
 		return
 	}
 
-	nick := m.Prefix.Name
-	channel := m.Params[0]
+	nick := e.Source.Name
+	channel := e.Params[0]
 
-	p.updateLastSeen(b, nick, channel)
+	p.updateLastSeen(c, nick, channel)
 }
 
 // Thanks to @belak for the comments
-func (p *lastSeenPlugin) updateLastSeen(b *seabird.Bot, rawNick, rawChannel string) {
-	l := b.GetLogger()
-
+func (p *lastSeenPlugin) updateLastSeen(c *girc.Client, rawNick, rawChannel string) {
 	search := LastSeen{
 		Channel: strings.ToLower(rawChannel),
 		Nick:    strings.ToLower(rawNick),
@@ -112,6 +115,6 @@ func (p *lastSeenPlugin) updateLastSeen(b *seabird.Bot, rawNick, rawChannel stri
 	})
 
 	if err != nil {
-		l.WithError(err).Warnf("Failed to update lastseen data for %s in %s", rawNick, rawChannel)
+		p.logger.WithError(err).Warnf("Failed to update lastseen data for %s in %s", rawNick, rawChannel)
 	}
 }

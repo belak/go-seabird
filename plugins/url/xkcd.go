@@ -57,6 +57,6 @@ func handleXKCD(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 		return false
 	}
 
-	b.Reply(m, "%s %s: %s", xkcdPrefix, scrape.Attr(n, "alt"), scrape.Attr(n, "title"))
+	c.Cmd.Replyf(e, "%s %s: %s", xkcdPrefix, scrape.Attr(n, "alt"), scrape.Attr(n, "title"))
 	return ok
 }

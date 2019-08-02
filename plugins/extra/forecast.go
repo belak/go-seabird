@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -10,11 +8,11 @@ import (
 	"time"
 
 	"github.com/go-xorm/xorm"
+	"github.com/lrstanley/girc"
 	darksky "github.com/mlbright/darksky/v2"
 	"googlemaps.github.io/maps"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -59,7 +57,7 @@ type ForecastLocation struct {
 	Lon     float64
 }
 
-func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
+func newForecastPlugin(b *seabird.Bot, c *girc.Client, db *xorm.Engine) error {
 	p := &forecastPlugin{db: db}
 
 	// Ensure DB tables are up to date
@@ -73,15 +71,20 @@ func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) 
 		return err
 	}
 
-	cm.Event("weather", p.weatherCallback, &seabird.HelpInfo{
-		Usage:       "<location>",
-		Description: "Retrieves current weather for given location",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("weather"), p.weatherCallback)
+	c.Handlers.AddBg(seabird.PrefixCommand("forecast"), p.forecastCallback)
 
-	cm.Event("forecast", p.forecastCallback, &seabird.HelpInfo{
-		Usage:       "<location>",
-		Description: "Retrieves three-day forecast for given location",
-	})
+	/*
+		cm.Event("weather", p.weatherCallback, &seabird.HelpInfo{
+			Usage:       "<location>",
+			Description: "Retrieves current weather for given location",
+		})
+
+		cm.Event("forecast", p.forecastCallback, &seabird.HelpInfo{
+			Usage:       "<location>",
+			Description: "Retrieves three-day forecast for given location",
+		})
+	*/
 
 	options := []maps.ClientOption{}
 	if p.MapsKey != "" {
@@ -106,16 +109,16 @@ func (p *forecastPlugin) forecastQuery(loc *ForecastLocation) (*darksky.Forecast
 		darksky.English)
 }
 
-func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) {
-	l := m.Trailing()
+func (p *forecastPlugin) getLocation(e girc.Event) (*ForecastLocation, error) {
+	l := e.Last()
 
-	target := &ForecastLocation{Nick: m.Prefix.Name}
+	target := &ForecastLocation{Nick: e.Source.Name}
 
 	// If it's an empty string, check the cache
 	if l == "" {
 		found, err := p.db.Get(target)
 		if err != nil || !found {
-			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
+			return nil, fmt.Errorf("Could not find a location for %q", e.Source.Name)
 		}
 		return target, nil
 	}
@@ -134,7 +137,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 	}
 
 	newLocation := &ForecastLocation{
-		Nick:    m.Prefix.Name,
+		Nick:    e.Source.Name,
 		Address: res[0].FormattedAddress,
 		Lat:     res[0].Geometry.Location.Lat,
 		Lon:     res[0].Geometry.Location.Lng,
@@ -152,26 +155,26 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 	return newLocation, err
 }
 
-func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
-	loc, err := p.getLocation(m)
+func (p *forecastPlugin) forecastCallback(c *girc.Client, e girc.Event) {
+	loc, err := p.getLocation(e)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		c.Cmd.ReplyTof(e, "%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		c.Cmd.ReplyTof(e, "%s", err.Error())
 		return
 	}
 
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
-	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
+	c.Cmd.ReplyTof(e, "3 day forecast for %s.", loc.Address)
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(int64(block.Time), 0).Weekday()
 
-		b.MentionReply(m,
+		c.Cmd.ReplyTof(e,
 			"%s: High %.2f%s, Low %.2f%s, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
@@ -183,23 +186,23 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
-func (p *forecastPlugin) weatherCallback(b *seabird.Bot, m *irc.Message) {
-	loc, err := p.getLocation(m)
+func (p *forecastPlugin) weatherCallback(c *girc.Client, e girc.Event) {
+	loc, err := p.getLocation(e)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		c.Cmd.ReplyTof(e, "%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		c.Cmd.ReplyTof(e, "%s", err.Error())
 		return
 	}
 
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
 	today := fc.Daily.Data[0]
-	b.MentionReply(m,
+	c.Cmd.ReplyTof(e,
 		"%s. Currently %.1f%s. High %.2f%s, Low %.2f%s, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,

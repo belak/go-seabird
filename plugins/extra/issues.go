@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -9,10 +7,10 @@ import (
 	"strings"
 
 	"github.com/google/go-github/github"
+	"github.com/lrstanley/girc"
 	"golang.org/x/oauth2"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -29,7 +27,7 @@ type issuesPlugin struct {
 	api *github.Client
 }
 
-func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newIssuesPlugin(b *seabird.Bot, c *girc.Client) error {
 	p := &issuesPlugin{
 		DefaultRepo: "belak/go-seabird",
 		RepoTags: map[string]string{
@@ -58,77 +56,80 @@ func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	// Create a github client from the oauth2 client
 	p.api = github.NewClient(tc)
 
-	cm.Event("issue", p.CreateIssue, &seabird.HelpInfo{
-		Usage:       "<issue title> [#repo_tag] [@user]",
-		Description: "Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("issue"), p.CreateIssue)
+	c.Handlers.AddBg(seabird.PrefixCommand("isearch"), p.IssueSearch)
 
-	cm.Event("isearch", p.IssueSearch, &seabird.HelpInfo{
-		Usage:       "<query string>",
-		Description: "Search the seabird repo for issues.",
-	})
+	/*
+		cm.Event("issue", p.CreateIssue, &seabird.HelpInfo{
+			Usage:       "<issue title> [#repo_tag] [@user]",
+			Description: "Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
+		})
+
+		cm.Event("isearch", p.IssueSearch, &seabird.HelpInfo{
+			Usage:       "<query string>",
+			Description: "Search the seabird repo for issues.",
+		})
+	*/
 
 	return nil
 }
 
-func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
-	go func() {
-		r := &github.IssueRequest{}
+func (p *issuesPlugin) CreateIssue(c *girc.Client, e girc.Event) {
+	r := &github.IssueRequest{}
 
-		// This will be what we eventually send to the server
-		body := "Filed by " + m.Prefix.Name + " in " + m.Params[0]
-		r.Body = &body
+	// This will be what we eventually send to the server
+	body := "Filed by " + e.Source.Name + " in " + e.Params[0]
+	r.Body = &body
 
-		title := strings.TrimSpace(m.Trailing())
-		searchChars := "#@"
-		targetRepo := p.DefaultRepo
-		for idx := strings.LastIndexAny(title, searchChars); idx > -1; idx = strings.LastIndexAny(title, searchChars) {
-			if strings.Contains(title[idx+1:], " ") {
-				break
-			}
-
-			char := title[idx]
-			data := title[idx+1:]
-			title = strings.TrimSpace(title[:idx])
-
-			switch char {
-			case '#':
-				if repoPath, ok := p.RepoTags[data]; ok {
-					targetRepo = repoPath
-				}
-			case '@':
-				r.Assignee = &data
-			}
-
-			searchChars = strings.Trim(searchChars, string(char))
-
-			if len(searchChars) == 0 {
-				break
-			}
+	title := strings.TrimSpace(e.Last())
+	searchChars := "#@"
+	targetRepo := p.DefaultRepo
+	for idx := strings.LastIndexAny(title, searchChars); idx > -1; idx = strings.LastIndexAny(title, searchChars) {
+		if strings.Contains(title[idx+1:], " ") {
+			break
 		}
 
-		if title == "" {
-			b.MentionReply(m, "Issue title required")
-			return
+		char := title[idx]
+		data := title[idx+1:]
+		title = strings.TrimSpace(title[:idx])
+
+		switch char {
+		case '#':
+			if repoPath, ok := p.RepoTags[data]; ok {
+				targetRepo = repoPath
+			}
+		case '@':
+			r.Assignee = &data
 		}
 
-		r.Title = &title
+		searchChars = strings.Trim(searchChars, string(char))
 
-		pathSegments := strings.SplitN(targetRepo, "/", 2)
-
-		issue, _, err := p.api.Issues.Create(context.TODO(), pathSegments[0], pathSegments[1], r)
-		if err != nil {
-			b.MentionReply(m, "%s", err.Error())
-			return
+		if len(searchChars) == 0 {
+			break
 		}
+	}
 
-		b.MentionReply(m, "Issue created. %s", *issue.HTMLURL)
-	}()
+	if title == "" {
+		c.Cmd.ReplyTof(e, "Issue title required")
+		return
+	}
+
+	r.Title = &title
+
+	pathSegments := strings.SplitN(targetRepo, "/", 2)
+
+	issue, _, err := p.api.Issues.Create(context.TODO(), pathSegments[0], pathSegments[1], r)
+	if err != nil {
+		c.Cmd.ReplyTof(e, "%s", err.Error())
+		return
+	}
+
+	c.Cmd.ReplyTof(e, "Issue created. %s", *issue.HTMLURL)
 }
 
-func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
+func (p *issuesPlugin) IssueSearch(c *girc.Client, e girc.Event) {
 	hasState := false
-	split := strings.Split(m.Trailing(), " ")
+	split := strings.Split(e.Last(), " ")
 	for i := 0; i < len(split); i++ {
 		if strings.HasPrefix(split[i], "repo:") {
 			split = append(split[:i], split[i+1:]...)
@@ -151,7 +152,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 
 	issues, _, err := p.api.Search.Issues(context.TODO(), strings.Join(split, " "), opt)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		c.Cmd.ReplyTof(e, "%s", err.Error())
 		return
 	}
 
@@ -161,9 +162,9 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	}
 
 	if total == 1 {
-		b.MentionReply(m, "There was %d result.", total)
+		c.Cmd.ReplyTof(e, "There was %d result.", total)
 	} else {
-		b.MentionReply(m, "There were %d results.", total)
+		c.Cmd.ReplyTof(e, "There were %d results.", total)
 	}
 
 	if total > 3 {
@@ -171,7 +172,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	}
 
 	for _, issue := range issues.Issues[:total] {
-		b.MentionReply(m, "%s", encodeIssue(issue))
+		c.Cmd.ReplyTof(e, "%s", encodeIssue(issue))
 	}
 }
 

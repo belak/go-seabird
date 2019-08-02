@@ -106,7 +106,7 @@ func (yp *youtubePlugin) Handle(b *seabird.Bot, m *irc.Message, req *url.URL) bo
 
 	// Send out the IRC message
 	msg := fmt.Sprintf("%s ~ %s", time, title)
-	b.Reply(m, "%s %s", youtubePrefix, msg)
+	c.Cmd.Replyf(e, "%s %s", youtubePrefix, msg)
 
 	return true
 }

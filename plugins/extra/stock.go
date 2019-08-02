@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -7,9 +5,9 @@ import (
 	"strings"
 
 	iex "github.com/goinvest/iexcloud"
+	"github.com/lrstanley/girc"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -23,7 +21,7 @@ type stockPlugin struct {
 	Client *iex.Client
 }
 
-func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newStockPlugin(b *seabird.Bot, c *girc.Client) error {
 	p := &stockPlugin{}
 	err := b.Config("stock", p)
 	if err != nil {
@@ -32,33 +30,35 @@ func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 
 	p.Client = iex.NewClient(p.Key, stockBaseURL)
 
+	c.Handlers.AddBg(seabird.PrefixCommand("stock"), p.search)
+
+	/*
 	cm.Event("stock", p.search, &seabird.HelpInfo{
 		Usage:       "<symbol>",
 		Description: "Gets current stock price for the given symbol",
 	})
+	*/
 
 	return nil
 }
 
-func (p *stockPlugin) search(b *seabird.Bot, m *irc.Message) {
-	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Symbol required")
-			return
+func (p *stockPlugin) search(c *girc.Client, e girc.Event) {
+	if e.Last() == "" {
+		c.Cmd.ReplyTof(e, "Symbol required")
+		return
+	}
+
+	symbols := strings.Split(strings.ToUpper(e.Last()), " ")
+	prices := []string{}
+
+	for _, symbol := range symbols {
+		price, err := p.Client.Price(symbol)
+		if err != nil {
+			c.Cmd.ReplyTof(e, "%s", err)
+			continue
 		}
+		prices = append(prices, fmt.Sprintf("%s: %.2f", symbol, price))
+	}
 
-		symbols := strings.Split(strings.ToUpper(m.Trailing()), " ")
-		prices := []string{}
-
-		for _, symbol := range symbols {
-			price, err := p.Client.Price(symbol)
-			if err != nil {
-				b.MentionReply(m, "%s", err)
-				continue
-			}
-			prices = append(prices, fmt.Sprintf("%s: %.2f", symbol, price))
-		}
-
-		b.MentionReply(m, "%s", strings.Join(prices, ", "))
-	}()
+	c.Cmd.ReplyTof(e, "%s", strings.Join(prices, ", "))
 }

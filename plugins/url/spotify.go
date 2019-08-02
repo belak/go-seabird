@@ -6,7 +6,7 @@ import (
 	"regexp"
 	"text/template"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2/clientcredentials"
 
@@ -134,9 +134,9 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 	return nil
 }
 
-func (s *spotifyProvider) privmsgCallback(b *seabird.Bot, m *irc.Message) {
+func (s *spotifyProvider) privmsgCallback(c *girc.Client, e girc.Event) {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, m, matcher, matcher.uriRegex, m.Trailing()) {
+		if s.handleTarget(b, m, matcher, matcher.uriRegex, e.Last()) {
 			return
 		}
 	}

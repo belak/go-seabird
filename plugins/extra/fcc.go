@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -7,7 +5,7 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
+	"github.com/lrstanley/girc"
 )
 
 func init() {
@@ -41,39 +39,41 @@ type fccResponse struct {
 	LicenseData fccLicenses `json:"Licenses"`
 }
 
-func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newFccPlugin(b *seabird.Bot, c *girc.Client) error {
 	p := &fccPlugin{}
 
-	cm.Event("callsign", p.Search, &seabird.HelpInfo{
-		Usage:       "<callsign>",
-		Description: "Finds information about given FCC callsign",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("callsign"), p.Search)
+
+	/*
+		cm.Event("callsign", p.Search, &seabird.HelpInfo{
+			Usage:       "<callsign>",
+			Description: "Finds information about given FCC callsign",
+		})
+	*/
 
 	return nil
 }
 
-func (p *fccPlugin) Search(b *seabird.Bot, m *irc.Message) {
-	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Callsign required")
-			return
-		}
+func (p *fccPlugin) Search(c *girc.Client, e girc.Event) {
+	if e.Last() == "" {
+		c.Cmd.ReplyTof(e, "Callsign required")
+		return
+	}
 
-		url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(m.Trailing())
+	url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(e.Last())
 
-		fr := &fccResponse{}
-		err := utils.GetJSON(url, fr)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
+	fr := &fccResponse{}
+	err := utils.GetJSON(url, fr)
+	if err != nil {
+		c.Cmd.ReplyTof(e, "%s", err)
+		return
+	}
 
-		if len(fr.LicenseData.Licenses) == 0 {
-			b.MentionReply(m, "No licenses found")
-			return
-		}
+	if len(fr.LicenseData.Licenses) == 0 {
+		c.Cmd.ReplyTof(e, "No licenses found")
+		return
+	}
 
-		license := fr.LicenseData.Licenses[0]
-		b.MentionReply(m, "%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
-	}()
+	license := fr.LicenseData.Licenses[0]
+	c.Cmd.ReplyTof(e, "%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
 }

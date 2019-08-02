@@ -5,6 +5,7 @@ require (
 	github.com/BurntSushi/toml v0.3.1
 	github.com/ChimeraCoder/anaconda v1.0.0
 	github.com/ChimeraCoder/tokenbucket v0.0.0-20131201223612-c5a927568de7 // indirect
+	github.com/Sirupsen/logrus v1.0.5
 	github.com/Unknwon/com v0.0.0-20170819223952-7677a1d7c113
 	github.com/azr/backoff v0.0.0-20160115115103-53511d3c7330 // indirect
 	github.com/belak/go-ping v0.0.0-20180517230102-86090cc6a4e2
@@ -34,7 +35,7 @@ require (
 	github.com/mlbright/darksky v0.0.0-20170901160544-26159461bcba
 	github.com/onsi/ginkgo v0.0.0-20170829012221-11459a886d9c // indirect
 	github.com/onsi/gomega v0.0.0-20170829124025-dcabb60a477c // indirect
-	github.com/sirupsen/logrus v1.0.5
+	github.com/sirupsen/logrus v1.4.2
 	github.com/smartystreets/assertions v0.0.0-20180927180507-b2de0cb4f26d // indirect
 	github.com/smartystreets/goconvey v0.0.0-20180222194500-ef6db91d284a // indirect
 	github.com/soudy/mathcat v0.0.0-20161113211117-85db51cac9df
@@ -46,7 +47,6 @@ require (
 	golang.org/x/net v0.0.0-20180724234803-3673e40ba225
 	golang.org/x/oauth2 v0.0.0-20180521191639-dd5f5d8e78ce
 	golang.org/x/sync v0.0.0-20180314180146-1d60e4601c6f // indirect
-	golang.org/x/sys v0.0.0-20180523211148-77b0e4315053 // indirect
 	golang.org/x/time v0.0.0-20180412165947-fbb02b2291d2 // indirect
 	google.golang.org/appengine v1.2.0 // indirect
 	googlemaps.github.io/maps v0.0.0-20180515075318-74df290bd159

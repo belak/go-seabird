@@ -1,5 +1,3 @@
-// +build ignore
-
 package extra
 
 import (
@@ -13,9 +11,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/lrstanley/girc"
+
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 var runescapeOldSchoolSkillNames = []string{
@@ -116,21 +115,27 @@ func newRunescapeLevelMetadata(name, player, line string) (runescapeLevelMetadat
 	}, nil
 }
 
-func newRunescapePlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newRunescapePlugin(c *girc.Client) error {
 	p := &runescapePlugin{}
 
-	cm.Event("rlvl", p.levelCallback, &seabird.HelpInfo{
-		Usage:       "<player> <skill>",
-		Description: "Returns a player's Old-School Runescape skill level",
-	})
-	cm.Event("rexp", p.expCallback, &seabird.HelpInfo{
-		Usage:       "<player> <skill>",
-		Description: "Returns a player's Old-School Runescape skill exp",
-	})
-	cm.Event("rrank", p.rankCallback, &seabird.HelpInfo{
-		Usage:       "<player> <skill>",
-		Description: "Returns a player's Old-School Runescape skill rank",
-	})
+	c.Handlers.AddBg(seabird.PrefixCommand("rlvl"), p.levelCallback)
+	c.Handlers.AddBg(seabird.PrefixCommand("rexp"), p.expCallback)
+	c.Handlers.AddBg(seabird.PrefixCommand("rrank"), p.rankCallback)
+
+	/*
+		cm.Event("rlvl", p.levelCallback, &seabird.HelpInfo{
+			Usage:       "<player> <skill>",
+			Description: "Returns a player's Old-School Runescape skill level",
+		})
+		cm.Event("rexp", p.expCallback, &seabird.HelpInfo{
+			Usage:       "<player> <skill>",
+			Description: "Returns a player's Old-School Runescape skill exp",
+		})
+		cm.Event("rrank", p.rankCallback, &seabird.HelpInfo{
+			Usage:       "<player> <skill>",
+			Description: "Returns a player's Old-School Runescape skill rank",
+		})
+	*/
 
 	return nil
 }
@@ -252,74 +257,69 @@ func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
 	return names
 }
 
-func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := strings.ToLower(m.Trailing())
-	go func() {
-		skills, err := p.getPlayerSkills(trailing)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
+func (p *runescapePlugin) levelCallback(c *girc.Client, e girc.Event) {
+	fmt.Println("Hello World")
+	trailing := strings.ToLower(e.Last())
+	skills, err := p.getPlayerSkills(trailing)
+	if err != nil {
+		c.Cmd.ReplyTof(e, "%s", err)
+		return
+	}
 
-		playerName := ""
-		names := sortedSkillNames(skills)
+	playerName := ""
+	names := sortedSkillNames(skills)
 
-		var responses []string
-		var skill runescapeLevelMetadata
-		for _, name := range names {
-			skill = skills[name]
-			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("level %s %s", utils.PrettifyNumber(skill.Level), skill.Skill))
-		}
+	var responses []string
+	var skill runescapeLevelMetadata
+	for _, name := range names {
+		skill = skills[name]
+		playerName = skill.Player
+		responses = append(responses, fmt.Sprintf("level %s %s", utils.PrettifyNumber(skill.Level), skill.Skill))
+	}
 
-		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
-	}()
+	c.Cmd.ReplyTof(e, "%s has %s", playerName, strings.Join(responses, ", "))
 }
 
-func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := strings.ToLower(m.Trailing())
-	go func() {
-		skills, err := p.getPlayerSkills(trailing)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
+func (p *runescapePlugin) expCallback(c *girc.Client, e girc.Event) {
+	trailing := strings.ToLower(e.Last())
+	skills, err := p.getPlayerSkills(trailing)
+	if err != nil {
+		c.Cmd.ReplyTof(e, "%s", err)
+		return
+	}
 
-		playerName := ""
-		names := sortedSkillNames(skills)
+	playerName := ""
+	names := sortedSkillNames(skills)
 
-		var responses []string
-		var skill runescapeLevelMetadata
-		for _, name := range names {
-			skill = skills[name]
-			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("%s experience in %s", utils.PrettifySuffix(skill.Exp), skill.Skill))
-		}
+	var responses []string
+	var skill runescapeLevelMetadata
+	for _, name := range names {
+		skill = skills[name]
+		playerName = skill.Player
+		responses = append(responses, fmt.Sprintf("%s experience in %s", utils.PrettifySuffix(skill.Exp), skill.Skill))
+	}
 
-		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
-	}()
+	c.Cmd.ReplyTof(e, "%s has %s", playerName, strings.Join(responses, ", "))
 }
 
-func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := strings.ToLower(m.Trailing())
-	go func() {
-		skills, err := p.getPlayerSkills(trailing)
-		if err != nil {
-			b.MentionReply(m, "%s", err)
-			return
-		}
+func (p *runescapePlugin) rankCallback(c *girc.Client, e girc.Event) {
+	trailing := strings.ToLower(e.Last())
+	skills, err := p.getPlayerSkills(trailing)
+	if err != nil {
+		c.Cmd.ReplyTof(e, "%s", err)
+		return
+	}
 
-		playerName := ""
-		names := sortedSkillNames(skills)
+	playerName := ""
+	names := sortedSkillNames(skills)
 
-		var responses []string
-		var skill runescapeLevelMetadata
-		for _, name := range names {
-			skill = skills[name]
-			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("rank %s in %s", utils.PrettifyNumber(skill.Rank), skill.Skill))
-		}
+	var responses []string
+	var skill runescapeLevelMetadata
+	for _, name := range names {
+		skill = skills[name]
+		playerName = skill.Player
+		responses = append(responses, fmt.Sprintf("rank %s in %s", utils.PrettifyNumber(skill.Rank), skill.Skill))
+	}
 
-		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
-	}()
+	c.Cmd.ReplyTof(e, "%s has %s", playerName, strings.Join(responses, ", "))
 }

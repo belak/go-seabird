@@ -5,7 +5,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/Sirupsen/logrus"
 
 	// Officially supported DB drivers
 	_ "github.com/lib/pq"

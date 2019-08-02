@@ -1,18 +1,16 @@
-// +build ignore
-
 package extra
 
 import (
 	"errors"
 	"regexp"
 	"strings"
-	"sync"
 	"time"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/go-xorm/xorm"
+	"github.com/lrstanley/girc"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -22,10 +20,8 @@ func init() {
 var timeRegexp = regexp.MustCompile(`\d+[smhd]`)
 
 type reminderPlugin struct {
-	db *xorm.Engine
-
-	roomLock *sync.Mutex
-	rooms    map[string]bool
+	db     *xorm.Engine
+	logger *logrus.Entry
 
 	// Singly buffered channel
 	updateChan chan struct{}
@@ -47,11 +43,10 @@ type Reminder struct {
 	ReminderTime time.Time
 }
 
-func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
+func newReminderPlugin(b *seabird.Bot, c *girc.Client, db *xorm.Engine) error {
 	p := &reminderPlugin{
 		db:         db,
-		roomLock:   &sync.Mutex{},
-		rooms:      make(map[string]bool),
+		logger:     b.GetLogger(),
 		updateChan: make(chan struct{}, 1),
 	}
 
@@ -60,57 +55,24 @@ func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Eng
 		return err
 	}
 
-	m.Event("001", p.InitialDispatch)
-	m.Event("JOIN", p.joinHandler)
-	m.Event("PART", p.partHandler)
-	m.Event("KICK", p.kickHandler)
+	c.Handlers.AddBg(girc.RPL_WELCOME, p.InitialDispatch)
+	c.Handlers.AddBg(seabird.PrefixCommand("remind"), p.RemindCommand)
 
-	cm.Event("remind", p.RemindCommand, &seabird.HelpInfo{
-		Usage:       "<duration> <message>",
-		Description: "Remind yourself to do something.",
-	})
+	/*
+		cm.Event("remind", p.RemindCommand, &seabird.HelpInfo{
+			Usage:       "<duration> <message>",
+			Description: "Remind yourself to do something.",
+		})
+	*/
 
 	return nil
 }
 
-func (p *reminderPlugin) joinHandler(b *seabird.Bot, m *irc.Message) {
-	if m.Prefix.Name != b.CurrentNick() {
-		return
-	}
-
-	p.roomLock.Lock()
-	defer p.roomLock.Unlock()
-	p.rooms[m.Params[0]] = true
-
-	p.updateChan <- struct{}{}
-}
-
-func (p *reminderPlugin) partHandler(b *seabird.Bot, m *irc.Message) {
-	if m.Prefix.Name != b.CurrentNick() {
-		return
-	}
-
-	p.roomLock.Lock()
-	defer p.roomLock.Unlock()
-	delete(p.rooms, m.Params[0])
-
-	p.updateChan <- struct{}{}
-}
-
-func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
-	if m.Params[1] != b.CurrentNick() {
-		return
-	}
-
-	p.roomLock.Lock()
-	defer p.roomLock.Unlock()
-	delete(p.rooms, m.Params[0])
-
-	p.updateChan <- struct{}{}
-}
-
 func (p *reminderPlugin) nextReminder() (*Reminder, error) {
 	// Find the next reminder we'll have to send
+	//
+	// TODO: This should only grab reminders for users who are online and
+	// channels we are in
 	r := &Reminder{}
 	_, err := p.db.OrderBy("reminder_time ASC").Get(r)
 	if r.ID == 0 {
@@ -119,25 +81,23 @@ func (p *reminderPlugin) nextReminder() (*Reminder, error) {
 	return r, err
 }
 
-func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
-	logger := b.GetLogger()
-
-	logger.Info("Starting reminder loop")
+func (p *reminderPlugin) remindLoop(c *girc.Client) {
+	p.logger.Info("Starting reminder loop")
 
 	for {
 		r, err := p.nextReminder()
 		if err != nil {
-			logger.WithError(err).Error("Transaction failure. Exiting loop.")
+			p.logger.WithError(err).Error("Transaction failure. Exiting loop.")
 			return
 		}
 
 		var timer <-chan time.Time
 		if r != nil {
-			logger.WithField("reminder", r).Debug("Next reminder")
+			p.logger.WithField("reminder", r).Debug("Next reminder")
 
 			waitDur := r.ReminderTime.Sub(time.Now())
 			if waitDur <= 0 {
-				p.dispatch(b, r)
+				p.dispatch(c, r)
 				continue
 			}
 
@@ -146,22 +106,18 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 
 		select {
 		case <-timer:
-			p.dispatch(b, r)
+			p.dispatch(c, r)
 		case <-p.updateChan:
 			continue
 		}
 	}
 }
 
-func (p *reminderPlugin) dispatch(b *seabird.Bot, r *Reminder) {
-	logger := b.GetLogger().WithField("reminder", r)
+func (p *reminderPlugin) dispatch(c *girc.Client, r *Reminder) {
+	logger := p.logger.WithField("reminder", r)
 
 	// Send the message
-	b.Send(&irc.Message{
-		Prefix:  &irc.Prefix{},
-		Command: "PRIVMSG",
-		Params:  []string{r.Target, r.Content},
-	})
+	c.Cmd.Message(r.Target, r.Content)
 
 	// Nuke the reminder now that it's been sent
 	_, err := p.db.Delete(r)
@@ -174,8 +130,8 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *Reminder) {
 
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
-func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
-	go p.remindLoop(b)
+func (p *reminderPlugin) InitialDispatch(c *girc.Client, e girc.Event) {
+	go p.remindLoop(c)
 }
 
 // ParseTime parses the text string and turns it into a time.Duration
@@ -208,43 +164,42 @@ func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
 	return ret, nil
 }
 
-func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
-	split := strings.SplitN(m.Trailing(), " ", 2)
+func (p *reminderPlugin) RemindCommand(c *girc.Client, e girc.Event) {
+	split := strings.SplitN(e.Last(), " ", 2)
 	if len(split) != 2 {
-		b.MentionReply(m, "Not enough args")
+		c.Cmd.ReplyTof(e, "Not enough args")
 		return
 	}
 
 	dur, err := p.ParseTime(split[0])
 	if err != nil {
-		b.MentionReply(m, "Invalid duration: %s", err)
+		c.Cmd.ReplyTof(e, "Invalid duration: %s", err)
 		return
 	}
 
 	r := &Reminder{
-		Target:       m.Prefix.Name,
+		Target:       e.Source.Name,
 		TargetType:   privateTarget,
 		Content:      split[1],
 		ReminderTime: time.Now().Add(dur),
 	}
 
-	if b.FromChannel(m) {
+	if e.IsFromChannel() {
 		// If it was from a channel, we need to prepend the user's name.
-		r.Target = m.Params[0]
+		r.Target = e.Params[0]
 		r.TargetType = channelTarget
-		r.Content = m.Prefix.Name + ": " + r.Content
+		r.Content = e.Source.Name + ": " + r.Content
 	}
 
 	_, err = p.db.Insert(r)
 	if err != nil {
-		b.MentionReply(m, "Failed to store reminder: %s", err)
+		c.Cmd.ReplyTof(e, "Failed to store reminder: %s", err)
 		return
 	}
 
-	b.MentionReply(m, "Event stored")
+	c.Cmd.ReplyTof(e, "Event stored")
 
-	logger := b.GetLogger()
-	logger.WithField("reminder", r).Debug("Stored reminder")
+	p.logger.WithField("reminder", r).Debug("Stored reminder")
 
 	p.updateChan <- struct{}{}
 }

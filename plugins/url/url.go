@@ -69,8 +69,8 @@ func (p *Plugin) RegisterProvider(domain string, f LinkProvider) error {
 	return nil
 }
 
-func (p *Plugin) callback(b *seabird.Bot, m *irc.Message) {
-	for _, rawurl := range urlRegex.FindAllString(m.Trailing(), -1) {
+func (p *Plugin) callback(c *girc.Client, e girc.Event) {
+	for _, rawurl := range urlRegex.FindAllString(e.Last(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)
 			if err != nil {
@@ -135,17 +135,17 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 	// If we got a result, pull the text from it
 	if ok {
 		title := newlineRegex.ReplaceAllLiteralString(scrape.Text(n), " ")
-		b.Reply(m, "Title: %s", title)
+		c.Cmd.Replyf(e, "Title: %s", title)
 	}
 
 	return ok
 }
 
-func isItDownCallback(b *seabird.Bot, m *irc.Message) {
+func isItDownCallback(c *girc.Client, e girc.Event) {
 	go func() {
-		url, err := url.Parse(m.Trailing())
+		url, err := url.Parse(e.Last())
 		if err != nil {
-			b.Reply(m, "URL doesn't appear to be valid")
+			c.Cmd.Replyf(e, "URL doesn't appear to be valid")
 			return
 		}
 
@@ -155,10 +155,10 @@ func isItDownCallback(b *seabird.Bot, m *irc.Message) {
 
 		r, err := client.Head(url.String())
 		if err != nil || r.StatusCode != 200 {
-			b.Reply(m, "It's not just you! %s looks down from here.", url)
+			c.Cmd.Replyf(e, "It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		b.Reply(m, "It's just you! %s looks up from here!", url)
+		c.Cmd.Replyf(e, "It's just you! %s looks up from here!", url)
 	}()
 }

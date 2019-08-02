@@ -1,27 +1,26 @@
-// +build ignore
-
 package extra
 
 import (
+	"github.com/lrstanley/girc"
+
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
 	seabird.RegisterPlugin("mentions", newMentionsPlugin)
 }
 
-func newMentionsPlugin(mm *seabird.MentionMux) {
-	mm.Event(mentionsCallback)
+func newMentionsPlugin(c *girc.Client) {
+	c.Handlers.Add(seabird.MENTION, mentionsCallback)
 }
 
-func mentionsCallback(b *seabird.Bot, m *irc.Message) {
-	switch m.Trailing() {
+func mentionsCallback(c *girc.Client, e girc.Event) {
+	switch e.Last() {
 	case "ping":
-		b.MentionReply(m, "pong")
+		c.Cmd.ReplyTof(e, "pong")
 	case "scoobysnack", "scooby snack":
-		b.Reply(m, "Scooby Dooby Doo!")
+		c.Cmd.Replyf(e, "Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
-		b.Reply(m, ":)")
+		c.Cmd.Replyf(e, ":)")
 	}
 }

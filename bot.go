@@ -11,9 +11,9 @@ import (
 	"unicode"
 
 	"github.com/BurntSushi/toml"
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/inject"
 	"github.com/lrstanley/girc"
-	"github.com/sirupsen/logrus"
 
 	plugin "github.com/belak/go-plugin"
 )
@@ -207,23 +207,6 @@ func (b *Bot) Run() error {
 		if !strings.HasPrefix(last, b.config.Prefix) {
 			return
 		}
-
-		/*
-		   -       // Copy it into a new Event
-		   -       newEvent := msg.Copy()
-		   -
-		   -       // Chop off the command itself
-		   -       msgParts := strings.SplitN(lastArg, " ", 2)
-		   -       newEvent.Params[len(newEvent.Params)-1] = ""
-		   -       if len(msgParts) > 1 {
-		   -               newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(msgParts[1])
-		   -       }
-		   -
-		   -       newEvent.Command = strings.ToLower(msgParts[0])
-		   -       if strings.HasPrefix(newEvent.Command, m.prefix) {
-		   -               newEvent.Command = newEvent.Command[len(m.prefix):]
-		   -       }
-		*/
 
 		// Copy it into a new Event
 		newEvent := event.Copy()

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"text/template"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/lrstanley/girc"
-	"github.com/sirupsen/logrus"
 )
 
 // TemplateMustCompile will add all the helpers to a new template,
