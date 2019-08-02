@@ -19,8 +19,12 @@ import (
 )
 
 // Any internal types are provided as constants here.
-const MENTION = "SEABIRD_MENTION"
+const (
+	MENTION = "SEABIRD_MENTION"
+)
 
+// PrefixCommand returns the internal routing string for use with
+// girc.Client.Handlers.Add for commands starting with the prefix string.
 func PrefixCommand(name string) string {
 	return "SEABIRD_COMMAND-" + strings.ToUpper(name)
 }
@@ -145,7 +149,7 @@ func (b *Bot) Run() error {
 	var err error
 	var tlsConf *tls.Config
 	if b.config.TLS {
-		tlsConf := &tls.Config{
+		tlsConf = &tls.Config{
 			InsecureSkipVerify: b.config.TLSNoVerify,
 		}
 
