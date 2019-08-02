@@ -7,7 +7,7 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
+	"github.com/lrstanley/girc"
 )
 
 func init() {
@@ -55,20 +55,20 @@ func newRedditProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("reddit.com", redditCallback)
 }
 
-func redditCallback(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
+func redditCallback(c *girc.Client, e girc.Event, u *url.URL) bool {
 	text := u.Path
 	if redditUserRegex.MatchString(text) {
-		return redditGetUser(b, m, text)
+		return redditGetUser(c, e, text)
 	} else if redditCommentRegex.MatchString(text) {
-		return redditGetComment(b, m, text)
+		return redditGetComment(c, e, text)
 	} else if redditSubRegex.MatchString(text) {
-		return redditGetSub(b, m, text)
+		return redditGetSub(c, e, text)
 	}
 
 	return false
 }
 
-func redditGetUser(b *seabird.Bot, m *irc.Message, url string) bool {
+func redditGetUser(c *girc.Client, e girc.Event, url string) bool {
 	matches := redditUserRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -91,7 +91,7 @@ func redditGetUser(b *seabird.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func redditGetComment(b *seabird.Bot, m *irc.Message, url string) bool {
+func redditGetComment(c *girc.Client, e girc.Event, url string) bool {
 	matches := redditCommentRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -111,7 +111,7 @@ func redditGetComment(b *seabird.Bot, m *irc.Message, url string) bool {
 	return true
 }
 
-func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
+func redditGetSub(c *girc.Client, e girc.Event, url string) bool {
 	matches := redditSubRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false

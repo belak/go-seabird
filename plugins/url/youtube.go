@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	duration "github.com/channelmeter/iso8601duration"
+	"github.com/lrstanley/girc"
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -80,7 +80,7 @@ func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (yp *youtubePlugin) Handle(b *seabird.Bot, m *irc.Message, req *url.URL) bool {
+func (yp *youtubePlugin) Handle(c *girc.Client, e girc.Event, req *url.URL) bool {
 	// Get the Video ID from the URL
 	p, _ := url.ParseQuery(req.RawQuery)
 	var id string

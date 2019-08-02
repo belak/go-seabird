@@ -9,12 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"github.com/Sirupsen/logrus"
+	"github.com/lrstanley/girc"
 	"github.com/yhat/scrape"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -40,24 +41,29 @@ var client = &http.Client{
 // takes the same parameters as a normal IRC callback in addition to a
 // *url.URL representing the found url. It returns true if it was able
 // to handle that url and false otherwise.
-type LinkProvider func(b *seabird.Bot, m *irc.Message, url *url.URL) bool
+type LinkProvider func(c *girc.Client, e girc.Event, url *url.URL) bool
 
 // Plugin stores all registeres URL LinkProviders
 type Plugin struct {
 	providers map[string][]LinkProvider
+	logger    *logrus.Entry
 }
 
-func newPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux) *Plugin {
+func newPlugin(b *seabird.Bot, c *girc.Client) *Plugin {
 	p := &Plugin{
 		providers: make(map[string][]LinkProvider),
+		logger:    b.GetLogger(),
 	}
 
-	m.Event("PRIVMSG", p.callback)
+	c.Handlers.AddBg(girc.PRIVMSG, p.callback)
+	c.Handlers.AddBg(seabird.PrefixCommand("down"), isItDownCallback)
 
-	cm.Event("down", isItDownCallback, &seabird.HelpInfo{
-		Usage:       "<website>",
-		Description: "Checks if given website is down",
-	})
+	/*
+		cm.Event("down", isItDownCallback, &seabird.HelpInfo{
+			Usage:       "<website>",
+			Description: "Checks if given website is down",
+		})
+	*/
 
 	return p
 }
@@ -81,7 +87,7 @@ func (p *Plugin) callback(c *girc.Client, e girc.Event) {
 			u.Path = strings.TrimRight(u.Path, "/")
 
 			for _, provider := range p.providers[u.Host] {
-				if provider(b, m, u) {
+				if provider(c, e, u) {
 					return
 				}
 			}
@@ -93,18 +99,18 @@ func (p *Plugin) callback(c *girc.Client, e girc.Event) {
 			if strings.HasPrefix(u.Host, "www.") {
 				host := u.Host[4:]
 				for _, provider := range p.providers[host] {
-					if provider(b, m, u) {
+					if provider(c, e, u) {
 						return
 					}
 				}
 			}
 
-			defaultLinkProvider(raw, b, m)
+			p.defaultLinkProvider(raw, c, e)
 		}(rawurl)
 	}
 }
 
-func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
+func (p *Plugin) defaultLinkProvider(url string, c *girc.Client, e girc.Event) bool {
 	var client = &http.Client{
 		Transport: &http.Transport{
 			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -125,7 +131,7 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 	// We search the first 1K and if a title isn't in there, we deal with it
 	z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
 	if err != nil {
-		b.GetLogger().WithError(err).Warn("Failed to grab URL")
+		p.logger.WithError(err).Warn("Failed to grab URL")
 		return false
 	}
 
@@ -142,23 +148,21 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 }
 
 func isItDownCallback(c *girc.Client, e girc.Event) {
-	go func() {
-		url, err := url.Parse(e.Last())
-		if err != nil {
-			c.Cmd.Replyf(e, "URL doesn't appear to be valid")
-			return
-		}
+	url, err := url.Parse(e.Last())
+	if err != nil {
+		c.Cmd.Replyf(e, "URL doesn't appear to be valid")
+		return
+	}
 
-		if url.Scheme == "" {
-			url.Scheme = "http"
-		}
+	if url.Scheme == "" {
+		url.Scheme = "http"
+	}
 
-		r, err := client.Head(url.String())
-		if err != nil || r.StatusCode != 200 {
-			c.Cmd.Replyf(e, "It's not just you! %s looks down from here.", url)
-			return
-		}
+	r, err := client.Head(url.String())
+	if err != nil || r.StatusCode != 200 {
+		c.Cmd.Replyf(e, "It's not just you! %s looks down from here.", url)
+		return
+	}
 
-		c.Cmd.Replyf(e, "It's just you! %s looks up from here!", url)
-	}()
+	c.Cmd.Replyf(e, "It's just you! %s looks up from here!", url)
 }

@@ -9,7 +9,7 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
+	"github.com/lrstanley/girc"
 )
 
 func init() {
@@ -67,21 +67,21 @@ func newBitbucketProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("bitbucket.org", bitbucketCallback)
 }
 
-func bitbucketCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketCallback(c *girc.Client, e girc.Event, url *url.URL) bool {
 	if bitbucketUserRegex.MatchString(url.Path) {
-		return bitbucketGetUser(b, m, url)
+		return bitbucketGetUser(c, e, url)
 	} else if bitbucketRepoRegex.MatchString(url.Path) {
-		return bitbucketGetRepo(b, m, url)
+		return bitbucketGetRepo(c, e, url)
 	} else if bitbucketIssueRegex.MatchString(url.Path) {
-		return bitbucketGetIssue(b, m, url)
+		return bitbucketGetIssue(c, e, url)
 	} else if bitbucketPullRegex.MatchString(url.Path) {
-		return bitbucketGetPull(b, m, url)
+		return bitbucketGetPull(c, e, url)
 	}
 
 	return false
 }
 
-func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetUser(c *girc.Client, e girc.Event, url *url.URL) bool {
 	matches := bitbucketUserRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 2 {
 		return false
@@ -101,7 +101,7 @@ func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetRepo(c *girc.Client, e girc.Event, url *url.URL) bool {
 	matches := bitbucketRepoRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 3 {
 		return false
@@ -131,7 +131,7 @@ func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetIssue(c *girc.Client, e girc.Event, url *url.URL) bool {
 	matches := bitbucketIssueRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
@@ -171,7 +171,7 @@ func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetPull(c *girc.Client, e girc.Event, url *url.URL) bool {
 	matches := bitbucketPullRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false

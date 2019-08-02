@@ -7,12 +7,13 @@ import (
 	"regexp"
 	"strconv"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/google/go-github/github"
+	"github.com/lrstanley/girc"
 	"golang.org/x/oauth2"
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -24,7 +25,8 @@ type githubConfig struct {
 }
 
 type githubProvider struct {
-	api *github.Client
+	api    *github.Client
+	logger *logrus.Entry
 }
 
 var (
@@ -51,7 +53,9 @@ func parseUserRepoNum(matches []string) (string, string, int, error) {
 }
 
 func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
-	t := &githubProvider{}
+	t := &githubProvider{
+		logger: b.GetLogger(),
+	}
 
 	gc := &githubConfig{}
 	err := b.Config("github", gc)
@@ -74,23 +78,23 @@ func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (t *githubProvider) githubCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func (t *githubProvider) githubCallback(c *girc.Client, e girc.Event, url *url.URL) bool {
 	if githubUserRegex.MatchString(url.Path) {
-		return t.getUser(b, m, url.Path)
+		return t.getUser(c, e, url.Path)
 	} else if githubRepoRegex.MatchString(url.Path) {
-		return t.getRepo(b, m, url.Path)
+		return t.getRepo(c, e, url.Path)
 	} else if githubIssueRegex.MatchString(url.Path) {
-		return t.getIssue(b, m, url.Path)
+		return t.getIssue(c, e, url.Path)
 	} else if githubPullRegex.MatchString(url.Path) {
-		return t.getPull(b, m, url.Path)
+		return t.getPull(c, e, url.Path)
 	}
 
 	return false
 }
 
-func (t *githubProvider) gistCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func (t *githubProvider) gistCallback(c *girc.Client, e girc.Event, url *url.URL) bool {
 	if githubGistRegex.MatchString(url.Path) {
-		return t.getGist(b, m, url.Path)
+		return t.getGist(c, e, url.Path)
 	}
 
 	return false
@@ -108,9 +112,7 @@ var userTemplate = utils.TemplateMustCompile("githubUser", `
 {{- with .user.Bio }} - {{ . }}{{ end -}}
 `)
 
-func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bool {
-	logger := b.GetLogger()
-
+func (t *githubProvider) getUser(c *girc.Client, e girc.Event, url string) bool {
 	matches := githubUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -118,12 +120,12 @@ func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) boo
 
 	user, _, err := t.api.Users.Get(context.TODO(), matches[1])
 	if err != nil {
-		logger.WithError(err).Error("Failed to get user from github")
+		t.logger.WithError(err).Error("Failed to get user from github")
 		return false
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, userTemplate, githubPrefix,
+		c, e, t.logger, userTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 		},
@@ -142,9 +144,7 @@ var repoTemplate = utils.TemplateMustCompile("githubRepo", `
 {{- with .repo.StargazersCount }}, {{ prettifySuffix . }} {{ pluralizeWord . "star" }}{{ end }}
 `)
 
-func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) bool {
-	logger := b.GetLogger()
-
+func (t *githubProvider) getRepo(c *girc.Client, e girc.Event, url string) bool {
 	matches := githubRepoRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -155,11 +155,11 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 	repo, _, err := t.api.Repositories.Get(context.TODO(), user, repoName)
 
 	if err != nil {
-		logger.WithError(err).Error("Failed to get repo from github")
+		t.logger.WithError(err).Error("Failed to get repo from github")
 		return false
 	}
 
-	logger = logger.WithField("repo", repo)
+	logger := t.logger.WithField("repo", repo)
 
 	// If the repo doesn't have a name, we get outta there
 	if repo.FullName == nil || *repo.FullName == "" {
@@ -168,7 +168,7 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, repoTemplate, githubPrefix,
+		c, e, logger, repoTemplate, githubPrefix,
 		map[string]interface{}{
 			"repo": repo,
 		},
@@ -183,24 +183,22 @@ Issue #{{ .issue.Number }} on {{ .user }}/{{ .repo }} [{{ .issue.State }}]
 {{- with .issue.CreatedAt }} [created {{ . | dateFormat "2 Jan 2006" }}]{{ end }}
 `)
 
-func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bool {
-	logger := b.GetLogger()
-
+func (t *githubProvider) getIssue(c *girc.Client, e girc.Event, url string) bool {
 	matches := githubIssueRegex.FindStringSubmatch(url)
 	user, repo, issueNum, err := parseUserRepoNum(matches)
 	if err != nil {
-		logger.WithError(err).Error("Failed to parse URL")
+		t.logger.WithError(err).Error("Failed to parse URL")
 		return false
 	}
 
 	issue, _, err := t.api.Issues.Get(context.TODO(), user, repo, issueNum)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get issue from github")
+		t.logger.WithError(err).Error("Failed to get issue from github")
 		return false
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, issueTemplate, githubPrefix,
+		c, e, t.logger, issueTemplate, githubPrefix,
 		map[string]interface{}{
 			"issue": issue,
 			"user":  user,
@@ -220,24 +218,22 @@ Pull request #{{ .pull.Number }} on {{ .user }}/{{ .repo }} [{{ .pull.State }}]
 {{- with .pull.ChangedFiles }}, {{ pluralize . "changed file" }}{{ end }}
 `)
 
-func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) bool {
-	logger := b.GetLogger()
-
+func (t *githubProvider) getPull(c *girc.Client, e girc.Event, url string) bool {
 	matches := githubPullRegex.FindStringSubmatch(url)
 	user, repo, pullNum, err := parseUserRepoNum(matches)
 	if err != nil {
-		logger.WithError(err).Error("Failed to parse URL")
+		t.logger.WithError(err).Error("Failed to parse URL")
 		return false
 	}
 
 	pull, _, err := t.api.PullRequests.Get(context.TODO(), user, repo, int(pullNum))
 	if err != nil {
-		logger.WithError(err).Error("Failed to get github pr")
+		t.logger.WithError(err).Error("Failed to get github pr")
 		return false
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, prTemplate, githubPrefix,
+		c, e, t.logger, prTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 			"repo": repo,
@@ -254,9 +250,7 @@ Created {{ .gist.CreatedAt | dateFormat "2 Jan 2006" }}
 {{- with .gist.Comments }}, {{ pluralize . "comment" }}{{ end }}
 `)
 
-func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) bool {
-	logger := b.GetLogger()
-
+func (t *githubProvider) getGist(c *girc.Client, e girc.Event, url string) bool {
 	matches := githubGistRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -265,12 +259,12 @@ func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) boo
 	id := matches[2]
 	gist, _, err := t.api.Gists.Get(context.TODO(), id)
 	if err != nil {
-		logger.WithError(err).Error("Failed to get gist")
+		t.logger.WithError(err).Error("Failed to get gist")
 		return false
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, gistTemplate, githubPrefix,
+		c, e, t.logger, gistTemplate, githubPrefix,
 		map[string]interface{}{
 			"gist": gist,
 		},

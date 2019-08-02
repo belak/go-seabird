@@ -7,12 +7,12 @@ import (
 	"text/template"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/lrstanley/girc"
 	"github.com/zmb3/spotify"
 	"golang.org/x/oauth2/clientcredentials"
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -25,7 +25,8 @@ type spotifyConfig struct {
 }
 
 type spotifyProvider struct {
-	api spotify.Client
+	api    spotify.Client
+	logger *logrus.Entry
 }
 
 var spotifyPrefix = "[Spotify]"
@@ -106,8 +107,10 @@ var spotifyMatchers = []spotifyMatch{
 	},
 }
 
-func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) error {
-	s := &spotifyProvider{}
+func newSpotifyProvider(b *seabird.Bot, c *girc.Client, urlPlugin *Plugin) error {
+	s := &spotifyProvider{
+		logger: b.GetLogger(),
+	}
 
 	sc := &spotifyConfig{}
 	err := b.Config("spotify", sc)
@@ -127,7 +130,7 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 
 	s.api = spotify.Authenticator{}.NewClient(token)
 
-	m.Event("PRIVMSG", s.privmsgCallback)
+	c.Handlers.AddBg(girc.PRIVMSG, s.privmsgCallback)
 
 	urlPlugin.RegisterProvider("open.spotify.com", s.HandleURL)
 
@@ -136,24 +139,22 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 
 func (s *spotifyProvider) privmsgCallback(c *girc.Client, e girc.Event) {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, m, matcher, matcher.uriRegex, e.Last()) {
+		if s.handleTarget(c, e, matcher, matcher.uriRegex, e.Last()) {
 			return
 		}
 	}
 }
 
-func (s *spotifyProvider) HandleURL(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
+func (s *spotifyProvider) HandleURL(c *girc.Client, e girc.Event, u *url.URL) bool {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, m, matcher, matcher.regex, u.Path) {
+		if s.handleTarget(c, e, matcher, matcher.regex, u.Path) {
 			return true
 		}
 	}
 	return false
 }
 
-func (s *spotifyProvider) handleTarget(b *seabird.Bot, m *irc.Message, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
-	logger := b.GetLogger()
-
+func (s *spotifyProvider) handleTarget(c *girc.Client, e girc.Event, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
 	if !regex.MatchString(target) {
 		return false
 	}
@@ -163,10 +164,10 @@ func (s *spotifyProvider) handleTarget(b *seabird.Bot, m *irc.Message, matcher s
 		return false
 	}
 
-	data := matcher.lookup(s, logger, matches[1:])
+	data := matcher.lookup(s, s.logger, matches[1:])
 	if data == nil {
 		return false
 	}
 
-	return utils.RenderRespond(b, m, logger, matcher.template, spotifyPrefix, data)
+	return utils.RenderRespond(c, e, s.logger, matcher.template, spotifyPrefix, data)
 }

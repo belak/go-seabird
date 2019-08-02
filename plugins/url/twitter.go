@@ -6,9 +6,9 @@ import (
 	"strconv"
 
 	"github.com/ChimeraCoder/anaconda"
+	"github.com/lrstanley/girc"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -48,17 +48,17 @@ func newtwitterProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (t *twitterProvider) Handle(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
+func (t *twitterProvider) Handle(c *girc.Client, e girc.Event, u *url.URL) bool {
 	if twitterUserRegex.MatchString(u.Path) {
-		return t.getUser(b, m, u.Path)
+		return t.getUser(c, e, u.Path)
 	} else if twitterStatusRegex.MatchString(u.Path) {
-		return t.getTweet(b, m, u.Path)
+		return t.getTweet(c, e, u.Path)
 	}
 
 	return false
 }
 
-func (t *twitterProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *twitterProvider) getUser(c *girc.Client, e girc.Event, url string) bool {
 	matches := twitterUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -75,7 +75,7 @@ func (t *twitterProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bo
 	return true
 }
 
-func (t *twitterProvider) getTweet(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *twitterProvider) getTweet(c *girc.Client, e girc.Event, url string) bool {
 	matches := twitterStatusRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false

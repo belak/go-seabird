@@ -6,12 +6,12 @@ import (
 	"net/url"
 	"regexp"
 
+	"github.com/lrstanley/girc"
 	"github.com/yhat/scrape"
 	"golang.org/x/net/html"
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -25,7 +25,7 @@ func newXKCDProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("xkcd.com", handleXKCD)
 }
 
-func handleXKCD(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func handleXKCD(c *girc.Client, e girc.Event, url *url.URL) bool {
 	if url.Path != "" && !xkcdRegex.MatchString(url.Path) {
 		return false
 	}
