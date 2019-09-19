@@ -1,3 +1,16 @@
 linters:
+  enable-all: true
   disable:
     - errcheck
+    - gochecknoglobals
+    - gochecknoinits
+    - goconst
+    - godox
+    - lll
+    - prealloc
+    - stylecheck
+    - unparam
+
+linters-settings:
+  govet:
+    check-shadowing: true

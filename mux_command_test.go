@@ -9,6 +9,7 @@ import (
 	irc "gopkg.in/irc.v3"
 )
 
+//nolint:funlen
 func TestCommandMux(t *testing.T) {
 	// Empty mux should still have help
 	mux := NewCommandMux("!")

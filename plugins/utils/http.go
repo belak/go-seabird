@@ -3,6 +3,7 @@ package utils
 import (
 	"net/http"
 
+	//nolint:misspell
 	"github.com/unknwon/com"
 )
 

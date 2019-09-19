@@ -181,7 +181,6 @@ func (p *netToolsPlugin) handleCommand(b *seabird.Bot, m *irc.Message, command s
 	}
 
 	b.MentionReply(m, "%s", url)
-
 }
 
 func (p *netToolsPlugin) Traceroute(b *seabird.Bot, m *irc.Message) {

@@ -1,8 +1,8 @@
 package extra
 
 import (
-	"xorm.io/core"
 	"github.com/go-xorm/xorm"
+	"xorm.io/core"
 
 	seabird "github.com/belak/go-seabird"
 )

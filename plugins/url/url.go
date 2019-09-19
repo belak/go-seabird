@@ -28,7 +28,9 @@ var (
 	newlineRegex = regexp.MustCompile(`\s*\n\s*`)
 )
 
-// NOTE: This nasty work is done so we ignore invalid ssl certs
+// NOTE: This nasty work is done so we ignore invalid ssl certs. We know what
+// we're doing.
+//nolint:gosec
 var client = &http.Client{
 	Transport: &http.Transport{
 		TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
@@ -42,7 +44,7 @@ var client = &http.Client{
 // to handle that url and false otherwise.
 type LinkProvider func(b *seabird.Bot, m *irc.Message, url *url.URL) bool
 
-// Plugin stores all registeres URL LinkProviders
+// Plugin stores all registered URL LinkProviders
 type Plugin struct {
 	providers map[string][]LinkProvider
 }
@@ -105,13 +107,6 @@ func (p *Plugin) callback(b *seabird.Bot, m *irc.Message) {
 }
 
 func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
-	var client = &http.Client{
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
-		},
-		Timeout: 5 * time.Second,
-	}
-
 	r, err := client.Get(url)
 	if err != nil {
 		return false
@@ -154,6 +149,10 @@ func isItDownCallback(b *seabird.Bot, m *irc.Message) {
 		}
 
 		r, err := client.Head(url.String())
+		if err == nil {
+			defer r.Body.Close()
+		}
+
 		if err != nil || r.StatusCode != 200 {
 			b.Reply(m, "It's not just you! %s looks down from here.", url)
 			return

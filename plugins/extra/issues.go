@@ -186,7 +186,7 @@ func encodeIssue(issue github.Issue) string {
 		out += " - " + *issue.Title
 	}
 	if issue.CreatedAt != nil {
-		out += " [created " + (*issue.CreatedAt).Format("2 Jan 2006") + "]"
+		out += " [created " + issue.CreatedAt.Format("2 Jan 2006") + "]"
 	}
 	if issue.HTMLURL != nil {
 		out += " - " + *issue.HTMLURL

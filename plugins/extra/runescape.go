@@ -153,6 +153,7 @@ func resolveAlias(possibleAlias string) string {
 	return possibleAlias
 }
 
+//nolint:funlen
 func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLevelMetadata, error) {
 	var emptySkills map[string]runescapeLevelMetadata
 
@@ -185,6 +186,7 @@ func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLe
 	if err != nil {
 		return emptySkills, err
 	}
+	defer resp.Body.Close()
 
 	bytes, err := ioutil.ReadAll(resp.Body)
 	if err != nil {

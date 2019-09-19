@@ -140,7 +140,7 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 			diff *= -1
 		}
 
-		changes[v[1]] = changes[v[1]] + diff
+		changes[v[1]] += diff
 	}
 
 	for name, diff := range changes {

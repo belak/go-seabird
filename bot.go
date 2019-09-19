@@ -17,6 +17,7 @@ import (
 	irc "gopkg.in/irc.v3"
 )
 
+//nolint:maligned
 type coreConfig struct {
 	Nick string
 	User string
@@ -289,7 +290,7 @@ func (b *Bot) ConnectAndRun() error {
 	var err error
 	if b.config.TLS {
 		conf := &tls.Config{
-			InsecureSkipVerify: b.config.TLSNoVerify,
+			InsecureSkipVerify: b.config.TLSNoVerify, //nolint:gosec
 		}
 
 		if b.config.TLSCert != "" && b.config.TLSKey != "" {

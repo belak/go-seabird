@@ -64,7 +64,7 @@ func wikiCallback(b *seabird.Bot, m *irc.Message) {
 
 			if len(t) > 256 {
 				t = t[:253]
-				t = t + "..."
+				t += "..."
 			}
 
 			if t != "" {

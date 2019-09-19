@@ -68,6 +68,7 @@ func newBitbucketProvider(urlPlugin *Plugin) {
 }
 
 func bitbucketCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+	//nolint:gocritic
 	if bitbucketUserRegex.MatchString(url.Path) {
 		return bitbucketGetUser(b, m, url)
 	} else if bitbucketRepoRegex.MatchString(url.Path) {

@@ -75,6 +75,7 @@ func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 }
 
 func (t *githubProvider) githubCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+	//nolint:gocritic
 	if githubUserRegex.MatchString(url.Path) {
 		return t.getUser(b, m, url.Path)
 	} else if githubRepoRegex.MatchString(url.Path) {
@@ -230,7 +231,7 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 		return false
 	}
 
-	pull, _, err := t.api.PullRequests.Get(context.TODO(), user, repo, int(pullNum))
+	pull, _, err := t.api.PullRequests.Get(context.TODO(), user, repo, pullNum)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get github pr")
 		return false

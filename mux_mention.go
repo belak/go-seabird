@@ -50,7 +50,6 @@ func (m *MentionMux) HandleEvent(b *Bot, msg *irc.Message) {
 		!strings.HasPrefix(lastArg, nick) ||
 		!unicode.IsPunct(rune(lastArg[len(nick)])) ||
 		lastArg[len(nick)+1] != ' ' {
-
 		return
 	}
 

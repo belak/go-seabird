@@ -57,6 +57,7 @@ func newRedditProvider(urlPlugin *Plugin) {
 
 func redditCallback(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
 	text := u.Path
+	//nolint:gocritic
 	if redditUserRegex.MatchString(text) {
 		return redditGetUser(b, m, text)
 	} else if redditCommentRegex.MatchString(text) {

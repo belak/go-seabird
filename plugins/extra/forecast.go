@@ -123,6 +123,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 	res, err := p.mapsClient.Geocode(context.TODO(), &maps.GeocodingRequest{
 		Address: l,
 	})
+	//nolint:gocritic
 	if err != nil {
 		return nil, err
 	} else if len(res) == 0 {
@@ -167,7 +168,7 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 
 	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
 	for _, block := range fc.Daily.Data[1:4] {
-		day := time.Unix(int64(block.Time), 0).Weekday()
+		day := time.Unix(block.Time, 0).Weekday()
 
 		b.MentionReply(m,
 			"%s: High %.2f%s, Low %.2f%s, Humidity %.f%%. %s",

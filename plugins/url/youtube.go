@@ -142,6 +142,7 @@ func getVideo(id string, key string) (time string, title string) {
 	var dr string
 
 	// Print Days and Hours only if they're not 0
+	//nolint:gocritic
 	if d.Days > 0 {
 		dr = fmt.Sprintf("%02d:%02d:%02d:%02d", d.Days, d.Hours, d.Minutes, d.Seconds)
 	} else if d.Hours > 0 {
