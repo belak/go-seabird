@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"math/big"
 	"strings"
 
 	"github.com/soudy/mathcat"
@@ -22,7 +23,7 @@ func newMathPlugin(cm *seabird.CommandMux) {
 
 func exprCallback(b *seabird.Bot, m *irc.Message) {
 	var err error
-	var res float64
+	var res *big.Rat
 
 	mc := mathcat.New()
 	for _, expr := range strings.Split(m.Trailing(), ";") {
@@ -32,5 +33,5 @@ func exprCallback(b *seabird.Bot, m *irc.Message) {
 		}
 	}
 
-	b.MentionReply(m, "%g", res)
+	b.MentionReply(m, "%s", res.RatString())
 }

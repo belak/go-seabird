@@ -96,7 +96,8 @@ var spotifyMatchers = []spotifyMatch{
 		template: utils.TemplateMustCompile("spotifyPlaylist", `
 			"{{- .Name }}" playlist by {{ .Owner.DisplayName }} ({{ pluralize .Tracks.Total "track" }})`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
-			playlist, err := s.api.GetPlaylist(matches[0], spotify.ID(matches[1]))
+			// playlist, err := s.api.GetPlaylist(matches[0], spotify.ID(matches[1]))
+			playlist, err := s.api.GetPlaylist(spotify.ID(matches[1]))
 			if err != nil {
 				logger.WithError(err).Error("Failed to get track info from Spotify")
 				return nil

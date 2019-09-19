@@ -3,7 +3,7 @@ package utils
 import (
 	"net/http"
 
-	"github.com/Unknwon/com"
+	"github.com/unknwon/com"
 )
 
 // PostJSON is a simple wrapper to post and get JSON from a given url.
