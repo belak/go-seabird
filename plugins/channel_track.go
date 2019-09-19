@@ -103,11 +103,7 @@ func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelT
 
 	bm.Event("352", p.whoCallback)
 	bm.Event("353", p.namesCallback)
-
-	// We don't need this for anything currently, so it's being
-	// disabled but left around.
-	//
-	// bm.Event("366", p.endOfNamesCallback)
+	bm.Event("366", p.endOfNamesCallback)
 
 	return p
 }

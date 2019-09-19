@@ -28,18 +28,6 @@ type Phrase struct {
 	Deleted   bool
 }
 
-// phraseBucket is the old nut.DB phrase store, along with phrase
-type phraseBucket struct {
-	Key     string
-	Entries []phrase
-}
-
-type phrase struct {
-	Value     string
-	Submitter string
-	Deleted   bool
-}
-
 func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &phrasesPlugin{db: db}
 

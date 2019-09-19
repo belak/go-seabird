@@ -133,7 +133,7 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 		if r != nil {
 			logger.WithField("reminder", r).Debug("Next reminder")
 
-			waitDur := r.ReminderTime.Sub(time.Now())
+			waitDur := time.Until(r.ReminderTime)
 			if waitDur <= 0 {
 				p.dispatch(b, r)
 				continue

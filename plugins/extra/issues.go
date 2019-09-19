@@ -3,7 +3,6 @@ package extra
 import (
 	"context"
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/google/go-github/github"
@@ -17,7 +16,7 @@ func init() {
 	seabird.RegisterPlugin("issues", newIssuesPlugin)
 }
 
-var issueTagRegex = regexp.MustCompile(`^(.+)(?: ([@#].+)){0,2}$`)
+// var issueTagRegex = regexp.MustCompile(`^(.+)(?: ([@#].+)){0,2}$`)
 
 type issuesPlugin struct {
 	Token       string

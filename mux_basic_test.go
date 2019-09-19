@@ -52,7 +52,7 @@ func TestBasicMux(t *testing.T) {
 	require.Equal(t, 2, mh.count)
 
 	// No handlers
-	mh = &messageHandler{}
+	// mh = &messageHandler{}
 	mux = NewBasicMux()
 	mux.HandleEvent(nil, m)
 }

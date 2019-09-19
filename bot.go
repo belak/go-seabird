@@ -236,11 +236,13 @@ func (b *Bot) CTCPReply(m *irc.Message, format string, v ...interface{}) error {
 	return nil
 }
 
+/*
 func (b *Bot) handshake() {
 	b.client.Writef("CAP END")
 	b.client.Writef("NICK %s", b.config.Nick)
 	b.client.Writef("USER %s 0.0.0.0 0.0.0.0 :%s", b.config.User, b.config.Name)
 }
+*/
 
 // Write will write an raw IRC message to the stream
 func (b *Bot) Write(line string) {

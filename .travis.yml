@@ -6,19 +6,15 @@ env:
   - GO111MODULE=on
 
 before_install:
-  - GO111MODULE=off go get -u golang.org/x/tools/go/analysis/passes/shadow/cmd/shadow
   - GO111MODULE=off go get -u github.com/Quasilyte/go-consistent
-  - GO111MODULE=off go get -u github.com/alecthomas/gometalinter
-  - GO111MODULE=off gometalinter --install
+  - curl -sfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh| sh -s -- -b $(go env GOPATH)/bin v0.18.0
 
 script:
   # Test
   - go test -v ./...
 
    # Linting
-  - $HOME/gopath/bin/gometalinter ./...
-  - go vet ./...
-  - go vet -vettool=$(which shadow) ./...
+  - golangci-lint run
   - go-consistent ./...
 
   # Build

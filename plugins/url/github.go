@@ -63,7 +63,7 @@ func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	ts := oauth2.StaticTokenSource(
 		&oauth2.Token{AccessToken: gc.Token},
 	)
-	tc := oauth2.NewClient(oauth2.NoContext, ts)
+	tc := oauth2.NewClient(context.TODO(), ts)
 
 	// Create a github client from the oauth2 client
 	t.api = github.NewClient(tc)
