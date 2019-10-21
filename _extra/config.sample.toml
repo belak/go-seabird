@@ -21,10 +21,12 @@ cmds = [
 ]
 
 plugins = [
+  "db",
   "chance"
 ]
 
 [db]
+driver = "sqlite3"
 filename = "dev.db"
 
 [ctcp]
