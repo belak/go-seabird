@@ -111,9 +111,11 @@ func (p *reminderPlugin) nextReminder() (*Reminder, error) {
 	// Find the next reminder we'll have to send
 	r := &Reminder{}
 	_, err := p.db.OrderBy("reminder_time ASC").Get(r)
+
 	if r.ID == 0 {
 		r = nil
 	}
+
 	return r, err
 }
 
@@ -130,6 +132,7 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 		}
 
 		var timer <-chan time.Time
+
 		if r != nil {
 			logger.WithField("reminder", r).Debug("Next reminder")
 
@@ -187,6 +190,7 @@ func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
 			if err != nil {
 				return ret, err
 			}
+
 			ret += tmp
 		case 'd':
 			// We can parse days as if they were hours then just

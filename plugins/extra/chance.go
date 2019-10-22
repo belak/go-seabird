@@ -51,12 +51,14 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
 	shotsLeft := p.rouletteShotsLeft[m.Params[0]]
 
 	var msg string
+
 	if shotsLeft < 1 {
 		shotsLeft = rand.Intn(p.RouletteGunSize) + 1
 		msg = "Reloading the gun... "
 	}
 
 	shotsLeft--
+
 	if shotsLeft < 1 {
 		b.MentionReply(m, "%sBANG!", msg)
 		b.Writef("KICK %s %s", m.Params[0], m.Prefix.Name)
@@ -74,6 +76,7 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 
 	guess := -1
 	guessStr := m.Trailing()
+
 	for k, v := range coinNames {
 		if guessStr == v {
 			guess = k
@@ -87,6 +90,7 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 			m.Params[0],
 			m.Prefix.Name,
 			strings.Join(coinNames, ", "))
+
 		return
 	}
 

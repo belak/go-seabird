@@ -41,6 +41,7 @@ func NewCommandMux(prefix string) *CommandMux {
 		"<command>",
 		"Displays help messages for a given command",
 	})
+
 	return m
 }
 
@@ -106,6 +107,7 @@ func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
 	if help != nil {
 		help.name = c
 	}
+
 	c = strings.ToLower(c)
 
 	m.private.Event(c, h)
@@ -119,6 +121,7 @@ func (m *CommandMux) Channel(c string, h HandlerFunc, help *HelpInfo) {
 	if help != nil {
 		help.name = c
 	}
+
 	c = strings.ToLower(c)
 
 	m.public.Event(c, h)
@@ -131,6 +134,7 @@ func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 	if help != nil {
 		help.name = c
 	}
+
 	c = strings.ToLower(c)
 
 	m.private.Event(c, h)
@@ -158,6 +162,7 @@ func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
 	// Chop off the command itself
 	msgParts := strings.SplitN(lastArg, " ", 2)
 	newEvent.Params[len(newEvent.Params)-1] = ""
+
 	if len(msgParts) > 1 {
 		newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(msgParts[1])
 	}

@@ -30,5 +30,6 @@ func (th *TestHandler) PopMessages() []*irc.Message {
 
 	ret := th.messages
 	th.messages = nil
+
 	return ret
 }

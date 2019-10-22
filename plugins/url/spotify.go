@@ -111,8 +111,7 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 	s := &spotifyProvider{}
 
 	sc := &spotifyConfig{}
-	err := b.Config("spotify", sc)
-	if err != nil {
+	if err := b.Config("spotify", sc); err != nil {
 		return err
 	}
 
@@ -121,6 +120,7 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 		ClientSecret: sc.ClientSecret,
 		TokenURL:     spotify.TokenURL,
 	}
+
 	token, err := config.Token(context.Background())
 	if err != nil {
 		return err
@@ -149,6 +149,7 @@ func (s *spotifyProvider) HandleURL(b *seabird.Bot, m *irc.Message, u *url.URL) 
 			return true
 		}
 	}
+
 	return false
 }
 

@@ -1,12 +1,11 @@
 # Seabird
 
-[![Build Status](https://drone.coded.io/api/badges/belak/go-seabird/status.svg)](https://drone.coded.io/belak/go-seabird)
+[![Build Status](https://travis-ci.org/belak/go-seabird.svg?branch=master)](https://travis-ci.org/belak/go-seabird)
 
 ## Requirements
 
-* go >= 1.7
+* go >= 1.12
 * gcc
-* [vgo](https://golang.org/x/vgo)
 
 ## Configuring
 
@@ -22,7 +21,7 @@ export SEABIRD_CONFIG=$HOME/config.toml
 # Running
 
 ```
-SEABIRD_CONFIG=$HOME/config.toml vgo run cmd/seabird/main.go
+SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
 ```
 
 # License

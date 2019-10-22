@@ -68,6 +68,7 @@ func (p *karmaPlugin) GetKarmaFor(name string) int {
 	// Note that we're explicitly ignoring an error here because it's not a
 	// problem when this returns zero results.
 	_, _ = p.db.Get(out)
+
 	return out.Score
 }
 
@@ -118,9 +119,12 @@ func (p *karmaPlugin) callback(b *seabird.Bot, m *irc.Message) {
 		return
 	}
 
-	var buzzkillTriggered bool
-	var jerkModeTriggered bool
-	var changes = make(map[string]int)
+	var (
+		buzzkillTriggered bool
+		jerkModeTriggered bool
+
+		changes = make(map[string]int)
+	)
 
 	matches := karmaRegex.FindAllStringSubmatch(m.Trailing(), -1)
 	for _, v := range matches {

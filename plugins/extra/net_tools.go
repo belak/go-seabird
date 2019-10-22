@@ -156,6 +156,7 @@ func (p *netToolsPlugin) pasteData(data string) (string, error) {
 	defer resp.Body.Close()
 
 	body, err := ioutil.ReadAll(resp.Body)
+
 	return string(body), err
 }
 

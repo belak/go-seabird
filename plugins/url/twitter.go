@@ -34,8 +34,7 @@ func newtwitterProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	t := &twitterProvider{}
 
 	tc := &twitterConfig{}
-	err := b.Config("twitter", tc)
-	if err != nil {
+	if err := b.Config("twitter", tc); err != nil {
 		return err
 	}
 

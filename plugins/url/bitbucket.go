@@ -91,8 +91,7 @@ func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	user := matches[1]
 
 	bu := &bitbucketUser{}
-	err := utils.GetJSON(fmt.Sprintf(userURL, user), bu)
-	if err != nil {
+	if err := utils.GetJSON(fmt.Sprintf(userURL, user), bu); err != nil {
 		return false
 	}
 
@@ -112,8 +111,7 @@ func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	repo := matches[2]
 
 	br := &bitbucketRepo{}
-	err := utils.GetJSON(fmt.Sprintf(repoURL, user, repo), br)
-	if err != nil {
+	if err := utils.GetJSON(fmt.Sprintf(repoURL, user, repo), br); err != nil {
 		return false
 	}
 
@@ -122,11 +120,14 @@ func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	if br.Language != "" {
 		out += " [" + br.Language + "]"
 	}
+
 	tm, err := time.Parse(time.RFC3339, br.UpdatedOn)
 	if err != nil {
 		return false
 	}
+
 	out += " Last pushed to " + tm.Format("2 Jan 2006")
+
 	b.Reply(m, "%s %s", bitbucketPrefix, out)
 
 	return true
@@ -143,8 +144,7 @@ func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	issueNum := matches[3]
 
 	bi := &bitbucketIssue{}
-	err := utils.GetJSON(fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi)
-	if err != nil {
+	if err := utils.GetJSON(fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi); err != nil {
 		return false
 	}
 
@@ -158,14 +158,18 @@ func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	if bi.Priority != "" && bi.Metadata.Kind != "" {
 		out += " [" + bi.Priority + " - " + bi.Metadata.Kind + "]"
 	}
+
 	out += " by " + bi.ReportedBy.Username
+
 	if bi.Title != "" {
 		out += " - " + bi.Title
 	}
+
 	tm, err := time.Parse("2006-01-02T15:04:05.000", bi.CreatedOn)
 	if err != nil {
 		return false
 	}
+
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
 	b.Reply(m, "%s %s", bitbucketPrefix, out)
 
@@ -183,8 +187,7 @@ func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	pullNum := matches[3]
 
 	bpr := &bitbucketPullRequest{}
-	err := utils.GetJSON(fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr)
-	if err != nil {
+	if err := utils.GetJSON(fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr); err != nil {
 		return false
 	}
 
@@ -193,11 +196,14 @@ func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	if bpr.Title != "" {
 		out += " - " + bpr.Title
 	}
+
 	tm, err := time.Parse("2006-01-02T15:04:05.000000-07:00", bpr.CreatedOn)
 	if err != nil {
 		return false
 	}
+
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
+
 	b.Reply(m, "%s %s", bitbucketPrefix, out)
 
 	return true

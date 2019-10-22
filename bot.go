@@ -51,7 +51,9 @@ type duration struct {
 
 func (d *duration) UnmarshalText(text []byte) error {
 	var err error
+
 	d.Duration, err = time.ParseDuration(string(text))
+
 	return err
 }
 
@@ -107,6 +109,7 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		b.log.Logger.Level = level
 	} else if b.config.Debug {
 		b.log.Warn("The Debug config option has been replaced with LogLevel")
@@ -187,6 +190,7 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) erro
 
 	target := m.Prefix.Name
 	prefix := ""
+
 	if b.FromChannel(m) {
 		target = m.Params[0]
 		prefix = m.Prefix.Name + ": "
@@ -286,8 +290,11 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 // Run.
 func (b *Bot) ConnectAndRun() error {
 	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
-	var c io.ReadWriteCloser
-	var err error
+	var (
+		c   io.ReadWriteCloser
+		err error
+	)
+
 	if b.config.TLS {
 		conf := &tls.Config{
 			InsecureSkipVerify: b.config.TLSNoVerify, //nolint:gosec
@@ -296,6 +303,7 @@ func (b *Bot) ConnectAndRun() error {
 		if b.config.TLSCert != "" && b.config.TLSKey != "" {
 			var cert tls.Certificate
 			cert, err = tls.LoadX509KeyPair(b.config.TLSCert, b.config.TLSKey)
+
 			if err != nil {
 				return err
 			}
@@ -353,6 +361,7 @@ func (b *Bot) Run(c io.ReadWriter) error {
 		if len(line) > 512 {
 			b.log.Warnf("Line longer than 512 chars: %s", strings.Trim(line, "\r\n"))
 		}
+
 		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
 	}
 

@@ -23,8 +23,8 @@ type stockPlugin struct {
 
 func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &stockPlugin{}
-	err := b.Config("stock", p)
-	if err != nil {
+
+	if err := b.Config("stock", p); err != nil {
 		return err
 	}
 
