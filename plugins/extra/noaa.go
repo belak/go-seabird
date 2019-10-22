@@ -64,6 +64,7 @@ func (p *noaaPlugin) getStation(b *seabird.Bot, m *irc.Message) (string, error) 
 		if err != nil || !found {
 			return "", fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
+
 		return target.Station, nil
 	}
 
@@ -142,6 +143,7 @@ func NOAALookup(urlFormat, code string) (string, error) {
 	out := &bytes.Buffer{}
 	in := bufio.NewReader(resp.Body)
 	first := false
+
 	for {
 		line, err := in.ReadString('\n')
 		if err == io.EOF {

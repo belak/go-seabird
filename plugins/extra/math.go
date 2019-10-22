@@ -22,10 +22,13 @@ func newMathPlugin(cm *seabird.CommandMux) {
 }
 
 func exprCallback(b *seabird.Bot, m *irc.Message) {
-	var err error
-	var res *big.Rat
+	var (
+		err error
+		res *big.Rat
 
-	mc := mathcat.New()
+		mc = mathcat.New()
+	)
+
 	for _, expr := range strings.Split(m.Trailing(), ";") {
 		res, err = mc.Run(expr)
 		if err != nil {

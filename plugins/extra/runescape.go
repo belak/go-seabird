@@ -93,18 +93,22 @@ func newRunescapeLevelMetadata(name, player, line string) (runescapeLevelMetadat
 	if len(levelData) < 3 {
 		return emptySkill, fmt.Errorf("Invalid data")
 	}
+
 	rank, err := strconv.Atoi(levelData[0])
 	if err != nil {
 		return emptySkill, err
 	}
+
 	level, err := strconv.Atoi(levelData[1])
 	if err != nil {
 		return emptySkill, err
 	}
+
 	exp, err := strconv.Atoi(levelData[2])
 	if err != nil {
 		return emptySkill, err
 	}
+
 	return runescapeLevelMetadata{
 		Rank:   rank,
 		Level:  level,
@@ -157,16 +161,20 @@ func resolveAlias(possibleAlias string) string {
 func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLevelMetadata, error) {
 	var emptySkills map[string]runescapeLevelMetadata
 
-	found := false
-	player := ""
-	skillsString := ""
-	var skills []string
+	var (
+		found        = false
+		player       string
+		skillsString string
+
+		skills []string
+	)
 
 	matches := levelRegex.FindAllStringSubmatch(search, -1)
 	for _, v := range matches {
 		if strings.HasPrefix(v[1], "\"") {
 			v[1] = v[1][1 : len(v[1])-1]
 		}
+
 		player = v[1]
 		skillsString = v[2]
 		skills = strings.Fields(skillsString)
@@ -192,10 +200,12 @@ func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLe
 	if err != nil {
 		return emptySkills, err
 	}
+
 	data := strings.Split(strings.TrimSpace(string(bytes)), "\n")
 
 	// It's not strictly needed to build all this up, but it may be useful later.
 	var ret = make(map[string]runescapeLevelMetadata)
+
 	if len(data) < len(runescapeOldSchoolSkillNames) {
 		return emptySkills, fmt.Errorf("Invalid data")
 	}
@@ -228,6 +238,7 @@ func (p *runescapePlugin) getPlayerSkills(search string) (map[string]runescapeLe
 				Player: player,
 				Skill:  skill,
 			}
+
 			continue
 		}
 
@@ -248,12 +259,15 @@ func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
 	for name := range skills {
 		names = append(names, name)
 	}
+
 	sort.Strings(names)
+
 	return names
 }
 
 func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := strings.ToLower(m.Trailing())
+
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
@@ -278,6 +292,7 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 
 func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := strings.ToLower(m.Trailing())
+
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
@@ -302,6 +317,7 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 
 func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
 	trailing := strings.ToLower(m.Trailing())
+
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {

@@ -68,8 +68,7 @@ type ytVideos struct {
 func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	// Get API key from seabird config
 	yp := &youtubePlugin{}
-	err := b.Config("youtube", yp)
-	if err != nil {
+	if err := b.Config("youtube", yp); err != nil {
 		return err
 	}
 
@@ -83,7 +82,9 @@ func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 func (yp *youtubePlugin) Handle(b *seabird.Bot, m *irc.Message, req *url.URL) bool {
 	// Get the Video ID from the URL
 	p, _ := url.ParseQuery(req.RawQuery)
+
 	var id string
+
 	if len(p["v"]) > 0 {
 		// using full www.youtube.com/?v=bbq
 		id = p["v"][0]
@@ -116,8 +117,7 @@ func getVideo(id string, key string) (time string, title string) {
 	api := fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?part=contentDetails%%2Csnippet&id=%s&fields=items(contentDetails%%2Csnippet)&key=%s", id, key)
 
 	var videos ytVideos
-	err := utils.GetJSON(api, &videos)
-	if err != nil {
+	if err := utils.GetJSON(api, &videos); err != nil {
 		return "", ""
 	}
 

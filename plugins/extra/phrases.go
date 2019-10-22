@@ -138,8 +138,8 @@ func (p *phrasesPlugin) historyCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	var data []Phrase
-	err := p.db.Find(&data, search)
-	if err != nil {
+
+	if err := p.db.Find(&data, search); err != nil {
 		b.MentionReply(m, "%s", err.Error())
 		return
 	}
