@@ -21,6 +21,7 @@ type dbConfig struct {
 // db config section.
 func NewDBPlugin(b *seabird.Bot) (*xorm.Engine, error) {
 	dbc := &dbConfig{}
+
 	err := b.Config("db", dbc)
 	if err != nil {
 		return nil, err
@@ -35,11 +36,15 @@ func NewDBPlugin(b *seabird.Bot) (*xorm.Engine, error) {
 	// using the GonicMapper as a base (so stuff like ID is converted properly)
 	// but also adding a table prefix (if set) and caching the results (similar
 	// to the default mapper).
-	var columnMapper core.IMapper = core.NewCacheMapper(core.GonicMapper{})
-	var tableMapper core.IMapper = core.GonicMapper{}
+	var (
+		columnMapper core.IMapper = core.NewCacheMapper(core.GonicMapper{})
+		tableMapper  core.IMapper = core.GonicMapper{}
+	)
+
 	if dbc.TablePrefix != "" {
 		tableMapper = core.NewPrefixMapper(tableMapper, dbc.TablePrefix)
 	}
+
 	tableMapper = core.NewCacheMapper(tableMapper)
 
 	engine.SetColumnMapper(columnMapper)

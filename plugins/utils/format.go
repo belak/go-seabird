@@ -11,8 +11,10 @@ import (
 )
 
 func dateFormat(layout string, v interface{}) (string, error) {
-	var t time.Time
-	var err error
+	var (
+		t   time.Time
+		err error
+	)
 
 	if gt, ok := v.(*github.Timestamp); ok {
 		t = gt.Time
@@ -22,6 +24,7 @@ func dateFormat(layout string, v interface{}) (string, error) {
 			return "", err
 		}
 	}
+
 	return t.Format(layout), nil
 }
 
@@ -84,7 +87,9 @@ func RawPrettifySuffix(num, blockSize float64, suffixes []string) string {
 		if num >= threshold {
 			return humanize.FormatFloat("#,###.#", num/threshold) + suffix
 		}
+
 		threshold /= blockSize
 	}
+
 	return humanize.Commaf(num)
 }

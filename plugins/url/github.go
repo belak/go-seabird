@@ -54,8 +54,7 @@ func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	t := &githubProvider{}
 
 	gc := &githubConfig{}
-	err := b.Config("github", gc)
-	if err != nil {
+	if err := b.Config("github", gc); err != nil {
 		return err
 	}
 
@@ -188,6 +187,7 @@ func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bo
 	logger := b.GetLogger()
 
 	matches := githubIssueRegex.FindStringSubmatch(url)
+
 	user, repo, issueNum, err := parseUserRepoNum(matches)
 	if err != nil {
 		logger.WithError(err).Error("Failed to parse URL")
@@ -225,6 +225,7 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 	logger := b.GetLogger()
 
 	matches := githubPullRegex.FindStringSubmatch(url)
+
 	user, repo, pullNum, err := parseUserRepoNum(matches)
 	if err != nil {
 		logger.WithError(err).Error("Failed to parse URL")
@@ -264,6 +265,7 @@ func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	id := matches[2]
+
 	gist, _, err := t.api.Gists.Get(context.TODO(), id)
 	if err != nil {
 		logger.WithError(err).Error("Failed to get gist")

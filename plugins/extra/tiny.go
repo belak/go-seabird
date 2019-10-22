@@ -24,8 +24,8 @@ type shortenResult struct {
 
 func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	p := &tinyPlugin{}
-	err := b.Config("tiny", p)
-	if err != nil {
+
+	if err := b.Config("tiny", p); err != nil {
 		return err
 	}
 

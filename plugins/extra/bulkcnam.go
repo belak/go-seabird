@@ -61,6 +61,7 @@ func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	in := bufio.NewReader(resp.Body)
+
 	line, err := in.ReadString('\n')
 	if err != nil || err == io.EOF {
 		b.MentionReply(m, "%s", strings.TrimSpace(line))

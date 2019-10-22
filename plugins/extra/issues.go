@@ -35,8 +35,8 @@ func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 			"uno":     "belak/go-seabird-uno",
 		},
 	}
-	err := b.Config("github", p)
-	if err != nil {
+
+	if err := b.Config("github", p); err != nil {
 		return err
 	}
 
@@ -126,6 +126,7 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	hasState := false
 	split := strings.Split(m.Trailing(), " ")
+
 	for i := 0; i < len(split); i++ {
 		if strings.HasPrefix(split[i], "repo:") {
 			split = append(split[:i], split[i+1:]...)
@@ -182,12 +183,15 @@ func encodeIssue(issue github.Issue) string {
 	if issue.Assignee != nil {
 		out += " (assigned to " + *issue.Assignee.Login + ")"
 	}
+
 	if issue.Title != nil && *issue.Title != "" {
 		out += " - " + *issue.Title
 	}
+
 	if issue.CreatedAt != nil {
 		out += " [created " + issue.CreatedAt.Format("2 Jan 2006") + "]"
 	}
+
 	if issue.HTMLURL != nil {
 		out += " - " + *issue.HTMLURL
 	}

@@ -30,8 +30,7 @@ type LastSeen struct {
 func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &lastSeenPlugin{db: db}
 
-	err := p.db.Sync(LastSeen{})
-	if err != nil {
+	if err := p.db.Sync(LastSeen{}); err != nil {
 		return err
 	}
 

@@ -16,8 +16,8 @@ type dbConfig struct {
 
 func openDBs(b *seabird.Bot) (*nut.DB, *xorm.Engine, error) {
 	dbc := &dbConfig{}
-	err := b.Config("db", dbc)
-	if err != nil {
+
+	if err := b.Config("db", dbc); err != nil {
 		return nil, nil, err
 	}
 

@@ -35,6 +35,7 @@ func getUnit(unit darksky.Units) string {
 	if v, ok := unitStrings[unit]; ok {
 		return v
 	}
+
 	return defaultUnitString
 }
 
@@ -115,6 +116,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 		if err != nil || !found {
 			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
 		}
+
 		return target, nil
 	}
 
@@ -167,6 +169,7 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
 	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
+
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(block.Time, 0).Weekday()
 

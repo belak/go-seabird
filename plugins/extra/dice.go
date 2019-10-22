@@ -23,6 +23,7 @@ func newDicePlugin(b *seabird.Bot, mm *seabird.MentionMux) {
 
 func diceCallback(b *seabird.Bot, m *irc.Message) {
 	var rolls []string
+
 	totalCount := 0
 
 	matches := diceRe.FindAllStringSubmatch(m.Trailing(), -1)

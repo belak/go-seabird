@@ -26,6 +26,7 @@ func newISupportPlugin(b *seabird.Bot, bm *seabird.BasicMux) *ISupportPlugin {
 		},
 	}
 	bm.Event("005", p.handle005)
+
 	return p
 }
 
@@ -83,6 +84,7 @@ func (p *ISupportPlugin) GetMap(key string) (map[string]string, bool) {
 	}
 
 	ret := make(map[string]string)
+
 	for _, v := range strings.Split(data, ",") {
 		innerData := strings.SplitN(v, ":", 2)
 		if len(innerData) != 2 {
