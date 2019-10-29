@@ -7,7 +7,6 @@ import (
 	iex "github.com/goinvest/iexcloud"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -38,25 +37,25 @@ func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *stockPlugin) search(b *seabird.Bot, m *irc.Message) {
+func (p *stockPlugin) search(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Symbol required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "Symbol required")
 			return
 		}
 
-		symbols := strings.Split(strings.ToUpper(m.Trailing()), " ")
+		symbols := strings.Split(strings.ToUpper(r.Message.Trailing()), " ")
 		prices := []string{}
 
 		for _, symbol := range symbols {
 			price, err := p.Client.Price(symbol)
 			if err != nil {
-				b.MentionReply(m, "%s", err)
+				b.MentionReply(r, "%s", err)
 				continue
 			}
 			prices = append(prices, fmt.Sprintf("%s: %.2f", symbol, price))
 		}
 
-		b.MentionReply(m, "%s", strings.Join(prices, ", "))
+		b.MentionReply(r, "%s", strings.Join(prices, ", "))
 	}()
 }

@@ -9,7 +9,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -36,25 +35,25 @@ func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func wikiCallback(b *seabird.Bot, m *irc.Message) {
+func wikiCallback(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Query required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "Query required")
 			return
 		}
 
 		wr := &wikiResponse{}
 		err := utils.GetJSON(
-			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(m.Trailing()),
+			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(r.Message.Trailing()),
 			wr)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
 		z, err := html.Parse(strings.NewReader(wr.Parse.Text.Data))
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
@@ -68,11 +67,11 @@ func wikiCallback(b *seabird.Bot, m *irc.Message) {
 			}
 
 			if t != "" {
-				b.MentionReply(m, "%s", t)
+				b.MentionReply(r, "%s", t)
 				return
 			}
 		}
 
-		b.MentionReply(m, "Error finding text")
+		b.MentionReply(r, "Error finding text")
 	}()
 }

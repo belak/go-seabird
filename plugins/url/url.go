@@ -14,7 +14,6 @@ import (
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -42,7 +41,7 @@ var client = &http.Client{
 // takes the same parameters as a normal IRC callback in addition to a
 // *url.URL representing the found url. It returns true if it was able
 // to handle that url and false otherwise.
-type LinkProvider func(b *seabird.Bot, m *irc.Message, url *url.URL) bool
+type LinkProvider func(b *seabird.Bot, r *seabird.Request, url *url.URL) bool
 
 // Plugin stores all registered URL LinkProviders
 type Plugin struct {
@@ -71,8 +70,8 @@ func (p *Plugin) RegisterProvider(domain string, f LinkProvider) error {
 	return nil
 }
 
-func (p *Plugin) callback(b *seabird.Bot, m *irc.Message) {
-	for _, rawurl := range urlRegex.FindAllString(m.Trailing(), -1) {
+func (p *Plugin) callback(b *seabird.Bot, r *seabird.Request) {
+	for _, rawurl := range urlRegex.FindAllString(r.Message.Trailing(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)
 			if err != nil {
@@ -83,7 +82,7 @@ func (p *Plugin) callback(b *seabird.Bot, m *irc.Message) {
 			u.Path = strings.TrimRight(u.Path, "/")
 
 			for _, provider := range p.providers[u.Host] {
-				if provider(b, m, u) {
+				if provider(b, r, u) {
 					return
 				}
 			}
@@ -95,30 +94,30 @@ func (p *Plugin) callback(b *seabird.Bot, m *irc.Message) {
 			if strings.HasPrefix(u.Host, "www.") {
 				host := u.Host[4:]
 				for _, provider := range p.providers[host] {
-					if provider(b, m, u) {
+					if provider(b, r, u) {
 						return
 					}
 				}
 			}
 
-			defaultLinkProvider(raw, b, m)
+			defaultLinkProvider(raw, b, r)
 		}(rawurl)
 	}
 }
 
-func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
-	r, err := client.Get(url)
+func defaultLinkProvider(url string, b *seabird.Bot, r *seabird.Request) bool {
+	resp, err := client.Get(url)
 	if err != nil {
 		return false
 	}
-	defer r.Body.Close()
+	defer resp.Body.Close()
 
-	if r.StatusCode != 200 {
+	if resp.StatusCode != 200 {
 		return false
 	}
 
 	// We search the first 1K and if a title isn't in there, we deal with it
-	z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
+	z, err := html.Parse(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
 		b.GetLogger().WithError(err).Warn("Failed to grab URL")
 		return false
@@ -130,17 +129,17 @@ func defaultLinkProvider(url string, b *seabird.Bot, m *irc.Message) bool {
 	// If we got a result, pull the text from it
 	if ok {
 		title := newlineRegex.ReplaceAllLiteralString(scrape.Text(n), " ")
-		b.Reply(m, "Title: %s", title)
+		b.Reply(r, "Title: %s", title)
 	}
 
 	return ok
 }
 
-func isItDownCallback(b *seabird.Bot, m *irc.Message) {
+func isItDownCallback(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		url, err := url.Parse(m.Trailing())
+		url, err := url.Parse(r.Message.Trailing())
 		if err != nil {
-			b.Reply(m, "URL doesn't appear to be valid")
+			b.Reply(r, "URL doesn't appear to be valid")
 			return
 		}
 
@@ -148,16 +147,16 @@ func isItDownCallback(b *seabird.Bot, m *irc.Message) {
 			url.Scheme = "http"
 		}
 
-		r, err := client.Head(url.String())
+		resp, err := client.Head(url.String())
 		if err == nil {
-			defer r.Body.Close()
+			defer resp.Body.Close()
 		}
 
-		if err != nil || r.StatusCode != 200 {
-			b.Reply(m, "It's not just you! %s looks down from here.", url)
+		if err != nil || resp.StatusCode != 200 {
+			b.Reply(r, "It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		b.Reply(m, "It's just you! %s looks up from here!", url)
+		b.Reply(r, "It's just you! %s looks up from here!", url)
 	}()
 }

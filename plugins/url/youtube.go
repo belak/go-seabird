@@ -9,7 +9,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -79,7 +78,7 @@ func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (yp *youtubePlugin) Handle(b *seabird.Bot, m *irc.Message, req *url.URL) bool {
+func (yp *youtubePlugin) Handle(b *seabird.Bot, r *seabird.Request, req *url.URL) bool {
 	// Get the Video ID from the URL
 	p, _ := url.ParseQuery(req.RawQuery)
 
@@ -107,7 +106,7 @@ func (yp *youtubePlugin) Handle(b *seabird.Bot, m *irc.Message, req *url.URL) bo
 
 	// Send out the IRC message
 	msg := fmt.Sprintf("%s ~ %s", time, title)
-	b.Reply(m, "%s %s", youtubePrefix, msg)
+	b.Reply(r, "%s %s", youtubePrefix, msg)
 
 	return true
 }

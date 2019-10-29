@@ -7,7 +7,6 @@ import (
 	"github.com/go-xorm/xorm"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -43,55 +42,43 @@ func newWeightPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux
 		Description: "Gets the most recent weight measurement for the current user",
 	})
 
-	/*
-	   cm.Event("weight-delta", p.weightDelta, &seabird.HelpInfo{
-	           Usage:       "[start_date]",
-	           Description: "Gets the current delta from either the first submitted measurement or from the submitted start date",
-	   })
-
-	   cm.Event("weight-url", p.weightUrl, &seabird.HelpInfo{
-	           Usage:       "",
-	           Description: "Gets the URL for viewing the current user's weight graph",
-	   })
-	*/
-
 	return nil
 }
 
-func (p *weightPlugin) addWeight(b *seabird.Bot, m *irc.Message) {
-	if len(m.Trailing()) == 0 {
-		b.MentionReply(m, "You must specify a new weight measurement")
+func (p *weightPlugin) addWeight(b *seabird.Bot, r *seabird.Request) {
+	if len(r.Message.Trailing()) == 0 {
+		b.MentionReply(r, "You must specify a new weight measurement")
 		return
 	}
 
-	weight, err := strconv.ParseFloat(m.Trailing(), 64)
+	weight, err := strconv.ParseFloat(r.Message.Trailing(), 64)
 	if err != nil {
-		b.MentionReply(m, "Invalid weight measurement")
+		b.MentionReply(r, "Invalid weight measurement")
 		return
 	}
 
-	measurement := &Measurement{Name: m.Prefix.Name, Weight: weight}
+	measurement := &Measurement{Name: r.Message.Prefix.Name, Weight: weight}
 
 	p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
 		res, err := s.Insert(measurement)
 		if err != nil {
-			b.MentionReply(m, "Error inserting new weight measurement: %v", err)
+			b.MentionReply(r, "Error inserting new weight measurement: %v", err)
 		}
 		return res, err
 	})
 
-	b.MentionReply(m, "Measurement added")
+	b.MentionReply(r, "Measurement added")
 }
 
-func (p *weightPlugin) lastWeight(b *seabird.Bot, m *irc.Message) {
-	user := m.Prefix.Name
+func (p *weightPlugin) lastWeight(b *seabird.Bot, r *seabird.Request) {
+	user := r.Message.Prefix.Name
 	measurement := &Measurement{Name: user}
 
 	_, err := p.db.Desc("date").Limit(1).Get(measurement)
 	if err != nil {
-		b.MentionReply(m, "Error fetching measurement value: %v", err)
+		b.MentionReply(r, "Error fetching measurement value: %v", err)
 		return
 	}
 
-	b.MentionReply(m, "Last measurement for %s was %.2f lbs", user, measurement.Weight)
+	b.MentionReply(r, "Last measurement for %s was %.2f lbs", user, measurement.Weight)
 }

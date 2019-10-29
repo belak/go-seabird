@@ -71,38 +71,38 @@ func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Eng
 	return nil
 }
 
-func (p *reminderPlugin) joinHandler(b *seabird.Bot, m *irc.Message) {
-	if m.Prefix.Name != b.CurrentNick() {
+func (p *reminderPlugin) joinHandler(b *seabird.Bot, r *seabird.Request) {
+	if r.Message.Prefix.Name != b.CurrentNick() {
 		return
 	}
 
 	p.roomLock.Lock()
 	defer p.roomLock.Unlock()
-	p.rooms[m.Params[0]] = true
+	p.rooms[r.Message.Params[0]] = true
 
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) partHandler(b *seabird.Bot, m *irc.Message) {
-	if m.Prefix.Name != b.CurrentNick() {
+func (p *reminderPlugin) partHandler(b *seabird.Bot, r *seabird.Request) {
+	if r.Message.Prefix.Name != b.CurrentNick() {
 		return
 	}
 
 	p.roomLock.Lock()
 	defer p.roomLock.Unlock()
-	delete(p.rooms, m.Params[0])
+	delete(p.rooms, r.Message.Params[0])
 
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) kickHandler(b *seabird.Bot, m *irc.Message) {
-	if m.Params[1] != b.CurrentNick() {
+func (p *reminderPlugin) kickHandler(b *seabird.Bot, r *seabird.Request) {
+	if r.Message.Params[1] != b.CurrentNick() {
 		return
 	}
 
 	p.roomLock.Lock()
 	defer p.roomLock.Unlock()
-	delete(p.rooms, m.Params[0])
+	delete(p.rooms, r.Message.Params[0])
 
 	p.updateChan <- struct{}{}
 }
@@ -175,7 +175,7 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *Reminder) {
 
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
-func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, m *irc.Message) {
+func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, r *seabird.Request) {
 	go p.remindLoop(b)
 }
 
@@ -210,43 +210,43 @@ func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
 	return ret, nil
 }
 
-func (p *reminderPlugin) RemindCommand(b *seabird.Bot, m *irc.Message) {
-	split := strings.SplitN(m.Trailing(), " ", 2)
+func (p *reminderPlugin) RemindCommand(b *seabird.Bot, r *seabird.Request) {
+	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) != 2 {
-		b.MentionReply(m, "Not enough args")
+		b.MentionReply(r, "Not enough args")
 		return
 	}
 
 	dur, err := p.ParseTime(split[0])
 	if err != nil {
-		b.MentionReply(m, "Invalid duration: %s", err)
+		b.MentionReply(r, "Invalid duration: %s", err)
 		return
 	}
 
-	r := &Reminder{
-		Target:       m.Prefix.Name,
+	rem := &Reminder{
+		Target:       r.Message.Prefix.Name,
 		TargetType:   privateTarget,
 		Content:      split[1],
 		ReminderTime: time.Now().Add(dur),
 	}
 
-	if b.FromChannel(m) {
+	if b.FromChannel(r) {
 		// If it was from a channel, we need to prepend the user's name.
-		r.Target = m.Params[0]
-		r.TargetType = channelTarget
-		r.Content = m.Prefix.Name + ": " + r.Content
+		rem.Target = r.Message.Params[0]
+		rem.TargetType = channelTarget
+		rem.Content = r.Message.Prefix.Name + ": " + rem.Content
 	}
 
-	_, err = p.db.Insert(r)
+	_, err = p.db.Insert(rem)
 	if err != nil {
-		b.MentionReply(m, "Failed to store reminder: %s", err)
+		b.MentionReply(r, "Failed to store reminder: %s", err)
 		return
 	}
 
-	b.MentionReply(m, "Event stored")
+	b.MentionReply(r, "Event stored")
 
 	logger := b.GetLogger()
-	logger.WithField("reminder", r).Debug("Stored reminder")
+	logger.WithField("reminder", rem).Debug("Stored reminder")
 
 	p.updateChan <- struct{}{}
 }

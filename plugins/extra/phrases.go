@@ -8,7 +8,6 @@ import (
 	"github.com/go-xorm/xorm"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -84,98 +83,98 @@ func (p *phrasesPlugin) getKey(key string) (*Phrase, error) {
 	return out, nil
 }
 
-func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, m *irc.Message) {
+func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, r *seabird.Request) {
 	entry := Phrase{
-		Name:      p.cleanedName(m.Trailing()),
-		Submitter: m.Prefix.Name,
+		Name:      p.cleanedName(r.Message.Trailing()),
+		Submitter: r.Message.Prefix.Name,
 		Deleted:   true,
 	}
 
 	if len(entry.Name) == 0 {
-		b.MentionReply(m, "No key supplied")
+		b.MentionReply(r, "No key supplied")
 	}
 
 	_, err := p.db.InsertOne(entry)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "Forgot %s", entry.Name)
+	b.MentionReply(r, "Forgot %s", entry.Name)
 }
 
-func (p *phrasesPlugin) getCallback(b *seabird.Bot, m *irc.Message) {
-	row, err := p.getKey(m.Trailing())
+func (p *phrasesPlugin) getCallback(b *seabird.Bot, r *seabird.Request) {
+	row, err := p.getKey(r.Message.Trailing())
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "%s", row.Value)
+	b.MentionReply(r, "%s", row.Value)
 }
 
-func (p *phrasesPlugin) giveCallback(b *seabird.Bot, m *irc.Message) {
-	split := strings.SplitN(m.Trailing(), " ", 2)
+func (p *phrasesPlugin) giveCallback(b *seabird.Bot, r *seabird.Request) {
+	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) < 2 {
-		b.MentionReply(m, "Not enough args")
+		b.MentionReply(r, "Not enough args")
 		return
 	}
 
 	row, err := p.getKey(split[1])
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
-	b.Reply(m, "%s: %s", split[0], row.Value)
+	b.Reply(r, "%s: %s", split[0], row.Value)
 }
 
-func (p *phrasesPlugin) historyCallback(b *seabird.Bot, m *irc.Message) {
-	search := &Phrase{Name: p.cleanedName(m.Trailing())}
+func (p *phrasesPlugin) historyCallback(b *seabird.Bot, r *seabird.Request) {
+	search := &Phrase{Name: p.cleanedName(r.Message.Trailing())}
 	if len(search.Name) == 0 {
-		b.MentionReply(m, "No key provided")
+		b.MentionReply(r, "No key provided")
 		return
 	}
 
 	var data []Phrase
 
 	if err := p.db.Find(&data, search); err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
 	for _, entry := range data {
 		if entry.Deleted {
-			b.MentionReply(m, "%s deleted by %s", search.Name, entry.Submitter)
+			b.MentionReply(r, "%s deleted by %s", search.Name, entry.Submitter)
 		} else {
-			b.MentionReply(m, "%s set by %s to %s", search.Name, entry.Submitter, entry.Value)
+			b.MentionReply(r, "%s set by %s to %s", search.Name, entry.Submitter, entry.Value)
 		}
 	}
 }
 
-func (p *phrasesPlugin) setCallback(b *seabird.Bot, m *irc.Message) {
-	split := strings.SplitN(m.Trailing(), " ", 2)
+func (p *phrasesPlugin) setCallback(b *seabird.Bot, r *seabird.Request) {
+	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) < 2 {
-		b.MentionReply(m, "Not enough args")
+		b.MentionReply(r, "Not enough args")
 		return
 	}
 
 	entry := Phrase{
 		Name:      p.cleanedName(split[0]),
-		Submitter: m.Prefix.Name,
+		Submitter: r.Message.Prefix.Name,
 		Value:     split[1],
 	}
 
 	if len(entry.Name) == 0 {
-		b.MentionReply(m, "No key provided")
+		b.MentionReply(r, "No key provided")
 		return
 	}
 
 	_, err := p.db.InsertOne(entry)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
-	b.MentionReply(m, "%s set to %s", entry.Name, entry.Value)
+	b.MentionReply(r, "%s set to %s", entry.Name, entry.Value)
 }

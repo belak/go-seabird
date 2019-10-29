@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -38,17 +37,17 @@ func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
 	})
 }
 
-func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
-	if !b.FromChannel(m) {
+func (p *chancePlugin) rouletteCallback(b *seabird.Bot, r *seabird.Request) {
+	if !b.FromChannel(r) {
 		return
 	}
 
-	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
+	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		// Invalid message
 		return
 	}
 
-	shotsLeft := p.rouletteShotsLeft[m.Params[0]]
+	shotsLeft := p.rouletteShotsLeft[r.Message.Params[0]]
 
 	var msg string
 
@@ -60,22 +59,22 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, m *irc.Message) {
 	shotsLeft--
 
 	if shotsLeft < 1 {
-		b.MentionReply(m, "%sBANG!", msg)
-		b.Writef("KICK %s %s", m.Params[0], m.Prefix.Name)
+		b.MentionReply(r, "%sBANG!", msg)
+		b.Writef("KICK %s %s", r.Message.Params[0], r.Message.Prefix.Name)
 	} else {
-		b.MentionReply(m, "%sClick.", msg)
+		b.MentionReply(r, "%sClick.", msg)
 	}
 
-	p.rouletteShotsLeft[m.Params[0]] = shotsLeft
+	p.rouletteShotsLeft[r.Message.Params[0]] = shotsLeft
 }
 
-func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
-	if !b.FromChannel(m) {
+func (p *chancePlugin) coinCallback(b *seabird.Bot, r *seabird.Request) {
+	if !b.FromChannel(r) {
 		return
 	}
 
 	guess := -1
-	guessStr := m.Trailing()
+	guessStr := r.Message.Trailing()
 
 	for k, v := range coinNames {
 		if guessStr == v {
@@ -87,8 +86,8 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 	if guess == -1 {
 		b.Writef(
 			"KICK %s %s :That's not a valid coin side. Options are: %s",
-			m.Params[0],
-			m.Prefix.Name,
+			r.Message.Params[0],
+			r.Message.Prefix.Name,
 			strings.Join(coinNames, ", "))
 
 		return
@@ -97,8 +96,8 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, m *irc.Message) {
 	flip := rand.Intn(2)
 
 	if flip == guess {
-		b.MentionReply(m, "Lucky guess!")
+		b.MentionReply(r, "Lucky guess!")
 	} else {
-		b.Writef("KICK %s %s :%s", m.Params[0], m.Prefix.Name, "Sorry! Better luck next time!")
+		b.Writef("KICK %s %s :%s", r.Message.Params[0], r.Message.Prefix.Name, "Sorry! Better luck next time!")
 	}
 }

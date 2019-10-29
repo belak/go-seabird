@@ -2,8 +2,6 @@ package seabird
 
 import (
 	"sync"
-
-	irc "gopkg.in/irc.v3"
 )
 
 // BasicMux is a simple IRC event multiplexer. It matches the command against
@@ -36,7 +34,7 @@ func (mux *BasicMux) Event(c string, h HandlerFunc) {
 // HandleEvent allows us to be a Handler so we can nest Handlers
 //
 // The BasicMux simply dispatches all the Handler commands as needed
-func (mux *BasicMux) HandleEvent(b *Bot, msg *irc.Message) {
+func (mux *BasicMux) HandleEvent(b *Bot, r *Request) {
 	// Lock our handlers so we don't crap bricks if a
 	// handler is added or removed from under our feet.
 	mux.mu.Lock()
@@ -44,12 +42,12 @@ func (mux *BasicMux) HandleEvent(b *Bot, msg *irc.Message) {
 
 	// Star means ALL THE THINGS. Really, this is only useful for logging.
 	for _, h := range mux.m["*"] {
-		h(b, msg)
+		h(b, r)
 	}
 
 	// Now that we've done the global handlers, we can run the ones specific to
 	// this command.
-	for _, h := range mux.m[msg.Command] {
-		h(b, msg)
+	for _, h := range mux.m[r.Message.Command] {
+		h(b, r)
 	}
 }

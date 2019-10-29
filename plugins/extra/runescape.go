@@ -13,7 +13,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 var runescapeOldSchoolSkillNames = []string{
@@ -265,13 +264,13 @@ func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
 	return names
 }
 
-func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := strings.ToLower(m.Trailing())
+func (p *runescapePlugin) levelCallback(b *seabird.Bot, r *seabird.Request) {
+	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
@@ -286,17 +285,17 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, m *irc.Message) {
 			responses = append(responses, fmt.Sprintf("level %s %s", utils.PrettifyNumber(skill.Level), skill.Skill))
 		}
 
-		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
+		b.MentionReply(r, "%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
-func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := strings.ToLower(m.Trailing())
+func (p *runescapePlugin) expCallback(b *seabird.Bot, r *seabird.Request) {
+	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
@@ -311,17 +310,17 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, m *irc.Message) {
 			responses = append(responses, fmt.Sprintf("%s experience in %s", utils.PrettifySuffix(skill.Exp), skill.Skill))
 		}
 
-		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
+		b.MentionReply(r, "%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
-func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
-	trailing := strings.ToLower(m.Trailing())
+func (p *runescapePlugin) rankCallback(b *seabird.Bot, r *seabird.Request) {
+	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
@@ -336,6 +335,6 @@ func (p *runescapePlugin) rankCallback(b *seabird.Bot, m *irc.Message) {
 			responses = append(responses, fmt.Sprintf("rank %s in %s", utils.PrettifyNumber(skill.Rank), skill.Skill))
 		}
 
-		b.MentionReply(m, "%s has %s", playerName, strings.Join(responses, ", "))
+		b.MentionReply(r, "%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }

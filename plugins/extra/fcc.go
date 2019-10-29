@@ -5,7 +5,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -50,28 +49,28 @@ func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *fccPlugin) Search(b *seabird.Bot, m *irc.Message) {
+func (p *fccPlugin) Search(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Callsign required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "Callsign required")
 			return
 		}
 
-		url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(m.Trailing())
+		url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(r.Message.Trailing())
 
 		fr := &fccResponse{}
 		err := utils.GetJSON(url, fr)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
 		if len(fr.LicenseData.Licenses) == 0 {
-			b.MentionReply(m, "No licenses found")
+			b.MentionReply(r, "No licenses found")
 			return
 		}
 
 		license := fr.LicenseData.Licenses[0]
-		b.MentionReply(m, "%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
+		b.MentionReply(r, "%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
 	}()
 }

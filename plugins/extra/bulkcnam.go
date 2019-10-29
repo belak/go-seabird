@@ -9,7 +9,6 @@ import (
 	"unicode"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -38,25 +37,25 @@ func newBulkCNAMPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 
 // This function queries the BulkCNAM API for a Phone #'s
 // corresponding CNAM, and returns it
-func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, m *irc.Message) {
-	number := m.Trailing()
+func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, r *seabird.Request) {
+	number := r.Message.Trailing()
 
 	for _, digit := range number {
 		if !unicode.IsDigit(digit) {
-			b.MentionReply(m, "Error: Not a phone number")
+			b.MentionReply(r, "Error: Not a phone number")
 			return
 		}
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://cnam.bulkcnam.com/?id=%s&did=%s", p.Key, number))
 	if err != nil {
-		b.MentionReply(m, "Error: BulkCNAM appears to be down")
+		b.MentionReply(r, "Error: BulkCNAM appears to be down")
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		b.MentionReply(m, "Error: Server side error occurred")
+		b.MentionReply(r, "Error: Server side error occurred")
 		return
 	}
 
@@ -64,8 +63,8 @@ func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, m *irc.Message) {
 
 	line, err := in.ReadString('\n')
 	if err != nil || err == io.EOF {
-		b.MentionReply(m, "%s", strings.TrimSpace(line))
+		b.MentionReply(r, "%s", strings.TrimSpace(line))
 	} else {
-		b.MentionReply(m, "Error: Something happened when parsing the response.")
+		b.MentionReply(r, "Error: Something happened when parsing the response.")
 	}
 }

@@ -10,7 +10,6 @@ import (
 	ping "github.com/belak/go-ping"
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -62,83 +61,83 @@ func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *netToolsPlugin) RDNS(b *seabird.Bot, m *irc.Message) {
+func (p *netToolsPlugin) RDNS(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Argument required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "Argument required")
 			return
 		}
-		names, err := net.LookupAddr(m.Trailing())
+		names, err := net.LookupAddr(r.Message.Trailing())
 		if err != nil {
-			b.MentionReply(m, err.Error())
+			b.MentionReply(r, err.Error())
 			return
 		}
 
 		if len(names) == 0 {
-			b.MentionReply(m, "No results found")
+			b.MentionReply(r, "No results found")
 			return
 		}
 
-		b.MentionReply(m, names[0])
+		b.MentionReply(r, names[0])
 
 		if len(names) > 1 {
 			for _, name := range names[1:] {
-				b.Writef("NOTICE %s :%s", m.Prefix.Name, name)
+				b.Writef("NOTICE %s :%s", r.Message.Prefix.Name, name)
 			}
 		}
 	}()
 }
 
-func (p *netToolsPlugin) Dig(b *seabird.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Dig(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Domain required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "Domain required")
 			return
 		}
 
-		addrs, err := net.LookupHost(m.Trailing())
+		addrs, err := net.LookupHost(r.Message.Trailing())
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
 		if len(addrs) == 0 {
-			b.MentionReply(m, "No results found")
+			b.MentionReply(r, "No results found")
 			return
 		}
 
-		b.MentionReply(m, addrs[0])
+		b.MentionReply(r, addrs[0])
 
 		if len(addrs) > 1 {
 			for _, addr := range addrs[1:] {
-				b.Writef("NOTICE %s :%s", m.Prefix.Name, addr)
+				b.Writef("NOTICE %s :%s", r.Message.Prefix.Name, addr)
 			}
 		}
 	}()
 }
 
-func (p *netToolsPlugin) Ping(b *seabird.Bot, m *irc.Message) {
+func (p *netToolsPlugin) Ping(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "Host required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "Host required")
 			return
 		}
 
-		pinger, err := ping.NewPinger(m.Trailing())
+		pinger, err := ping.NewPinger(r.Message.Trailing())
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 		pinger.Count = 1
 		pinger.SetPrivileged(p.PrivilegedPing)
 
 		pinger.OnRecv = func(pkt *ping.Packet) {
-			b.MentionReply(m, "%d bytes from %s: icmp_seq=%d time=%s",
+			b.MentionReply(r, "%d bytes from %s: icmp_seq=%d time=%s",
 				pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 		}
 		err = pinger.Run()
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 	}()
@@ -169,36 +168,36 @@ func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) 
 	return p.pasteData(string(out))
 }
 
-func (p *netToolsPlugin) handleCommand(b *seabird.Bot, m *irc.Message, command string, emptyMsg string) {
-	if m.Trailing() == "" {
-		b.MentionReply(m, "Host required")
+func (p *netToolsPlugin) handleCommand(b *seabird.Bot, r *seabird.Request, command string, emptyMsg string) {
+	if r.Message.Trailing() == "" {
+		b.MentionReply(r, "Host required")
 		return
 	}
 
-	url, err := p.runCommand("traceroute", m.Trailing())
+	url, err := p.runCommand("traceroute", r.Message.Trailing())
 	if err != nil {
-		b.MentionReply(m, "%s", err)
+		b.MentionReply(r, "%s", err)
 		return
 	}
 
-	b.MentionReply(m, "%s", url)
+	b.MentionReply(r, "%s", url)
 }
 
-func (p *netToolsPlugin) Traceroute(b *seabird.Bot, m *irc.Message) {
-	go p.handleCommand(b, m, "traceroute", "Host required")
+func (p *netToolsPlugin) Traceroute(b *seabird.Bot, r *seabird.Request) {
+	go p.handleCommand(b, r, "traceroute", "Host required")
 }
 
-func (p *netToolsPlugin) Whois(b *seabird.Bot, m *irc.Message) {
-	go p.handleCommand(b, m, "whois", "Domain required")
+func (p *netToolsPlugin) Whois(b *seabird.Bot, r *seabird.Request) {
+	go p.handleCommand(b, r, "whois", "Domain required")
 }
 
-func (p *netToolsPlugin) DNSCheck(b *seabird.Bot, m *irc.Message) {
-	if m.Trailing() == "" {
-		b.MentionReply(m, "Domain required")
+func (p *netToolsPlugin) DNSCheck(b *seabird.Bot, r *seabird.Request) {
+	if r.Message.Trailing() == "" {
+		b.MentionReply(r, "Domain required")
 		return
 	}
 
-	b.MentionReply(m, "https://www.whatsmydns.net/#A/"+m.Trailing())
+	b.MentionReply(r, "https://www.whatsmydns.net/#A/"+r.Message.Trailing())
 }
 
 type asnResponse struct {
@@ -210,29 +209,29 @@ type asnResponse struct {
 	LastIP        string `json:"last_ip"`
 }
 
-func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, m *irc.Message) {
-	if m.Trailing() == "" {
-		b.MentionReply(m, "IP required")
+func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, r *seabird.Request) {
+	if r.Message.Trailing() == "" {
+		b.MentionReply(r, "IP required")
 		return
 	}
 
 	asnResp := asnResponse{}
 
 	err := utils.GetJSON(
-		"https://api.iptoasn.com/v1/as/ip/"+m.Trailing(),
+		"https://api.iptoasn.com/v1/as/ip/"+r.Message.Trailing(),
 		&asnResp)
 	if err != nil {
-		b.MentionReply(m, "%s", err)
+		b.MentionReply(r, "%s", err)
 		return
 	}
 
 	if !asnResp.Announced {
-		b.MentionReply(m, "ASN information not available")
+		b.MentionReply(r, "ASN information not available")
 		return
 	}
 
 	b.MentionReply(
-		m,
+		r,
 		"#%d (%s - %s) - %s (%s)",
 		asnResp.AsNumber,
 		asnResp.FirstIP,

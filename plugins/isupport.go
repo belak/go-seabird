@@ -6,7 +6,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -30,21 +29,21 @@ func newISupportPlugin(b *seabird.Bot, bm *seabird.BasicMux) *ISupportPlugin {
 	return p
 }
 
-func (p *ISupportPlugin) handle005(b *seabird.Bot, m *irc.Message) {
+func (p *ISupportPlugin) handle005(b *seabird.Bot, r *seabird.Request) {
 	logger := b.GetLogger()
 
 	// Check for really old servers (or servers which based 005 off of rfc2812
-	if !strings.HasSuffix(m.Trailing(), "server") {
+	if !strings.HasSuffix(r.Message.Trailing(), "server") {
 		logger.Warn("This server doesn't appear to support ISupport messages. Here there be dragons.")
 		return
 	}
 
-	if len(m.Params) < 2 {
+	if len(r.Message.Params) < 2 {
 		logger.Warn("Not enough params in ISupport message")
 		return
 	}
 
-	for _, param := range m.Params[1 : len(m.Params)-1] {
+	for _, param := range r.Message.Params[1 : len(r.Message.Params)-1] {
 		data := strings.SplitN(param, "=", 2)
 		if len(data) < 2 {
 			p.raw[data[0]] = ""

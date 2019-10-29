@@ -155,15 +155,15 @@ func (b *Bot) Send(m *irc.Message) {
 	b.client.WriteMessage(m)
 }
 
-// Reply to an irc.Message with a convenience wrapper around fmt.Sprintf
-func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
-	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
+// Reply to a Request with a convenience wrapper around fmt.Sprintf
+func (b *Bot) Reply(r *Request, format string, v ...interface{}) error {
+	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		return errors.New("Invalid IRC message")
 	}
 
-	target := m.Prefix.Name
-	if b.FromChannel(m) {
-		target = m.Params[0]
+	target := r.Message.Prefix.Name
+	if b.FromChannel(r) {
+		target = r.Message.Params[0]
 	}
 
 	fullMsg := fmt.Sprintf(format, v...)
@@ -183,17 +183,17 @@ func (b *Bot) Reply(m *irc.Message, format string, v ...interface{}) error {
 
 // MentionReply acts the same as Bot.Reply but it will prefix it with the user's
 // nick if we are in a channel.
-func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) error {
-	if len(m.Params) < 1 || len(m.Params[0]) < 1 {
+func (b *Bot) MentionReply(r *Request, format string, v ...interface{}) error {
+	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		return errors.New("Invalid IRC message")
 	}
 
-	target := m.Prefix.Name
+	target := r.Message.Prefix.Name
 	prefix := ""
 
-	if b.FromChannel(m) {
-		target = m.Params[0]
-		prefix = m.Prefix.Name + ": "
+	if b.FromChannel(r) {
+		target = r.Message.Params[0]
+		prefix = r.Message.Prefix.Name + ": "
 	}
 
 	fullMsg := fmt.Sprintf(format, v...)
@@ -212,20 +212,20 @@ func (b *Bot) MentionReply(m *irc.Message, format string, v ...interface{}) erro
 }
 
 // PrivateReply is similar to Reply, but it will always send privately.
-func (b *Bot) PrivateReply(m *irc.Message, format string, v ...interface{}) {
+func (b *Bot) PrivateReply(r *Request, format string, v ...interface{}) {
 	b.Send(&irc.Message{
 		Prefix:  &irc.Prefix{},
 		Command: "PRIVMSG",
 		Params: []string{
-			m.Prefix.Name,
+			r.Message.Prefix.Name,
 			fmt.Sprintf(format, v...),
 		},
 	})
 }
 
 // CTCPReply is a convenience function to respond to CTCP requests.
-func (b *Bot) CTCPReply(m *irc.Message, format string, v ...interface{}) error {
-	if m.Command != "CTCP" {
+func (b *Bot) CTCPReply(r *Request, format string, v ...interface{}) error {
+	if r.Message.Command != "CTCP" {
 		return errors.New("Invalid CTCP message")
 	}
 
@@ -233,21 +233,13 @@ func (b *Bot) CTCPReply(m *irc.Message, format string, v ...interface{}) error {
 		Prefix:  &irc.Prefix{},
 		Command: "NOTICE",
 		Params: []string{
-			m.Prefix.Name,
+			r.Message.Prefix.Name,
 			fmt.Sprintf(format, v...),
 		},
 	})
 
 	return nil
 }
-
-/*
-func (b *Bot) handshake() {
-	b.client.Writef("CAP END")
-	b.client.Writef("NICK %s", b.config.Nick)
-	b.client.Writef("USER %s 0.0.0.0 0.0.0.0 :%s", b.config.User, b.config.Name)
-}
-*/
 
 // Write will write an raw IRC message to the stream
 func (b *Bot) Write(line string) {
@@ -260,29 +252,34 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 }
 
 // FromChannel is a wrapper around the irc package's FromChannel.
-func (b *Bot) FromChannel(m *irc.Message) bool {
-	return b.client.FromChannel(m)
+func (b *Bot) FromChannel(r *Request) bool {
+	return b.client.FromChannel(r.Message)
 }
 
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
+	r := NewRequest(m)
+
+	timer := r.Timer("total_request")
+	defer timer.Done()
+
 	// Handle the event and pass it along
-	if m.Command == "001" {
+	if r.Message.Command == "001" {
 		b.log.Info("Connected")
 
 		for _, v := range b.config.Cmds {
 			b.Write(v)
 		}
-	} else if m.Command == "PRIVMSG" {
+	} else if r.Message.Command == "PRIVMSG" {
 		// Clean up CTCP stuff so plugins don't need to parse it manually
-		lastArg := m.Trailing()
+		lastArg := r.Message.Trailing()
 		lastIdx := len(lastArg) - 1
 		if lastIdx > 0 && lastArg[0] == '\x01' && lastArg[lastIdx] == '\x01' {
-			m.Command = "CTCP"
-			m.Params[len(m.Params)-1] = lastArg[1:lastIdx]
+			r.Message.Command = "CTCP"
+			r.Message.Params[len(r.Message.Params)-1] = lastArg[1:lastIdx]
 		}
 	}
 
-	b.mux.HandleEvent(b, m)
+	b.mux.HandleEvent(b, r)
 }
 
 // ConnectAndRun is a convenience function which will pull the

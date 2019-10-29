@@ -12,7 +12,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -135,17 +134,17 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 	return nil
 }
 
-func (s *spotifyProvider) privmsgCallback(b *seabird.Bot, m *irc.Message) {
+func (s *spotifyProvider) privmsgCallback(b *seabird.Bot, r *seabird.Request) {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, m, matcher, matcher.uriRegex, m.Trailing()) {
+		if s.handleTarget(b, r, matcher, matcher.uriRegex, r.Message.Trailing()) {
 			return
 		}
 	}
 }
 
-func (s *spotifyProvider) HandleURL(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
+func (s *spotifyProvider) HandleURL(b *seabird.Bot, r *seabird.Request, u *url.URL) bool {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, m, matcher, matcher.regex, u.Path) {
+		if s.handleTarget(b, r, matcher, matcher.regex, u.Path) {
 			return true
 		}
 	}
@@ -153,7 +152,7 @@ func (s *spotifyProvider) HandleURL(b *seabird.Bot, m *irc.Message, u *url.URL) 
 	return false
 }
 
-func (s *spotifyProvider) handleTarget(b *seabird.Bot, m *irc.Message, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
+func (s *spotifyProvider) handleTarget(b *seabird.Bot, r *seabird.Request, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
 	logger := b.GetLogger()
 
 	if !regex.MatchString(target) {
@@ -170,5 +169,5 @@ func (s *spotifyProvider) handleTarget(b *seabird.Bot, m *irc.Message, matcher s
 		return false
 	}
 
-	return utils.RenderRespond(b, m, logger, matcher.template, spotifyPrefix, data)
+	return utils.RenderRespond(b, r, logger, matcher.template, spotifyPrefix, data)
 }
