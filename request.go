@@ -9,9 +9,7 @@ import (
 
 type contextKey string
 
-const (
-	timingKey contextKey = "context: timing"
-)
+const timingKey = contextKey("context: timing")
 
 type Timing struct {
 	Start time.Time
