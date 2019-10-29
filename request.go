@@ -7,17 +7,23 @@ import (
 	irc "gopkg.in/irc.v3"
 )
 
+type contextKey string
+
+const (
+	timingKey contextKey = "context: timing"
+)
+
 type Timing struct {
 	Start time.Time
 	End   time.Time
 }
 
-func (d *Timing) Done() {
-	d.End = time.Now()
+func (t *Timing) Done() {
+	t.End = time.Now()
 }
 
-func (d *Timing) Elapsed() time.Duration {
-	return d.End.Sub(d.Start)
+func (t *Timing) Elapsed() time.Duration {
+	return t.End.Sub(t.Start)
 }
 
 type Request struct {
@@ -26,10 +32,14 @@ type Request struct {
 }
 
 func NewRequest(m *irc.Message) *Request {
-	return &Request{
+	r := &Request{
 		m,
 		context.TODO(),
 	}
+
+	r.SetTimingMap(make(map[string]*Timing))
+
+	return r
 }
 
 func (r *Request) Copy() *Request {
@@ -39,8 +49,15 @@ func (r *Request) Copy() *Request {
 	}
 }
 
-func (r *Request) SetValue(key string, value interface{}) {
-	r.Context = context.WithValue(r.Context, key, value)
+func (r *Request) TimingMap() map[string]*Timing {
+	return r.Context.Value(timingKey).(map[string]*Timing)
+}
+
+func (r *Request) SetTimingMap(tc map[string]*Timing) {
+	r.Context = context.WithValue(r.Context, timingKey, tc)
+}
+
+func (r *Request) AddTiming(name string, t *Timing) {
 }
 
 func (r *Request) Timer(event string) *Timing {
@@ -48,8 +65,8 @@ func (r *Request) Timer(event string) *Timing {
 		Start: time.Now(),
 	}
 
-	// TODO: nest this within a namespace
-	r.SetValue(event, timer)
+	ctx := r.TimingMap()
+	ctx[event] = timer
 
 	return timer
 }

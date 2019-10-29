@@ -1,6 +1,8 @@
 package seabird
 
-import "github.com/belak/go-plugin"
+import (
+	"github.com/belak/go-plugin"
+)
 
 var plugins = plugin.NewRegistry()
 
