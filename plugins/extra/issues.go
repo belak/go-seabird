@@ -9,7 +9,6 @@ import (
 	"golang.org/x/oauth2"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -68,15 +67,15 @@ func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
+func (p *issuesPlugin) CreateIssue(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		r := &github.IssueRequest{}
+		req := &github.IssueRequest{}
 
 		// This will be what we eventually send to the server
-		body := "Filed by " + m.Prefix.Name + " in " + m.Params[0]
-		r.Body = &body
+		body := "Filed by " + r.Message.Prefix.Name + " in " + r.Message.Params[0]
+		req.Body = &body
 
-		title := strings.TrimSpace(m.Trailing())
+		title := strings.TrimSpace(r.Message.Trailing())
 		searchChars := "#@"
 		targetRepo := p.DefaultRepo
 		for idx := strings.LastIndexAny(title, searchChars); idx > -1; idx = strings.LastIndexAny(title, searchChars) {
@@ -94,7 +93,7 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 					targetRepo = repoPath
 				}
 			case '@':
-				r.Assignee = &data
+				req.Assignee = &data
 			}
 
 			searchChars = strings.Trim(searchChars, string(char))
@@ -105,27 +104,27 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, m *irc.Message) {
 		}
 
 		if title == "" {
-			b.MentionReply(m, "Issue title required")
+			b.MentionReply(r, "Issue title required")
 			return
 		}
 
-		r.Title = &title
+		req.Title = &title
 
 		pathSegments := strings.SplitN(targetRepo, "/", 2)
 
-		issue, _, err := p.api.Issues.Create(context.TODO(), pathSegments[0], pathSegments[1], r)
+		issue, _, err := p.api.Issues.Create(context.TODO(), pathSegments[0], pathSegments[1], req)
 		if err != nil {
-			b.MentionReply(m, "%s", err.Error())
+			b.MentionReply(r, "%s", err.Error())
 			return
 		}
 
-		b.MentionReply(m, "Issue created. %s", *issue.HTMLURL)
+		b.MentionReply(r, "Issue created. %s", *issue.HTMLURL)
 	}()
 }
 
-func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
+func (p *issuesPlugin) IssueSearch(b *seabird.Bot, r *seabird.Request) {
 	hasState := false
-	split := strings.Split(m.Trailing(), " ")
+	split := strings.Split(r.Message.Trailing(), " ")
 
 	for i := 0; i < len(split); i++ {
 		if strings.HasPrefix(split[i], "repo:") {
@@ -149,7 +148,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 
 	issues, _, err := p.api.Search.Issues(context.TODO(), strings.Join(split, " "), opt)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
@@ -159,9 +158,9 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	}
 
 	if total == 1 {
-		b.MentionReply(m, "There was %d result.", total)
+		b.MentionReply(r, "There was %d result.", total)
 	} else {
-		b.MentionReply(m, "There were %d results.", total)
+		b.MentionReply(r, "There were %d results.", total)
 	}
 
 	if total > 3 {
@@ -169,7 +168,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, m *irc.Message) {
 	}
 
 	for _, issue := range issues.Issues[:total] {
-		b.MentionReply(m, "%s", encodeIssue(issue))
+		b.MentionReply(r, "%s", encodeIssue(issue))
 	}
 }
 

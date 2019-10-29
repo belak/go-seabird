@@ -4,8 +4,6 @@ import (
 	"strings"
 	"sync"
 	"unicode"
-
-	irc "gopkg.in/irc.v3"
 )
 
 // MentionMux is a simple IRC event multiplexer, based on a slice of Handlers
@@ -35,13 +33,13 @@ func (m *MentionMux) Event(h HandlerFunc) {
 }
 
 // HandleEvent strips off the nick punctuation and spaces and runs the handlers
-func (m *MentionMux) HandleEvent(b *Bot, msg *irc.Message) {
-	if msg.Command != "PRIVMSG" {
+func (m *MentionMux) HandleEvent(b *Bot, r *Request) {
+	if r.Message.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
 	}
 
-	lastArg := msg.Trailing()
+	lastArg := r.Message.Trailing()
 	nick := b.CurrentNick()
 
 	// We only handle this event if it starts with the
@@ -54,15 +52,15 @@ func (m *MentionMux) HandleEvent(b *Bot, msg *irc.Message) {
 	}
 
 	// Copy it into a new Event
-	newEvent := msg.Copy()
+	newRequest := r.Copy()
 
 	// Strip the nick, punctuation, and spaces from the message
-	newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(lastArg[len(nick)+1:])
+	newRequest.Message.Params[len(newRequest.Message.Params)-1] = strings.TrimSpace(lastArg[len(nick)+1:])
 
 	m.lock.RLock()
 	defer m.lock.RUnlock()
 
 	for _, h := range m.handlers {
-		h(b, newEvent)
+		h(b, newRequest)
 	}
 }

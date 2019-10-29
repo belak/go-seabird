@@ -3,8 +3,6 @@ package seabird
 import (
 	"sort"
 	"strings"
-
-	irc "gopkg.in/irc.v3"
 )
 
 // CommandMux is a simple IRC event multiplexer, based on the BasicMux.
@@ -45,8 +43,8 @@ func NewCommandMux(prefix string) *CommandMux {
 	return m
 }
 
-func (m *CommandMux) help(b *Bot, msg *irc.Message) {
-	cmd := msg.Trailing()
+func (m *CommandMux) help(b *Bot, r *Request) {
+	cmd := r.Message.Trailing()
 	if cmd == "" {
 		// Get all keys
 		keys := make([]string, 0, len(m.cmdHelp))
@@ -57,30 +55,30 @@ func (m *CommandMux) help(b *Bot, msg *irc.Message) {
 		// Sort everything
 		sort.Strings(keys)
 
-		if b.FromChannel(msg) {
+		if b.FromChannel(r) {
 			// If they said "!help" in a channel, list all available commands
-			b.Reply(msg, "Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
+			b.Reply(r, "Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
 		} else {
 			for _, v := range keys {
 				h := m.cmdHelp[v]
 				if h.Usage != "" {
-					b.Reply(msg, "%s %s: %s", v, h.Usage, h.Description)
+					b.Reply(r, "%s %s: %s", v, h.Usage, h.Description)
 				} else {
-					b.Reply(msg, "%s: %s", v, h.Description)
+					b.Reply(r, "%s: %s", v, h.Description)
 				}
 			}
 		}
 	} else if help, ok := m.cmdHelp[cmd]; ok {
 		if help == nil {
-			b.Reply(msg, "There is no help available for command %q", cmd)
+			b.Reply(r, "There is no help available for command %q", cmd)
 		} else {
 			lines := help.format(m.prefix, cmd)
 			for _, line := range lines {
-				b.Reply(msg, "%s", line)
+				b.Reply(r, "%s", line)
 			}
 		}
 	} else {
-		b.MentionReply(msg, "There is no help available for command %q", cmd)
+		b.MentionReply(r, "There is no help available for command %q", cmd)
 	}
 }
 
@@ -144,35 +142,36 @@ func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 
 // HandleEvent strips off the prefix, pulls the command out
 // and runs HandleEvent on the internal BasicMux
-func (m *CommandMux) HandleEvent(b *Bot, msg *irc.Message) {
-	if msg.Command != "PRIVMSG" {
+func (m *CommandMux) HandleEvent(b *Bot, r *Request) {
+	if r.Message.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
 	}
 
 	// Get the last arg and see if it starts with the command prefix
-	lastArg := msg.Trailing()
-	if b.FromChannel(msg) && !strings.HasPrefix(lastArg, m.prefix) {
+	lastArg := r.Message.Trailing()
+	if b.FromChannel(r) && !strings.HasPrefix(lastArg, m.prefix) {
 		return
 	}
 
+	// TODO(jsvana): this loses multi-plugin timing information.
 	// Copy it into a new Event
-	newEvent := msg.Copy()
+	newRequest := r.Copy()
 
 	// Chop off the command itself
 	msgParts := strings.SplitN(lastArg, " ", 2)
-	newEvent.Params[len(newEvent.Params)-1] = ""
+	newRequest.Message.Params[len(newRequest.Message.Params)-1] = ""
 
 	if len(msgParts) > 1 {
-		newEvent.Params[len(newEvent.Params)-1] = strings.TrimSpace(msgParts[1])
+		newRequest.Message.Params[len(newRequest.Message.Params)-1] = strings.TrimSpace(msgParts[1])
 	}
 
-	newEvent.Command = strings.ToLower(msgParts[0])
-	newEvent.Command = strings.TrimPrefix(newEvent.Command, m.prefix)
+	newRequest.Message.Command = strings.ToLower(msgParts[0])
+	newRequest.Message.Command = strings.TrimPrefix(newRequest.Message.Command, m.prefix)
 
-	if b.FromChannel(newEvent) {
-		m.public.HandleEvent(b, newEvent)
+	if b.FromChannel(newRequest) {
+		m.public.HandleEvent(b, newRequest)
 	} else {
-		m.private.HandleEvent(b, newEvent)
+		m.private.HandleEvent(b, newRequest)
 	}
 }

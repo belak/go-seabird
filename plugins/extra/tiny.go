@@ -5,7 +5,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -37,23 +36,23 @@ func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (t *tinyPlugin) Shorten(b *seabird.Bot, m *irc.Message) {
+func (t *tinyPlugin) Shorten(b *seabird.Bot, r *seabird.Request) {
 	go func() {
-		if m.Trailing() == "" {
-			b.MentionReply(m, "URL required")
+		if r.Message.Trailing() == "" {
+			b.MentionReply(r, "URL required")
 			return
 		}
 
 		url := fmt.Sprintf("https://www.googleapis.com/urlshortener/v1/url?key=%s", t.Key)
 
-		data := map[string]string{"longUrl": m.Trailing()}
+		data := map[string]string{"longUrl": r.Message.Trailing()}
 		sr := &shortenResult{}
 		err := utils.PostJSON(url, data, sr)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
-		b.MentionReply(m, sr.ID)
+		b.MentionReply(r, sr.ID)
 	}()
 }

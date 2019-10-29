@@ -7,7 +7,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -55,21 +54,21 @@ func newRedditProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("reddit.com", redditCallback)
 }
 
-func redditCallback(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
+func redditCallback(b *seabird.Bot, r *seabird.Request, u *url.URL) bool {
 	text := u.Path
 	//nolint:gocritic
 	if redditUserRegex.MatchString(text) {
-		return redditGetUser(b, m, text)
+		return redditGetUser(b, r, text)
 	} else if redditCommentRegex.MatchString(text) {
-		return redditGetComment(b, m, text)
+		return redditGetComment(b, r, text)
 	} else if redditSubRegex.MatchString(text) {
-		return redditGetSub(b, m, text)
+		return redditGetSub(b, r, text)
 	}
 
 	return false
 }
 
-func redditGetUser(b *seabird.Bot, m *irc.Message, url string) bool {
+func redditGetUser(b *seabird.Bot, r *seabird.Request, url string) bool {
 	matches := redditUserRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
 		return false
@@ -86,12 +85,12 @@ func redditGetUser(b *seabird.Bot, m *irc.Message, url string) bool {
 		gold = " [gold]"
 	}
 
-	b.Reply(m, "%s %s%s has %d link karma and %d comment karma", redditPrefix, ru.Data.Name, gold, ru.Data.LinkKarma, ru.Data.CommentKarma)
+	b.Reply(r, "%s %s%s has %d link karma and %d comment karma", redditPrefix, ru.Data.Name, gold, ru.Data.LinkKarma, ru.Data.CommentKarma)
 
 	return true
 }
 
-func redditGetComment(b *seabird.Bot, m *irc.Message, url string) bool {
+func redditGetComment(b *seabird.Bot, r *seabird.Request, url string) bool {
 	matches := redditCommentRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -105,12 +104,12 @@ func redditGetComment(b *seabird.Bot, m *irc.Message, url string) bool {
 	cm := rc[0].Data.Children[0].Data
 
 	// Title title - jsvana (/r/vim, score: 5)
-	b.Reply(m, "%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
+	b.Reply(r, "%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
 
 	return true
 }
 
-func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
+func redditGetSub(b *seabird.Bot, r *seabird.Request, url string) bool {
 	matches := redditSubRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -122,7 +121,7 @@ func redditGetSub(b *seabird.Bot, m *irc.Message, url string) bool {
 	}
 
 	// /r/vim - Description description (1 subscriber, 2 actives)
-	b.Reply(m, "%s %s - %s (%s %s, %s %s)",
+	b.Reply(r, "%s %s - %s (%s %s, %s %s)",
 		redditPrefix,
 		rs.Data.URL,
 		rs.Data.Description,

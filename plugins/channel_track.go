@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -164,62 +163,62 @@ func (p *ChannelTracker) RegisterSessionCleanupCallback(f func(u *User)) {
 
 // Private functions
 
-func (p *ChannelTracker) joinCallback(b *seabird.Bot, m *irc.Message) {
-	user := m.Prefix.Name
-	channel := m.Trailing()
+func (p *ChannelTracker) joinCallback(b *seabird.Bot, r *seabird.Request) {
+	user := r.Message.Prefix.Name
+	channel := r.Message.Trailing()
 
 	p.addUserToChannel(b, user, channel)
 
 	//fmt.Printf("%s (%s) joined %s\n", user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) partCallback(b *seabird.Bot, m *irc.Message) {
-	user := m.Prefix.Name
-	channel := m.Params[0]
+func (p *ChannelTracker) partCallback(b *seabird.Bot, r *seabird.Request) {
+	user := r.Message.Prefix.Name
+	channel := r.Message.Params[0]
 
 	p.removeUserFromChannel(b, user, channel)
 
 	//fmt.Printf("%s (%s) left %s\n", user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) kickCallback(b *seabird.Bot, m *irc.Message) {
+func (p *ChannelTracker) kickCallback(b *seabird.Bot, r *seabird.Request) {
 	//actor := m.Prefix.Name
-	user := m.Params[1]
-	channel := m.Params[0]
+	user := r.Message.Params[1]
+	channel := r.Message.Params[0]
 
 	p.removeUserFromChannel(b, user, channel)
 
 	//fmt.Printf("%s (%s) kicked %s (%s) from %s\n", actor, p.uuids[actor], user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) quitCallback(b *seabird.Bot, m *irc.Message) {
-	user := m.Prefix.Name
+func (p *ChannelTracker) quitCallback(b *seabird.Bot, r *seabird.Request) {
+	user := r.Message.Prefix.Name
 
 	p.removeUser(b, user)
 
 	//fmt.Printf("%s (%s) quit\n", user, p.uuids[user])
 } //nolint:wsl
 
-func (p *ChannelTracker) nickCallback(b *seabird.Bot, m *irc.Message) {
-	oldUser := m.Prefix.Name
-	newUser := m.Params[0]
+func (p *ChannelTracker) nickCallback(b *seabird.Bot, r *seabird.Request) {
+	oldUser := r.Message.Prefix.Name
+	newUser := r.Message.Params[0]
 
 	p.renameUser(b, oldUser, newUser)
 
 	//fmt.Printf("%s (%s) changed their name to %s\n", oldUser, p.uuids[newUser], newUser)
 } //nolint:wsl
 
-func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
+func (p *ChannelTracker) modeCallback(b *seabird.Bot, r *seabird.Request) {
 	// We only care about MODE messages where a specific user is
 	// changed.
-	if len(m.Params) < 3 {
+	if len(r.Message.Params) < 3 {
 		return
 	}
 
 	logger := b.GetLogger()
 
-	channel := m.Params[0]
-	target := m.Params[2]
+	channel := r.Message.Params[0]
+	target := r.Message.Params[2]
 
 	// Ensure we know about this user and this channel
 	u := p.LookupUser(target)
@@ -237,9 +236,9 @@ func (p *ChannelTracker) modeCallback(b *seabird.Bot, m *irc.Message) {
 	b.Writef("WHO :%s", target)
 }
 
-func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
+func (p *ChannelTracker) whoCallback(b *seabird.Bot, r *seabird.Request) {
 	// Filter out broken messages
-	if len(m.Params) < 7 {
+	if len(r.Message.Params) < 7 {
 		return
 	}
 
@@ -249,9 +248,9 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, m *irc.Message) {
 	}
 
 	var (
-		channel = m.Params[0]
-		nick    = m.Params[4]
-		modes   = m.Params[5]
+		channel = r.Message.Params[0]
+		nick    = r.Message.Params[4]
+		modes   = r.Message.Params[5]
 	)
 
 	logger := b.GetLogger()
@@ -325,7 +324,7 @@ func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune
 	return prefixes, true
 }
 
-func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
+func (p *ChannelTracker) namesCallback(b *seabird.Bot, r *seabird.Request) {
 	prefixes, ok := p.getSymbolToPrefixMapping(b)
 	if !ok {
 		return
@@ -333,9 +332,9 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 
 	logger := b.GetLogger()
 
-	channel := m.Params[2]
+	channel := r.Message.Params[2]
 
-	users := strings.Split(strings.TrimSpace(m.Trailing()), " ")
+	users := strings.Split(strings.TrimSpace(r.Message.Trailing()), " ")
 	for _, user := range users {
 		i := strings.IndexFunc(user, func(r rune) bool {
 			_, ok := prefixes[r]
@@ -376,8 +375,8 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
-func (p *ChannelTracker) endOfNamesCallback(b *seabird.Bot, m *irc.Message) {
-	channel := m.Params[1]
+func (p *ChannelTracker) endOfNamesCallback(b *seabird.Bot, r *seabird.Request) {
+	channel := r.Message.Params[1]
 
 	fmt.Printf("Got all names for %s\n", channel)
 }

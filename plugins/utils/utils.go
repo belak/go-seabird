@@ -8,7 +8,6 @@ import (
 	"github.com/sirupsen/logrus"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 // TemplateMustCompile will add all the helpers to a new template,
@@ -48,14 +47,14 @@ func RenderTemplate(t *template.Template, vars interface{}) (string, error) {
 // RenderRespond is a wrapper around RenderTemplate which will render a template
 // and respond to the given message. It will return true on success and false on
 // failure.
-func RenderRespond(b *seabird.Bot, m *irc.Message, logger *logrus.Entry, t *template.Template, prefix string, vars interface{}) bool {
+func RenderRespond(b *seabird.Bot, r *seabird.Request, logger *logrus.Entry, t *template.Template, prefix string, vars interface{}) bool {
 	out, err := RenderTemplate(t, vars)
 	if err != nil {
 		logger.WithError(err).Error("Failed to render template")
 		return false
 	}
 
-	b.Reply(m, "%s %s", prefix, out)
+	b.Reply(r, "%s %s", prefix, out)
 
 	return true
 }

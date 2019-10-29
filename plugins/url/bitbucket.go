@@ -9,7 +9,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -67,22 +66,22 @@ func newBitbucketProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("bitbucket.org", bitbucketCallback)
 }
 
-func bitbucketCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketCallback(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	//nolint:gocritic
 	if bitbucketUserRegex.MatchString(url.Path) {
-		return bitbucketGetUser(b, m, url)
+		return bitbucketGetUser(b, r, url)
 	} else if bitbucketRepoRegex.MatchString(url.Path) {
-		return bitbucketGetRepo(b, m, url)
+		return bitbucketGetRepo(b, r, url)
 	} else if bitbucketIssueRegex.MatchString(url.Path) {
-		return bitbucketGetIssue(b, m, url)
+		return bitbucketGetIssue(b, r, url)
 	} else if bitbucketPullRegex.MatchString(url.Path) {
-		return bitbucketGetPull(b, m, url)
+		return bitbucketGetPull(b, r, url)
 	}
 
 	return false
 }
 
-func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetUser(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketUserRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 2 {
 		return false
@@ -96,12 +95,12 @@ func bitbucketGetUser(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	}
 
 	// Jay Vana @jsvana
-	b.Reply(m, "%s %s (@%s)", bitbucketPrefix, bu.DisplayName, bu.Username)
+	b.Reply(r, "%s %s (@%s)", bitbucketPrefix, bu.DisplayName, bu.Username)
 
 	return true
 }
 
-func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetRepo(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketRepoRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 3 {
 		return false
@@ -128,12 +127,12 @@ func bitbucketGetRepo(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 
 	out += " Last pushed to " + tm.Format("2 Jan 2006")
 
-	b.Reply(m, "%s %s", bitbucketPrefix, out)
+	b.Reply(r, "%s %s", bitbucketPrefix, out)
 
 	return true
 }
 
-func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetIssue(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketIssueRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
@@ -171,12 +170,12 @@ func bitbucketGetIssue(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 	}
 
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
-	b.Reply(m, "%s %s", bitbucketPrefix, out)
+	b.Reply(r, "%s %s", bitbucketPrefix, out)
 
 	return true
 }
 
-func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func bitbucketGetPull(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketPullRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
@@ -204,7 +203,7 @@ func bitbucketGetPull(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
 
-	b.Reply(m, "%s %s", bitbucketPrefix, out)
+	b.Reply(r, "%s %s", bitbucketPrefix, out)
 
 	return true
 }

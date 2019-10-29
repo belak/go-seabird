@@ -7,7 +7,6 @@ import (
 	"github.com/soudy/mathcat"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -21,7 +20,7 @@ func newMathPlugin(cm *seabird.CommandMux) {
 	})
 }
 
-func exprCallback(b *seabird.Bot, m *irc.Message) {
+func exprCallback(b *seabird.Bot, r *seabird.Request) {
 	var (
 		err error
 		res *big.Rat
@@ -29,12 +28,12 @@ func exprCallback(b *seabird.Bot, m *irc.Message) {
 		mc = mathcat.New()
 	)
 
-	for _, expr := range strings.Split(m.Trailing(), ";") {
+	for _, expr := range strings.Split(r.Message.Trailing(), ";") {
 		res, err = mc.Run(expr)
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 		}
 	}
 
-	b.MentionReply(m, "%s", res.RatString())
+	b.MentionReply(r, "%s", res.RatString())
 }

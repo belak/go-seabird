@@ -8,7 +8,6 @@ import (
 	"github.com/go-xorm/xorm"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -44,16 +43,16 @@ func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Eng
 	return nil
 }
 
-func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, m *irc.Message) {
-	nick := m.Trailing()
+func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, r *seabird.Request) {
+	nick := r.Message.Trailing()
 	if nick == "" {
-		b.MentionReply(m, "Nick required")
+		b.MentionReply(r, "Nick required")
 		return
 	}
 
-	channel := m.Params[0]
+	channel := r.Message.Params[0]
 
-	b.MentionReply(m, "%s", p.getLastSeen(nick, channel))
+	b.MentionReply(r, "%s", p.getLastSeen(nick, channel))
 }
 
 func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
@@ -78,13 +77,13 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), t.Month().String(), t.Year())
 }
 
-func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, m *irc.Message) {
-	if len(m.Params) < 2 || !b.FromChannel(m) || m.Prefix.Name == "" {
+func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, r *seabird.Request) {
+	if len(r.Message.Params) < 2 || !b.FromChannel(r) || r.Message.Prefix.Name == "" {
 		return
 	}
 
-	nick := m.Prefix.Name
-	channel := m.Params[0]
+	nick := r.Message.Prefix.Name
+	channel := r.Message.Params[0]
 
 	p.updateLastSeen(b, nick, channel)
 }

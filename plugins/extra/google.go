@@ -6,7 +6,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -35,36 +34,36 @@ func newGooglePlugin(cm *seabird.CommandMux) {
 	})
 }
 
-func googleWebCallback(b *seabird.Bot, m *irc.Message) {
-	googleSearch(b, m, "web", m.Trailing())
+func googleWebCallback(b *seabird.Bot, r *seabird.Request) {
+	googleSearch(b, r, "web", r.Message.Trailing())
 }
 
-func googleImageCallback(b *seabird.Bot, m *irc.Message) {
-	googleSearch(b, m, "images", m.Trailing())
+func googleImageCallback(b *seabird.Bot, r *seabird.Request) {
+	googleSearch(b, r, "images", r.Message.Trailing())
 }
 
-func googleSearch(b *seabird.Bot, m *irc.Message, service, query string) {
+func googleSearch(b *seabird.Bot, r *seabird.Request, service, query string) {
 	go func() {
 		if query == "" {
-			b.MentionReply(m, "Query required")
+			b.MentionReply(r, "Query required")
 			return
 		}
 
 		gr := &googleResponse{}
 		err := utils.GetJSON(
-			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(m.Trailing()),
+			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(query),
 			gr)
 
 		if err != nil {
-			b.MentionReply(m, "%s", err)
+			b.MentionReply(r, "%s", err)
 			return
 		}
 
 		if len(gr.ResponseData.Results) == 0 {
-			b.MentionReply(m, "Error fetching search results")
+			b.MentionReply(r, "Error fetching search results")
 			return
 		}
 
-		b.MentionReply(m, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].URL)
+		b.MentionReply(r, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].URL)
 	}()
 }

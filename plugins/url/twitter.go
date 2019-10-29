@@ -8,7 +8,6 @@ import (
 	"github.com/ChimeraCoder/anaconda"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -47,17 +46,17 @@ func newtwitterProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (t *twitterProvider) Handle(b *seabird.Bot, m *irc.Message, u *url.URL) bool {
+func (t *twitterProvider) Handle(b *seabird.Bot, r *seabird.Request, u *url.URL) bool {
 	if twitterUserRegex.MatchString(u.Path) {
-		return t.getUser(b, m, u.Path)
+		return t.getUser(b, r, u.Path)
 	} else if twitterStatusRegex.MatchString(u.Path) {
-		return t.getTweet(b, m, u.Path)
+		return t.getTweet(b, r, u.Path)
 	}
 
 	return false
 }
 
-func (t *twitterProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *twitterProvider) getUser(b *seabird.Bot, r *seabird.Request, url string) bool {
 	matches := twitterUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -69,12 +68,12 @@ func (t *twitterProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bo
 	}
 
 	// Jay Vana (@jsvana) - Description description
-	b.Reply(m, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
+	b.Reply(r, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
 
 	return true
 }
 
-func (t *twitterProvider) getTweet(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *twitterProvider) getTweet(b *seabird.Bot, r *seabird.Request, url string) bool {
 	matches := twitterStatusRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
 		return false
@@ -91,7 +90,7 @@ func (t *twitterProvider) getTweet(b *seabird.Bot, m *irc.Message, url string) b
 	}
 
 	// Tweet text (@jsvana)
-	b.Reply(m, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
+	b.Reply(r, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
 
 	return true
 }

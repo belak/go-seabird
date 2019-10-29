@@ -12,7 +12,6 @@ import (
 	"googlemaps.github.io/maps"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -105,16 +104,16 @@ func (p *forecastPlugin) forecastQuery(loc *ForecastLocation) (*darksky.Forecast
 		darksky.English)
 }
 
-func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) {
-	l := m.Trailing()
+func (p *forecastPlugin) getLocation(r *seabird.Request) (*ForecastLocation, error) {
+	l := r.Message.Trailing()
 
-	target := &ForecastLocation{Nick: m.Prefix.Name}
+	target := &ForecastLocation{Nick: r.Message.Prefix.Name}
 
 	// If it's an empty string, check the cache
 	if l == "" {
 		found, err := p.db.Get(target)
 		if err != nil || !found {
-			return nil, fmt.Errorf("Could not find a location for %q", m.Prefix.Name)
+			return nil, fmt.Errorf("Could not find a location for %q", r.Message.Prefix.Name)
 		}
 
 		return target, nil
@@ -135,7 +134,7 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 	}
 
 	newLocation := &ForecastLocation{
-		Nick:    m.Prefix.Name,
+		Nick:    r.Message.Prefix.Name,
 		Address: res[0].FormattedAddress,
 		Lat:     res[0].Geometry.Location.Lat,
 		Lon:     res[0].Geometry.Location.Lng,
@@ -153,27 +152,27 @@ func (p *forecastPlugin) getLocation(m *irc.Message) (*ForecastLocation, error) 
 	return newLocation, err
 }
 
-func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
-	loc, err := p.getLocation(m)
+func (p *forecastPlugin) forecastCallback(b *seabird.Bot, r *seabird.Request) {
+	loc, err := p.getLocation(r)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
-	b.MentionReply(m, "3 day forecast for %s.", loc.Address)
+	b.MentionReply(r, "3 day forecast for %s.", loc.Address)
 
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(block.Time, 0).Weekday()
 
-		b.MentionReply(m,
+		b.MentionReply(r,
 			"%s: High %.2f%s, Low %.2f%s, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
@@ -185,23 +184,23 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, m *irc.Message) {
 	}
 }
 
-func (p *forecastPlugin) weatherCallback(b *seabird.Bot, m *irc.Message) {
-	loc, err := p.getLocation(m)
+func (p *forecastPlugin) weatherCallback(b *seabird.Bot, r *seabird.Request) {
+	loc, err := p.getLocation(r)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		b.MentionReply(m, "%s", err.Error())
+		b.MentionReply(r, "%s", err.Error())
 		return
 	}
 
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
 	today := fc.Daily.Data[0]
-	b.MentionReply(m,
+	b.MentionReply(r,
 		"%s. Currently %.1f%s. High %.2f%s, Low %.2f%s, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,

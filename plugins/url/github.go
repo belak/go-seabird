@@ -12,7 +12,6 @@ import (
 
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/go-seabird/plugins/utils"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -73,24 +72,24 @@ func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (t *githubProvider) githubCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func (t *githubProvider) githubCallback(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	//nolint:gocritic
 	if githubUserRegex.MatchString(url.Path) {
-		return t.getUser(b, m, url.Path)
+		return t.getUser(b, r, url.Path)
 	} else if githubRepoRegex.MatchString(url.Path) {
-		return t.getRepo(b, m, url.Path)
+		return t.getRepo(b, r, url.Path)
 	} else if githubIssueRegex.MatchString(url.Path) {
-		return t.getIssue(b, m, url.Path)
+		return t.getIssue(b, r, url.Path)
 	} else if githubPullRegex.MatchString(url.Path) {
-		return t.getPull(b, m, url.Path)
+		return t.getPull(b, r, url.Path)
 	}
 
 	return false
 }
 
-func (t *githubProvider) gistCallback(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func (t *githubProvider) gistCallback(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	if githubGistRegex.MatchString(url.Path) {
-		return t.getGist(b, m, url.Path)
+		return t.getGist(b, r, url.Path)
 	}
 
 	return false
@@ -108,7 +107,7 @@ var userTemplate = utils.TemplateMustCompile("githubUser", `
 {{- with .user.Bio }} - {{ . }}{{ end -}}
 `)
 
-func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getUser(b *seabird.Bot, r *seabird.Request, url string) bool {
 	logger := b.GetLogger()
 
 	matches := githubUserRegex.FindStringSubmatch(url)
@@ -123,7 +122,7 @@ func (t *githubProvider) getUser(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, userTemplate, githubPrefix,
+		b, r, logger, userTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 		},
@@ -142,7 +141,7 @@ var repoTemplate = utils.TemplateMustCompile("githubRepo", `
 {{- with .repo.StargazersCount }}, {{ prettifySuffix . }} {{ pluralizeWord . "star" }}{{ end }}
 `)
 
-func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getRepo(b *seabird.Bot, r *seabird.Request, url string) bool {
 	logger := b.GetLogger()
 
 	matches := githubRepoRegex.FindStringSubmatch(url)
@@ -168,7 +167,7 @@ func (t *githubProvider) getRepo(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, repoTemplate, githubPrefix,
+		b, r, logger, repoTemplate, githubPrefix,
 		map[string]interface{}{
 			"repo": repo,
 		},
@@ -183,7 +182,7 @@ Issue #{{ .issue.Number }} on {{ .user }}/{{ .repo }} [{{ .issue.State }}]
 {{- with .issue.CreatedAt }} [created {{ . | dateFormat "2 Jan 2006" }}]{{ end }}
 `)
 
-func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getIssue(b *seabird.Bot, r *seabird.Request, url string) bool {
 	logger := b.GetLogger()
 
 	matches := githubIssueRegex.FindStringSubmatch(url)
@@ -201,7 +200,7 @@ func (t *githubProvider) getIssue(b *seabird.Bot, m *irc.Message, url string) bo
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, issueTemplate, githubPrefix,
+		b, r, logger, issueTemplate, githubPrefix,
 		map[string]interface{}{
 			"issue": issue,
 			"user":  user,
@@ -221,7 +220,7 @@ Pull request #{{ .pull.Number }} on {{ .user }}/{{ .repo }} [{{ .pull.State }}]
 {{- with .pull.ChangedFiles }}, {{ pluralize . "changed file" }}{{ end }}
 `)
 
-func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getPull(b *seabird.Bot, r *seabird.Request, url string) bool {
 	logger := b.GetLogger()
 
 	matches := githubPullRegex.FindStringSubmatch(url)
@@ -239,7 +238,7 @@ func (t *githubProvider) getPull(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, prTemplate, githubPrefix,
+		b, r, logger, prTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 			"repo": repo,
@@ -256,7 +255,7 @@ Created {{ .gist.CreatedAt | dateFormat "2 Jan 2006" }}
 {{- with .gist.Comments }}, {{ pluralize . "comment" }}{{ end }}
 `)
 
-func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) bool {
+func (t *githubProvider) getGist(b *seabird.Bot, r *seabird.Request, url string) bool {
 	logger := b.GetLogger()
 
 	matches := githubGistRegex.FindStringSubmatch(url)
@@ -273,7 +272,7 @@ func (t *githubProvider) getGist(b *seabird.Bot, m *irc.Message, url string) boo
 	}
 
 	return utils.RenderRespond(
-		b, m, logger, gistTemplate, githubPrefix,
+		b, r, logger, gistTemplate, githubPrefix,
 		map[string]interface{}{
 			"gist": gist,
 		},

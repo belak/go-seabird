@@ -11,7 +11,6 @@ import (
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
-	irc "gopkg.in/irc.v3"
 )
 
 func init() {
@@ -25,23 +24,23 @@ func newXKCDProvider(urlPlugin *Plugin) {
 	urlPlugin.RegisterProvider("xkcd.com", handleXKCD)
 }
 
-func handleXKCD(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
+func handleXKCD(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	if url.Path != "" && !xkcdRegex.MatchString(url.Path) {
 		return false
 	}
 
-	r, err := http.Get(url.String())
+	resp, err := http.Get(url.String())
 	if err != nil {
 		return false
 	}
-	defer r.Body.Close()
+	defer resp.Body.Close()
 
-	if r.StatusCode != 200 {
+	if resp.StatusCode != 200 {
 		return false
 	}
 
 	// We search the first 1K and if a title isn't in there, we deal with it
-	z, err := html.Parse(io.LimitReader(r.Body, 1024*1024))
+	z, err := html.Parse(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
 		return false
 	}
@@ -57,7 +56,7 @@ func handleXKCD(b *seabird.Bot, m *irc.Message, url *url.URL) bool {
 		return false
 	}
 
-	b.Reply(m, "%s %s: %s", xkcdPrefix, scrape.Attr(n, "alt"), scrape.Attr(n, "title"))
+	b.Reply(r, "%s %s: %s", xkcdPrefix, scrape.Attr(n, "alt"), scrape.Attr(n, "title"))
 
 	return ok
 }
