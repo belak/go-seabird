@@ -1,7 +1,6 @@
 package seabird
 
 import (
-	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -258,10 +257,7 @@ func (b *Bot) FromChannel(r *Request) bool {
 }
 
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
-	r := &Request{
-		m,
-		context.TODO(),
-	}
+	r := NewRequest(m)
 
 	timer := r.Timer("total_request")
 	defer timer.Done()

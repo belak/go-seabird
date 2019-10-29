@@ -25,6 +25,13 @@ type Request struct {
 	Context context.Context
 }
 
+func NewRequest(m *irc.Message) *Request {
+	return &Request{
+		m,
+		context.TODO(),
+	}
+}
+
 func (r *Request) Copy() *Request {
 	return &Request{
 		r.Message.Copy(),
