@@ -2,7 +2,6 @@ package seabird
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	irc "gopkg.in/irc.v3"
@@ -34,6 +33,7 @@ func (r *Request) Copy() *Request {
 }
 
 func (r *Request) SetValue(key string, value interface{}) {
+	r.Context = context.WithValue(r.Context, key, value)
 }
 
 func (r *Request) Timer(event string) *Timing {
