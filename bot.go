@@ -260,7 +260,6 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	r := NewRequest(m)
 
 	timer := r.Timer("total_request")
-	defer timer.Done()
 
 	// Handle the event and pass it along
 	if r.Message.Command == "001" {
@@ -280,6 +279,10 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	}
 
 	b.mux.HandleEvent(b, r)
+	timer.Done()
+
+	// TODO(jsvana): log request timings here
+	r.LogTimings(b.log)
 }
 
 // ConnectAndRun is a convenience function which will pull the
