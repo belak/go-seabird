@@ -79,6 +79,7 @@ func (r *Request) Timer(event string) *Timing {
 
 func (r *Request) LogTimings(logger *logrus.Entry) {
 	timings := r.TimingMap()
+
 	sortedTimings := make([]*Timing, 0, len(timings))
 	for _, timing := range timings {
 		sortedTimings = append(sortedTimings, timing)
