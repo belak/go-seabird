@@ -281,7 +281,6 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, r)
 	timer.Done()
 
-	// TODO(jsvana): log request timings here
 	r.LogTimings(b.log)
 }
 
