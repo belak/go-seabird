@@ -90,6 +90,7 @@ func (r *Request) LogTimings(logger *logrus.Entry) {
 	})
 
 	logger.Debug("Request timing:")
+
 	for _, timing := range sortedTimings {
 		if !timing.Completed {
 			logger.Debugf("%s: [started:%d] [not completed]", timing.Title, timing.Start.UnixNano())
