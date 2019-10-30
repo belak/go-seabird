@@ -281,7 +281,9 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, r)
 	timer.Done()
 
-	r.LogTimings(b.log)
+	if b.log.Logger.IsLevelEnabled(logrus.DebugLevel) {
+		r.LogTimings(b.log)
+	}
 }
 
 // ConnectAndRun is a convenience function which will pull the
