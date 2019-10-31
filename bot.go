@@ -12,6 +12,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/codegangsta/inject"
+	"github.com/influxdata/influxdb1-client/v2"
 	"github.com/sirupsen/logrus"
 
 	plugin "github.com/belak/go-plugin"
@@ -87,8 +88,9 @@ type Bot struct {
 	log      *logrus.Entry
 	injector inject.Injector
 
+	influxDbClient  client.Client
 	lastPointSubmit time.Time
-	points          *list.List
+	points          chan *client.Point
 }
 
 // NewBot will return a new Bot given an io.Reader pointing to a
@@ -136,7 +138,15 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	err = b.Config("influxdb", &b.influxDbConfig)
 	if err == nil {
 		b.lastPointSubmit = time.Now()
-		b.points = list.New()
+		b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
+		b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
+			Addr:     b.influxDbConfig.Url,
+			Username: b.influxDbConfig.Username,
+			Password: b.influxDbConfig.Password,
+		})
+		if err != nil {
+			return nil, err
+		}
 	} else {
 		b.influxDbConfig.Enabled = false
 		b.log.Debug("InfluxDB logging is disabled")
@@ -307,9 +317,79 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, r)
 	timer.Done()
 
-	if b.influxDbConfig.Enabled {
-		r.Log(b)
+	r.Log(b)
+}
+
+func (b *Bot) loggingThread() {
+	points := list.New()
+
+	// Ensure that we're pushing partial batches of data by not blocking
+	for {
+		// This allows us to avoid busywaiting by setting a timer instead of sleeping
+		// in a loop.
+		// NOTE: this currently forces us to wait for another message to flush the queue.
+		// The reason is that you read one point in an iteration, read a bunch more,
+		// and then hit trySubmit, which can be hit before SubmitIntervalMs is hit. When
+		// that happens, you re-enter this loop, have a full queue, but still need to
+		// wait for a new message to come in to submit the stats.
+		point, ok := <-b.points
+		if !ok {
+			b.log.Error("InfluxDB datapoint channel closed unexpectedly")
+			break
+		}
+
+		if points.Len() < b.influxDbConfig.BufferSize {
+			points.PushBack(point)
+
+			timer := time.After(1 * time.Second)
+
+			done := false
+			for !done {
+				select {
+				case point = <-b.points:
+					points.PushBack(point)
+				case <-timer:
+					done = true
+				}
+			}
+		} else {
+			b.log.Warning("InfluxDB datapoint queue is full. Dropping datapoint and attempting to flush the queue by submitting.")
+		}
+
+		b.trySubmit(points)
 	}
+}
+
+func (b *Bot) trySubmit(points *list.List) {
+	now := time.Now()
+
+	// Don't submit before the configured submit interval
+	if now.Sub(b.lastPointSubmit).Milliseconds() < b.influxDbConfig.SubmitIntervalMs {
+		return
+	}
+
+	if points.Len() == 0 {
+		return
+	}
+
+	batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
+		Database:  b.influxDbConfig.Database,
+		Precision: b.influxDbConfig.Precision,
+	})
+
+	submittedPoints := points.Len()
+	for points.Len() > 0 {
+		batch.AddPoint(points.Remove(points.Front()).(*client.Point))
+	}
+
+	err := b.influxDbClient.Write(batch)
+	if err != nil {
+		b.log.Warning("Error submitting data to InfluxDB: ", err.Error())
+	}
+
+	b.log.Debugf("Submitted a batch of %d point(s) to InfluxDB", submittedPoints)
+
+	b.lastPointSubmit = now
 }
 
 // ConnectAndRun is a convenience function which will pull the
@@ -390,6 +470,10 @@ func (b *Bot) Run(c io.ReadWriter) error {
 		}
 
 		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
+	}
+
+	if b.influxDbConfig.Enabled {
+		go b.loggingThread()
 	}
 
 	// Start the main loop

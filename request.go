@@ -102,46 +102,16 @@ func (r *Request) Log(bot *Bot) {
 
 	point, err := client.NewPoint("request_timing", map[string]string{}, fields, now)
 	if err != nil {
-		bot.log.Warning("Error: ", err.Error())
+		bot.log.Warning("Error creating a new InfluxDB datapoint: ", err.Error())
 		return
 	}
 
-	if bot.points.Len() > bot.influxDbConfig.BufferSize {
-		bot.log.Warning("Too many datapoints to buffer. Refusing to buffer more until datapoints are submitted.")
-	}
-
-	bot.points.PushBack(point)
-
-	// TODO(jsvana): break this out into a separate thread otherwise datapoints won't get
-	// submitted regularly
-	if now.Sub(bot.lastPointSubmit).Milliseconds() < bot.influxDbConfig.SubmitIntervalMs {
+	// Ensure that we don't block the bot by using a blocking insert. Instead, drop
+	// requests as necessary.
+	select {
+	case bot.points <- point:
 		return
+	default:
+		bot.log.Warning("InfluxDB datapoint queue is full, dropping datapoint")
 	}
-
-	batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  bot.influxDbConfig.Database,
-		Precision: bot.influxDbConfig.Precision,
-	})
-
-	for bot.points.Len() > 0 {
-		batch.AddPoint(bot.points.Remove(bot.points.Front()).(*client.Point))
-	}
-
-	c, err := client.NewHTTPClient(client.HTTPConfig{
-		Addr:     bot.influxDbConfig.Url,
-		Username: bot.influxDbConfig.Username,
-		Password: bot.influxDbConfig.Password,
-	})
-	if err != nil {
-		bot.log.Warning("Error creating InfluxDB Client: ", err.Error())
-		return
-	}
-	defer c.Close()
-
-	err = c.Write(batch)
-	if err != nil {
-		bot.log.Warning("Error: ", err.Error())
-	}
-
-	bot.lastPointSubmit = now
 }
