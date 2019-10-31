@@ -1,7 +1,6 @@
 package seabird
 
 import (
-	"container/list"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -48,14 +47,14 @@ type coreConfig struct {
 }
 
 type InfluxDbConfig struct {
-	Enabled          bool
-	Url              string
-	Username         string
-	Password         string
-	Database         string
-	Precision        string
-	SubmitIntervalMs int64
-	BufferSize       int
+	Enabled        bool
+	Url            string
+	Username       string
+	Password       string
+	Database       string
+	Precision      string
+	SubmitInterval duration
+	BufferSize     int
 }
 
 type duration struct {
@@ -88,9 +87,8 @@ type Bot struct {
 	log      *logrus.Entry
 	injector inject.Injector
 
-	influxDbClient  client.Client
-	lastPointSubmit time.Time
-	points          chan *client.Point
+	influxDbClient client.Client
+	points         chan *client.Point
 }
 
 // NewBot will return a new Bot given an io.Reader pointing to a
@@ -137,7 +135,6 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	// Set up InfluxDB logging
 	err = b.Config("influxdb", &b.influxDbConfig)
 	if err == nil {
-		b.lastPointSubmit = time.Now()
 		b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
 		b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
 			Addr:     b.influxDbConfig.Url,
@@ -321,65 +318,48 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 }
 
 func (b *Bot) loggingThread() {
-	points := list.New()
+	batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
+		Database:  b.influxDbConfig.Database,
+		Precision: b.influxDbConfig.Precision,
+	})
 
 	// Ensure that we're pushing partial batches of data by not blocking
 	for {
 		// This allows us to avoid busywaiting by setting a timer instead of sleeping
 		// in a loop.
-		// NOTE: this currently forces us to wait for another message to flush the queue.
-		// The reason is that you read one point in an iteration, read a bunch more,
-		// and then hit trySubmit, which can be hit before SubmitIntervalMs is hit. When
-		// that happens, you re-enter this loop, have a full queue, but still need to
-		// wait for a new message to come in to submit the stats.
 		point, ok := <-b.points
 		if !ok {
 			b.log.Error("InfluxDB datapoint channel closed unexpectedly")
 			break
 		}
 
-		if points.Len() < b.influxDbConfig.BufferSize {
-			points.PushBack(point)
+		batch.AddPoint(point)
 
-			timer := time.After(1 * time.Second)
+		timer := time.After(b.influxDbConfig.SubmitInterval.Duration)
 
-			done := false
-			for !done {
-				select {
-				case point = <-b.points:
-					points.PushBack(point)
-				case <-timer:
+		done := false
+		for !done {
+			select {
+			case point = <-b.points:
+				if len(batch.Points()) < b.influxDbConfig.BufferSize {
+					batch.AddPoint(point)
+				} else {
+					b.log.Warning("InfluxDB datapoint queue is full. Dropping datapoint and attempting to flush the queue by submitting.")
 					done = true
 				}
+			case <-timer:
+				done = true
 			}
-		} else {
-			b.log.Warning("InfluxDB datapoint queue is full. Dropping datapoint and attempting to flush the queue by submitting.")
 		}
 
-		b.trySubmit(points)
+		b.submit(batch)
 	}
 }
 
-func (b *Bot) trySubmit(points *list.List) {
-	now := time.Now()
-
-	// Don't submit before the configured submit interval
-	if now.Sub(b.lastPointSubmit).Milliseconds() < b.influxDbConfig.SubmitIntervalMs {
+func (b *Bot) submit(batch client.BatchPoints) {
+	submittedPoints := len(batch.Points())
+	if submittedPoints == 0 {
 		return
-	}
-
-	if points.Len() == 0 {
-		return
-	}
-
-	batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  b.influxDbConfig.Database,
-		Precision: b.influxDbConfig.Precision,
-	})
-
-	submittedPoints := points.Len()
-	for points.Len() > 0 {
-		batch.AddPoint(points.Remove(points.Front()).(*client.Point))
 	}
 
 	err := b.influxDbClient.Write(batch)
@@ -388,8 +368,6 @@ func (b *Bot) trySubmit(points *list.List) {
 	}
 
 	b.log.Debugf("Submitted a batch of %d point(s) to InfluxDB", submittedPoints)
-
-	b.lastPointSubmit = now
 }
 
 // ConnectAndRun is a convenience function which will pull the

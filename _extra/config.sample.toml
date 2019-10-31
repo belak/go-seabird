@@ -32,7 +32,8 @@ database = "my-db"
 precision = "s"
 username = "username"
 password = "password"
-submitinterval = 10
+submitinterval = "10s"
+buffersize = 50
 
 [db]
 driver = "sqlite3"
