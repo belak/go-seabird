@@ -25,6 +25,15 @@ plugins = [
   "chance"
 ]
 
+[influxdb]
+enabled = false
+url = "https://my-influx-url.com"
+database = "my-db"
+precision = "s"
+username = "username"
+password = "password"
+submitinterval = 10
+
 [db]
 driver = "sqlite3"
 datasource = "dev.db"

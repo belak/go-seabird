@@ -2,10 +2,9 @@ package seabird
 
 import (
 	"context"
-	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
+	"github.com/influxdata/influxdb1-client/v2"
 
 	irc "gopkg.in/irc.v3"
 )
@@ -61,9 +60,6 @@ func (r *Request) SetTimingMap(tc map[string]*Timing) {
 	r.Context = context.WithValue(r.Context, timingKey, tc)
 }
 
-func (r *Request) AddTiming(name string, t *Timing) {
-}
-
 func (r *Request) Timer(event string) *Timing {
 	timer := &Timing{
 		Title:     event,
@@ -77,26 +73,75 @@ func (r *Request) Timer(event string) *Timing {
 	return timer
 }
 
-func (r *Request) LogTimings(logger *logrus.Entry) {
+func (r *Request) Log(bot *Bot) {
 	timings := r.TimingMap()
 
-	sortedTimings := make([]*Timing, 0, len(timings))
+	fields := make(map[string]interface{})
+
+	completeEvents := 0
+	incompleteEvents := 0
+
 	for _, timing := range timings {
-		sortedTimings = append(sortedTimings, timing)
-	}
-
-	sort.Slice(sortedTimings, func(i, j int) bool {
-		return sortedTimings[i].Start.Before(sortedTimings[j].Start)
-	})
-
-	logger.Debug("Request timing:")
-
-	for _, timing := range sortedTimings {
+		keyBase := timing.Title
+		fields[keyBase+"-start"] = timing.Start.UnixNano()
 		if !timing.Completed {
-			logger.Debugf("%s: [started:%d] [not completed]", timing.Title, timing.Start.UnixNano())
+			incompleteEvents += 1
 			continue
 		}
 
-		logger.Debugf("%s: [start:%d] [duration:%s]", timing.Title, timing.Start.UnixNano(), timing.Elapsed().String())
+		fields[keyBase+"-end"] = timing.End.UnixNano()
+		fields[keyBase+"-elapsed"] = timing.Elapsed().Nanoseconds()
+
+		completeEvents += 1
 	}
+
+	fields["complete-events"] = completeEvents
+	fields["incomplete-events"] = incompleteEvents
+
+	now := time.Now()
+
+	point, err := client.NewPoint("request_timing", map[string]string{}, fields, now)
+	if err != nil {
+		bot.log.Warning("Error: ", err.Error())
+		return
+	}
+
+	if bot.points.Len() > bot.influxDbConfig.BufferSize {
+		bot.log.Warning("Too many datapoints to buffer. Refusing to buffer more until datapoints are submitted.")
+	}
+
+	bot.points.PushBack(point)
+
+	// TODO(jsvana): break this out into a separate thread otherwise datapoints won't get
+	// submitted regularly
+	if now.Sub(bot.lastPointSubmit).Milliseconds() < bot.influxDbConfig.SubmitIntervalMs {
+		return
+	}
+
+	batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
+		Database:  bot.influxDbConfig.Database,
+		Precision: bot.influxDbConfig.Precision,
+	})
+
+	for bot.points.Len() > 0 {
+		batch.AddPoint(bot.points.Remove(bot.points.Front()).(*client.Point))
+	}
+
+	c, err := client.NewHTTPClient(client.HTTPConfig{
+		Addr:     bot.influxDbConfig.Url,
+		Username: bot.influxDbConfig.Username,
+		Password: bot.influxDbConfig.Password,
+	})
+	if err != nil {
+		bot.log.Warning("Error creating InfluxDB Client: ", err.Error())
+		return
+	}
+	defer c.Close()
+
+	err = c.Write(batch)
+	if err != nil {
+		bot.log.Warning("Error: ", err.Error())
+	}
+
+	bot.lastPointSubmit = now
 }

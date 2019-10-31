@@ -23,6 +23,7 @@ require (
 	github.com/goinvest/iexcloud v0.0.0-20190827121925-77c60293a922
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.1.1
+	github.com/influxdata/influxdb1-client v0.0.0-20190809212627-fc22c7df067e
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/mlbright/darksky v0.0.0-20190903032611-d133a40b35ab

@@ -1,6 +1,7 @@
 package seabird
 
 import (
+	"container/list"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -45,6 +46,17 @@ type coreConfig struct {
 	SendBurst int
 }
 
+type InfluxDbConfig struct {
+	Enabled          bool
+	Url              string
+	Username         string
+	Password         string
+	Database         string
+	Precision        string
+	SubmitIntervalMs int64
+	BufferSize       int
+}
+
 type duration struct {
 	time.Duration
 }
@@ -64,15 +76,19 @@ type Bot struct {
 	mux *BasicMux
 
 	// Config stuff
-	confValues map[string]toml.Primitive
-	md         toml.MetaData
-	config     coreConfig
+	confValues     map[string]toml.Primitive
+	md             toml.MetaData
+	config         coreConfig
+	influxDbConfig InfluxDbConfig
 
 	// Internal things
 	client   *irc.Client
 	registry *plugin.Registry
 	log      *logrus.Entry
 	injector inject.Injector
+
+	lastPointSubmit time.Time
+	points          *list.List
 }
 
 // NewBot will return a new Bot given an io.Reader pointing to a
@@ -114,6 +130,16 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	} else if b.config.Debug {
 		b.log.Warn("The Debug config option has been replaced with LogLevel")
 		b.log.Logger.Level = logrus.DebugLevel
+	}
+
+	// Set up InfluxDB logging
+	err = b.Config("influxdb", &b.influxDbConfig)
+	if err == nil {
+		b.lastPointSubmit = time.Now()
+		b.points = list.New()
+	} else {
+		b.influxDbConfig.Enabled = false
+		b.log.Debug("InfluxDB logging is disabled")
 	}
 
 	commandMux := NewCommandMux(b.config.Prefix)
@@ -281,8 +307,8 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, r)
 	timer.Done()
 
-	if b.log.Logger.IsLevelEnabled(logrus.DebugLevel) {
-		r.LogTimings(b.log)
+	if b.influxDbConfig.Enabled {
+		r.Log(b)
 	}
 }
 
