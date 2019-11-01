@@ -11,10 +11,10 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/codegangsta/inject"
-	"github.com/influxdata/influxdb1-client/v2"
 	"github.com/sirupsen/logrus"
 
 	plugin "github.com/belak/go-plugin"
+	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -48,7 +48,7 @@ type coreConfig struct {
 
 type InfluxDbConfig struct {
 	Enabled        bool
-	Url            string
+	URL            string
 	Username       string
 	Password       string
 	Database       string
@@ -121,9 +121,9 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 
 	b.log.Logger.Level = logrus.InfoLevel
 	if b.config.LogLevel != "" {
-		level, err := logrus.ParseLevel(b.config.LogLevel)
-		if err != nil {
-			return nil, err
+		level, innerErr := logrus.ParseLevel(b.config.LogLevel)
+		if innerErr != nil {
+			return nil, innerErr
 		}
 
 		b.log.Logger.Level = level
@@ -132,21 +132,9 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		b.log.Logger.Level = logrus.DebugLevel
 	}
 
-	// Set up InfluxDB logging
-	err = b.Config("influxdb", &b.influxDbConfig)
-	if err == nil {
-		b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
-		b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
-			Addr:     b.influxDbConfig.Url,
-			Username: b.influxDbConfig.Username,
-			Password: b.influxDbConfig.Password,
-		})
-		if err != nil {
-			return nil, err
-		}
-	} else {
-		b.influxDbConfig.Enabled = false
-		b.log.Debug("InfluxDB logging is disabled")
+	err = b.setupInfluxDb()
+	if err != nil {
+		return nil, err
 	}
 
 	commandMux := NewCommandMux(b.config.Prefix)
@@ -161,6 +149,28 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	})
 
 	return b, nil
+}
+
+func (b *Bot) setupInfluxDb() error {
+	// Set up InfluxDB logging
+	err := b.Config("influxdb", &b.influxDbConfig)
+	if err == nil {
+		b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
+		b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
+			Addr:     b.influxDbConfig.URL,
+			Username: b.influxDbConfig.Username,
+			Password: b.influxDbConfig.Password,
+		})
+
+		if err != nil {
+			return err
+		}
+	} else {
+		b.influxDbConfig.Enabled = false
+		b.log.Debug("InfluxDB logging is disabled")
+	}
+
+	return nil
 }
 
 // GetLogger grabs the underlying logger for this bot.

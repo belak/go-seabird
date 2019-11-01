@@ -4,8 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/influxdata/influxdb1-client/v2"
-
+	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -84,15 +83,16 @@ func (r *Request) Log(bot *Bot) {
 	for _, timing := range timings {
 		keyBase := timing.Title
 		fields[keyBase+"-start"] = timing.Start.UnixNano()
+
 		if !timing.Completed {
-			incompleteEvents += 1
+			incompleteEvents++
 			continue
 		}
 
 		fields[keyBase+"-end"] = timing.End.UnixNano()
 		fields[keyBase+"-elapsed"] = timing.Elapsed().Nanoseconds()
 
-		completeEvents += 1
+		completeEvents++
 	}
 
 	fields["complete-events"] = completeEvents
@@ -100,7 +100,7 @@ func (r *Request) Log(bot *Bot) {
 
 	now := time.Now()
 
-	point, err := client.NewPoint("request_timing", map[string]string{}, fields, now)
+	point, err := client.NewPoint("request_timing", make(map[string]string), fields, now)
 	if err != nil {
 		bot.log.Warning("Error creating a new InfluxDB datapoint: ", err.Error())
 		return
