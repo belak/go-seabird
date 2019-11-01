@@ -1,8 +1,6 @@
 package extra
 
 import (
-	"encoding/json"
-	"fmt"
 	"time"
 
 	"github.com/go-xorm/xorm"
@@ -24,18 +22,6 @@ type watchdogCheck struct {
 	Nonce  string
 }
 
-type CheckRequest struct {
-	Nonce string `json:"nonce"`
-	UseDb bool   `json:"use_db,omitempty"`
-}
-
-type CheckResponse struct {
-	Time    int64  `json:"time"`
-	Success bool   `json:"success"`
-	Message string `json:"message"`
-	Nonce   string `json:"nonce,omitempty"`
-}
-
 func newWatchdogPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
 	p := &watchdogPlugin{db: db}
 
@@ -52,26 +38,10 @@ func newWatchdogPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandM
 	return nil
 }
 
-func (p *watchdogPlugin) marshalOrRespondFailedMarshal(b *seabird.Bot, r *seabird.Request, response *CheckResponse) {
-	response.Time = time.Now().Unix()
-	respStr, err := json.Marshal(response)
-
-	if err != nil {
-		b.MentionReply(r, `{"time":%d,"status":"failed to marshal response"}`, response.Time)
-		return
-	}
-
-	b.MentionReply(r, "%s", respStr)
-}
-
-func (p *watchdogPlugin) checkDb(b *seabird.Bot, r *seabird.Request, request *CheckRequest) bool {
-	if !request.UseDb {
-		return true
-	}
-
+func (p *watchdogPlugin) checkDb(b *seabird.Bot, r *seabird.Request, nonce string) bool {
 	check := &watchdogCheck{
 		Entity: r.Message.Prefix.String(),
-		Nonce:  request.Nonce,
+		Nonce:  nonce,
 	}
 
 	_, err := p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
@@ -79,14 +49,7 @@ func (p *watchdogPlugin) checkDb(b *seabird.Bot, r *seabird.Request, request *Ch
 	})
 
 	if err != nil {
-		resp := &CheckResponse{
-			Success: false,
-			Message: fmt.Sprintf("Error writing check to DB: \"%s\"", err),
-			Nonce:   request.Nonce,
-		}
-
-		p.marshalOrRespondFailedMarshal(b, r, resp)
-
+		b.MentionReply(r, "Error writing check to DB: \"%s\"", err)
 		return false
 	}
 
@@ -98,50 +61,16 @@ func (p *watchdogPlugin) check(b *seabird.Bot, r *seabird.Request) {
 	defer timer.Done()
 
 	if len(r.Message.Trailing()) == 0 {
-		resp := &CheckResponse{
-			Success: false,
-			Message: "missing json argument",
-		}
-		p.marshalOrRespondFailedMarshal(b, r, resp)
-
+		b.MentionReply(r, "Error: missing nonce argument")
 		return
 	}
 
-	request := CheckRequest{
-		UseDb: true,
-	}
+	nonce := r.Message.Trailing()
 
-	err := json.Unmarshal([]byte(r.Message.Trailing()), &request)
-	if err != nil {
-		resp := &CheckResponse{
-			Success: false,
-			Message: fmt.Sprintf("unable to parse JSON: \"%s\"", err),
-		}
-		p.marshalOrRespondFailedMarshal(b, r, resp)
-
-		return
-	}
-
-	if len(request.Nonce) == 0 {
-		resp := &CheckResponse{
-			Success: false,
-			Message: fmt.Sprintf("missing nonce"),
-		}
-		p.marshalOrRespondFailedMarshal(b, r, resp)
-
-		return
-	}
-
-	ok := p.checkDb(b, r, &request)
+	ok := p.checkDb(b, r, nonce)
 	if !ok {
 		return
 	}
 
-	resp := &CheckResponse{
-		Success: true,
-		Message: "ok",
-		Nonce:   request.Nonce,
-	}
-
-	p.marshalOrRespondFailedMarshal(b, r, resp)
+	b.MentionReply(r, "%d %s", time.Now().Unix(), nonce)
 }
