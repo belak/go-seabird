@@ -328,13 +328,13 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 }
 
 func (b *Bot) loggingThread() {
-	batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
-		Database:  b.influxDbConfig.Database,
-		Precision: b.influxDbConfig.Precision,
-	})
-
 	// Ensure that we're pushing partial batches of data by not blocking
 	for {
+		batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
+			Database:  b.influxDbConfig.Database,
+			Precision: b.influxDbConfig.Precision,
+		})
+
 		// This allows us to avoid busywaiting by setting a timer instead of sleeping
 		// in a loop.
 		point, ok := <-b.points
