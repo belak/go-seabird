@@ -45,37 +45,55 @@ type redditComment struct {
 	} `json:"data"`
 }
 
-var redditUserRegex = regexp.MustCompile(`^/(u|user)/([^/]+)$`)
-var redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
-var redditSubRegex = regexp.MustCompile(`^/r/([^/]+)/?.*$`)
-var redditPrefix = "[Reddit]"
+var (
+	redditPrefix = "[Reddit]"
 
-func newRedditProvider(urlPlugin *Plugin) {
+	// /r/subreddit
+	redditPrivmsgSubRegex = regexp.MustCompile(`(?:\s|^)/r/([^\s/]+)`)
+	// /u/username
+	redditPrivmsgUserRegex = regexp.MustCompile(`(?:\s|^)/(?:u|user)/([^\s/]+)`)
+
+	// URL matches
+	redditUserRegex    = regexp.MustCompile(`^/(?:u|user)/([^\s/]+)$`)
+	redditCommentRegex = regexp.MustCompile(`^/r/[^/]+/comments/([^/]+)/.*$`)
+	redditSubRegex     = regexp.MustCompile(`^/r/([^\s/]+)/?.*$`)
+)
+
+func newRedditProvider(m *seabird.BasicMux, urlPlugin *Plugin) {
+	m.Event("PRIVMSG", redditPrivmsgCallback)
 	urlPlugin.RegisterProvider("reddit.com", redditCallback)
+}
+
+func redditPrivmsgCallback(b *seabird.Bot, r *seabird.Request) {
+	content := r.Message.Trailing()
+
+	for _, matches := range redditPrivmsgSubRegex.FindAllStringSubmatch(content, -1) {
+		redditGetSub(b, r, matches[1])
+	}
+
+	for _, matches := range redditPrivmsgUserRegex.FindAllStringSubmatch(content, -1) {
+		redditGetUser(b, r, matches[1])
+	}
 }
 
 func redditCallback(b *seabird.Bot, r *seabird.Request, u *url.URL) bool {
 	text := u.Path
+
 	//nolint:gocritic
-	if redditUserRegex.MatchString(text) {
-		return redditGetUser(b, r, text)
-	} else if redditCommentRegex.MatchString(text) {
-		return redditGetComment(b, r, text)
-	} else if redditSubRegex.MatchString(text) {
-		return redditGetSub(b, r, text)
+	if matches := redditUserRegex.FindStringSubmatch(text); len(matches) == 2 {
+		return redditGetUser(b, r, matches[1])
+	} else if matches := redditCommentRegex.FindStringSubmatch(text); len(matches) == 2 {
+		return redditGetComment(b, r, matches[1])
+	} else if matches := redditSubRegex.FindStringSubmatch(text); len(matches) == 2 {
+		return redditGetSub(b, r, matches[1])
 	}
 
 	return false
 }
 
-func redditGetUser(b *seabird.Bot, r *seabird.Request, url string) bool {
-	matches := redditUserRegex.FindStringSubmatch(url)
-	if len(matches) != 3 {
-		return false
-	}
-
+func redditGetUser(b *seabird.Bot, r *seabird.Request, text string) bool {
 	ru := &redditUser{}
-	if err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/user/%s/about.json", matches[2]), ru); err != nil {
+	if err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/user/%s/about.json", text), ru); err != nil {
 		return false
 	}
 
@@ -90,14 +108,9 @@ func redditGetUser(b *seabird.Bot, r *seabird.Request, url string) bool {
 	return true
 }
 
-func redditGetComment(b *seabird.Bot, r *seabird.Request, url string) bool {
-	matches := redditCommentRegex.FindStringSubmatch(url)
-	if len(matches) != 2 {
-		return false
-	}
-
+func redditGetComment(b *seabird.Bot, r *seabird.Request, text string) bool {
 	rc := []redditComment{}
-	if err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/comments/%s.json", matches[1]), rc); err != nil || len(rc) < 1 {
+	if err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/comments/%s.json", text), rc); err != nil || len(rc) < 1 {
 		return false
 	}
 
@@ -109,14 +122,9 @@ func redditGetComment(b *seabird.Bot, r *seabird.Request, url string) bool {
 	return true
 }
 
-func redditGetSub(b *seabird.Bot, r *seabird.Request, url string) bool {
-	matches := redditSubRegex.FindStringSubmatch(url)
-	if len(matches) != 2 {
-		return false
-	}
-
+func redditGetSub(b *seabird.Bot, r *seabird.Request, text string) bool {
 	rs := &redditSub{}
-	if err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/r/%s/about.json", matches[1]), rs); err != nil {
+	if err := utils.GetJSON(fmt.Sprintf("https://www.reddit.com/r/%s/about.json", text), rs); err != nil {
 		return false
 	}
 
