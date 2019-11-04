@@ -154,23 +154,21 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 func (b *Bot) setupInfluxDb() error {
 	// Set up InfluxDB logging
 	err := b.Config("influxdb", &b.influxDbConfig)
-	if err == nil {
-		b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
-		b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
-			Addr:     b.influxDbConfig.URL,
-			Username: b.influxDbConfig.Username,
-			Password: b.influxDbConfig.Password,
-		})
-
-		if err != nil {
-			return err
-		}
-	} else {
+	if err != nil {
 		b.influxDbConfig.Enabled = false
 		b.log.Debug("InfluxDB logging is disabled")
+
+		return nil
 	}
 
-	return nil
+	b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
+	b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
+		Addr:     b.influxDbConfig.URL,
+		Username: b.influxDbConfig.Username,
+		Password: b.influxDbConfig.Password,
+	})
+
+	return err
 }
 
 // GetLogger grabs the underlying logger for this bot.
