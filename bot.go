@@ -154,12 +154,14 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 func (b *Bot) setupInfluxDb() error {
 	// Set up InfluxDB logging
 	err := b.Config("influxdb", &b.influxDbConfig)
-	if err != nil {
+	if err != nil || !b.influxDbConfig.Enabled {
 		b.influxDbConfig.Enabled = false
 		b.log.Debug("InfluxDB logging is disabled")
 
 		return nil
 	}
+
+	b.log.Debug("InfluxDB logging is enabled")
 
 	b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
 	b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
@@ -326,6 +328,8 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 }
 
 func (b *Bot) loggingThread() {
+	b.log.Debug("Starting logging thread")
+
 	// Ensure that we're pushing partial batches of data by not blocking
 	for {
 		batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
@@ -360,6 +364,7 @@ func (b *Bot) loggingThread() {
 			}
 		}
 
+		b.log.Debugf("Submitting a batch of %d point(s) to InfluxDB", len(batch.Points()))
 		b.submit(batch)
 	}
 }
