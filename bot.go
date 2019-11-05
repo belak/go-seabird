@@ -14,6 +14,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	plugin "github.com/belak/go-plugin"
+	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -45,6 +46,17 @@ type coreConfig struct {
 	SendBurst int
 }
 
+type InfluxDbConfig struct {
+	Enabled        bool
+	URL            string
+	Username       string
+	Password       string
+	Database       string
+	Precision      string
+	SubmitInterval duration
+	BufferSize     int
+}
+
 type duration struct {
 	time.Duration
 }
@@ -64,15 +76,19 @@ type Bot struct {
 	mux *BasicMux
 
 	// Config stuff
-	confValues map[string]toml.Primitive
-	md         toml.MetaData
-	config     coreConfig
+	confValues     map[string]toml.Primitive
+	md             toml.MetaData
+	config         coreConfig
+	influxDbConfig InfluxDbConfig
 
 	// Internal things
 	client   *irc.Client
 	registry *plugin.Registry
 	log      *logrus.Entry
 	injector inject.Injector
+
+	influxDbClient client.Client
+	points         chan *client.Point
 }
 
 // NewBot will return a new Bot given an io.Reader pointing to a
@@ -105,15 +121,20 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 
 	b.log.Logger.Level = logrus.InfoLevel
 	if b.config.LogLevel != "" {
-		level, err := logrus.ParseLevel(b.config.LogLevel)
-		if err != nil {
-			return nil, err
+		level, innerErr := logrus.ParseLevel(b.config.LogLevel)
+		if innerErr != nil {
+			return nil, innerErr
 		}
 
 		b.log.Logger.Level = level
 	} else if b.config.Debug {
 		b.log.Warn("The Debug config option has been replaced with LogLevel")
 		b.log.Logger.Level = logrus.DebugLevel
+	}
+
+	err = b.setupInfluxDb()
+	if err != nil {
+		return nil, err
 	}
 
 	commandMux := NewCommandMux(b.config.Prefix)
@@ -128,6 +149,26 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	})
 
 	return b, nil
+}
+
+func (b *Bot) setupInfluxDb() error {
+	// Set up InfluxDB logging
+	err := b.Config("influxdb", &b.influxDbConfig)
+	if err != nil {
+		b.influxDbConfig.Enabled = false
+		b.log.Debug("InfluxDB logging is disabled")
+
+		return nil
+	}
+
+	b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
+	b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
+		Addr:     b.influxDbConfig.URL,
+		Username: b.influxDbConfig.Username,
+		Password: b.influxDbConfig.Password,
+	})
+
+	return err
 }
 
 // GetLogger grabs the underlying logger for this bot.
@@ -281,9 +322,60 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	b.mux.HandleEvent(b, r)
 	timer.Done()
 
-	if b.log.Logger.IsLevelEnabled(logrus.DebugLevel) {
-		r.LogTimings(b.log)
+	r.Log(b)
+}
+
+func (b *Bot) loggingThread() {
+	// Ensure that we're pushing partial batches of data by not blocking
+	for {
+		batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
+			Database:  b.influxDbConfig.Database,
+			Precision: b.influxDbConfig.Precision,
+		})
+
+		// This allows us to avoid busywaiting by setting a timer instead of sleeping
+		// in a loop.
+		point, ok := <-b.points
+		if !ok {
+			b.log.Error("InfluxDB datapoint channel closed unexpectedly")
+			break
+		}
+
+		batch.AddPoint(point)
+
+		timer := time.After(b.influxDbConfig.SubmitInterval.Duration)
+
+		done := false
+		for !done {
+			select {
+			case point = <-b.points:
+				if len(batch.Points()) < b.influxDbConfig.BufferSize {
+					batch.AddPoint(point)
+				} else {
+					b.log.Warning("InfluxDB datapoint queue is full. Dropping datapoint and attempting to flush the queue by submitting.")
+					done = true
+				}
+			case <-timer:
+				done = true
+			}
+		}
+
+		b.submit(batch)
 	}
+}
+
+func (b *Bot) submit(batch client.BatchPoints) {
+	submittedPoints := len(batch.Points())
+	if submittedPoints == 0 {
+		return
+	}
+
+	err := b.influxDbClient.Write(batch)
+	if err != nil {
+		b.log.Warning("Error submitting data to InfluxDB: ", err.Error())
+	}
+
+	b.log.Debugf("Submitted a batch of %d point(s) to InfluxDB", submittedPoints)
 }
 
 // ConnectAndRun is a convenience function which will pull the
@@ -364,6 +456,10 @@ func (b *Bot) Run(c io.ReadWriter) error {
 		}
 
 		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
+	}
+
+	if b.influxDbConfig.Enabled {
+		go b.loggingThread()
 	}
 
 	// Start the main loop

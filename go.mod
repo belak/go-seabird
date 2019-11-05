@@ -23,6 +23,7 @@ require (
 	github.com/goinvest/iexcloud v0.0.0-20190827121925-77c60293a922
 	github.com/google/go-github v17.0.0+incompatible
 	github.com/google/uuid v1.1.1
+	github.com/influxdata/influxdb1-client v0.0.0-20190809212627-fc22c7df067e
 	github.com/lib/pq v1.2.0
 	github.com/mattn/go-sqlite3 v1.11.0
 	github.com/mlbright/darksky v0.0.0-20190903032611-d133a40b35ab
@@ -36,6 +37,7 @@ require (
 	github.com/zmb3/spotify v0.0.0-20190725171427-5159bf56b13d
 	golang.org/x/net v0.0.0-20190918130420-a8b05e9114ab
 	golang.org/x/oauth2 v0.0.0-20190604053449-0f29369cfe45
+	golang.org/x/tools v0.0.0-20191031220737-6d8f1af9ccc0 // indirect
 	googlemaps.github.io/maps v0.0.0-20190909213747-3c037358a0f0
 	gopkg.in/irc.v3 v3.1.0
 	xorm.io/core v0.7.0

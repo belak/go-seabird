@@ -2,11 +2,9 @@ package seabird
 
 import (
 	"context"
-	"sort"
 	"time"
 
-	"github.com/sirupsen/logrus"
-
+	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -61,9 +59,6 @@ func (r *Request) SetTimingMap(tc map[string]*Timing) {
 	r.Context = context.WithValue(r.Context, timingKey, tc)
 }
 
-func (r *Request) AddTiming(name string, t *Timing) {
-}
-
 func (r *Request) Timer(event string) *Timing {
 	timer := &Timing{
 		Title:     event,
@@ -77,26 +72,46 @@ func (r *Request) Timer(event string) *Timing {
 	return timer
 }
 
-func (r *Request) LogTimings(logger *logrus.Entry) {
+func (r *Request) Log(bot *Bot) {
 	timings := r.TimingMap()
 
-	sortedTimings := make([]*Timing, 0, len(timings))
+	fields := make(map[string]interface{})
+
+	completeEvents := 0
+	incompleteEvents := 0
+
 	for _, timing := range timings {
-		sortedTimings = append(sortedTimings, timing)
-	}
+		keyBase := timing.Title
+		fields[keyBase+"-start"] = timing.Start.UnixNano()
 
-	sort.Slice(sortedTimings, func(i, j int) bool {
-		return sortedTimings[i].Start.Before(sortedTimings[j].Start)
-	})
-
-	logger.Debug("Request timing:")
-
-	for _, timing := range sortedTimings {
 		if !timing.Completed {
-			logger.Debugf("%s: [started:%d] [not completed]", timing.Title, timing.Start.UnixNano())
+			incompleteEvents++
 			continue
 		}
 
-		logger.Debugf("%s: [start:%d] [duration:%s]", timing.Title, timing.Start.UnixNano(), timing.Elapsed().String())
+		fields[keyBase+"-end"] = timing.End.UnixNano()
+		fields[keyBase+"-elapsed"] = timing.Elapsed().Nanoseconds()
+
+		completeEvents++
+	}
+
+	fields["complete-events"] = completeEvents
+	fields["incomplete-events"] = incompleteEvents
+
+	now := time.Now()
+
+	point, err := client.NewPoint("request_timing", make(map[string]string), fields, now)
+	if err != nil {
+		bot.log.Warning("Error creating a new InfluxDB datapoint: ", err.Error())
+		return
+	}
+
+	// Ensure that we don't block the bot by using a blocking insert. Instead, drop
+	// requests as necessary.
+	select {
+	case bot.points <- point:
+		return
+	default:
+		bot.log.Warning("InfluxDB datapoint queue is full, dropping datapoint")
 	}
 }
