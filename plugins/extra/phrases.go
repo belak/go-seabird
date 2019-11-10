@@ -1,13 +1,13 @@
 package extra
 
 import (
+	"context"
 	"errors"
 	"strings"
 	"unicode"
 
-	"github.com/go-xorm/xorm"
-
 	seabird "github.com/belak/go-seabird"
+	"github.com/go-xorm/xorm"
 )
 
 func init() {
@@ -27,13 +27,17 @@ type Phrase struct {
 	Deleted   bool
 }
 
-func newPhrasesPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &phrasesPlugin{db: db}
+func newPhrasesPlugin(b *seabird.Bot) error {
+	p := &phrasesPlugin{
+		db: CtxDB(b.Context()), // TODO: ensure db plugin loaded
+	}
 
-	err := db.Sync(Phrase{})
+	err := p.db.Sync(Phrase{})
 	if err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("forget", p.forgetCallback, &seabird.HelpInfo{
 		Usage:       "<key>",
@@ -83,7 +87,7 @@ func (p *phrasesPlugin) getKey(key string) (*Phrase, error) {
 	return out, nil
 }
 
-func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *phrasesPlugin) forgetCallback(ctx context.Context, r *seabird.Request) {
 	entry := Phrase{
 		Name:      p.cleanedName(r.Message.Trailing()),
 		Submitter: r.Message.Prefix.Name,
@@ -92,6 +96,7 @@ func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, r *seabird.Request) {
 
 	if len(entry.Name) == 0 {
 		r.MentionReply("No key supplied")
+		return
 	}
 
 	_, err := p.db.InsertOne(entry)
@@ -103,7 +108,7 @@ func (p *phrasesPlugin) forgetCallback(b *seabird.Bot, r *seabird.Request) {
 	r.MentionReply("Forgot %s", entry.Name)
 }
 
-func (p *phrasesPlugin) getCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *phrasesPlugin) getCallback(ctx context.Context, r *seabird.Request) {
 	row, err := p.getKey(r.Message.Trailing())
 	if err != nil {
 		r.MentionReply("%s", err.Error())
@@ -113,7 +118,7 @@ func (p *phrasesPlugin) getCallback(b *seabird.Bot, r *seabird.Request) {
 	r.MentionReply("%s", row.Value)
 }
 
-func (p *phrasesPlugin) giveCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *phrasesPlugin) giveCallback(ctx context.Context, r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) < 2 {
 		r.MentionReply("Not enough args")
@@ -129,7 +134,7 @@ func (p *phrasesPlugin) giveCallback(b *seabird.Bot, r *seabird.Request) {
 	r.Reply("%s: %s", split[0], row.Value)
 }
 
-func (p *phrasesPlugin) historyCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *phrasesPlugin) historyCallback(ctx context.Context, r *seabird.Request) {
 	search := &Phrase{Name: p.cleanedName(r.Message.Trailing())}
 	if len(search.Name) == 0 {
 		r.MentionReply("No key provided")
@@ -152,7 +157,7 @@ func (p *phrasesPlugin) historyCallback(b *seabird.Bot, r *seabird.Request) {
 	}
 }
 
-func (p *phrasesPlugin) setCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *phrasesPlugin) setCallback(ctx context.Context, r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) < 2 {
 		r.MentionReply("Not enough args")

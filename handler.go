@@ -1,5 +1,7 @@
 package seabird
 
+import "context"
+
 // Handler is an interface representing objects which can be registered to serve
 // a particular Event.Command or subcommand in the IRC client.
 type Handler interface {
@@ -12,15 +14,15 @@ type Handler interface {
 	// network requests and IO, it may be best to grab the required data and run
 	// the response code in a goroutine so the rest of the Client can continue
 	// as usual.
-	HandleEvent(b *Bot, r *Request)
+	HandleEvent(ctx context.Context, r *Request)
 }
 
 // The HandlerFunc is an adapter to allow the use of ordinary functions as IRC
 // handlers. If f is a function with the appropriate signature, HandlerFunc(f)
 // is a Handler object that calls f.
-type HandlerFunc func(b *Bot, r *Request)
+type HandlerFunc func(ctx context.Context, r *Request)
 
 // HandleEvent calls f(c, e)
-func (f HandlerFunc) HandleEvent(b *Bot, r *Request) {
-	f(b, r)
+func (f HandlerFunc) HandleEvent(ctx context.Context, r *Request) {
+	f(ctx, r)
 }

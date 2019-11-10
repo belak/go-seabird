@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"net/url"
 
 	seabird "github.com/belak/go-seabird"
@@ -38,7 +39,9 @@ type fccResponse struct {
 	LicenseData fccLicenses `json:"Licenses"`
 }
 
-func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newFccPlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	p := &fccPlugin{}
 
 	cm.Event("callsign", p.Search, &seabird.HelpInfo{
@@ -49,7 +52,7 @@ func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *fccPlugin) Search(b *seabird.Bot, r *seabird.Request) {
+func (p *fccPlugin) Search(ctx context.Context, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Callsign required")

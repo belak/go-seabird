@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"html"
 	"net/url"
 
@@ -22,7 +23,9 @@ type googleResponse struct {
 	ResponseStatus int `json:"responseStatus"`
 }
 
-func newGooglePlugin(cm *seabird.CommandMux) {
+func newGooglePlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	cm.Event("g", googleWebCallback, &seabird.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google web search result for given query",
@@ -32,17 +35,19 @@ func newGooglePlugin(cm *seabird.CommandMux) {
 		Usage:       "<query>",
 		Description: "Retrieves top Google images search result for given query",
 	})
+
+	return nil
 }
 
-func googleWebCallback(b *seabird.Bot, r *seabird.Request) {
-	googleSearch(b, r, "web", r.Message.Trailing())
+func googleWebCallback(ctx context.Context, r *seabird.Request) {
+	googleSearch(ctx, r, "web", r.Message.Trailing())
 }
 
-func googleImageCallback(b *seabird.Bot, r *seabird.Request) {
-	googleSearch(b, r, "images", r.Message.Trailing())
+func googleImageCallback(ctx context.Context, r *seabird.Request) {
+	googleSearch(ctx, r, "images", r.Message.Trailing())
 }
 
-func googleSearch(b *seabird.Bot, r *seabird.Request, service, query string) {
+func googleSearch(ctx context.Context, r *seabird.Request, service, query string) {
 	go func() {
 		if query == "" {
 			r.MentionReply("Query required")

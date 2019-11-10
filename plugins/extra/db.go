@@ -1,14 +1,23 @@
 package extra
 
 import (
+	"context"
+
 	"github.com/go-xorm/xorm"
 	"xorm.io/core"
 
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
 	seabird.RegisterPlugin("db", NewDBPlugin)
+}
+
+const contextKeyDB = internal.ContextKey("seabird-db")
+
+func CtxDB(ctx context.Context) *xorm.Engine {
+	return ctx.Value(contextKeyDB).(*xorm.Engine)
 }
 
 type dbConfig struct {
@@ -19,17 +28,17 @@ type dbConfig struct {
 
 // NewDBPlugin instantiates a new database connection from a bot with a valid
 // db config section.
-func NewDBPlugin(b *seabird.Bot) (*xorm.Engine, error) {
+func NewDBPlugin(b *seabird.Bot) error {
 	dbc := &dbConfig{}
 
 	err := b.Config("db", dbc)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	engine, err := xorm.NewEngine(dbc.Driver, dbc.DataSource)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
 	// Ensure table and column mapping is set up how we want it. This means
@@ -50,5 +59,7 @@ func NewDBPlugin(b *seabird.Bot) (*xorm.Engine, error) {
 	engine.SetColumnMapper(columnMapper)
 	engine.SetTableMapper(tableMapper)
 
-	return engine, nil
+	b.SetValue(contextKeyDB, engine)
+
+	return nil
 }

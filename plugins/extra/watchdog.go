@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"time"
 
 	"github.com/go-xorm/xorm"
@@ -22,14 +23,18 @@ type watchdogCheck struct {
 	Nonce  string
 }
 
-func newWatchdogPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &watchdogPlugin{db: db}
+func newWatchdogPlugin(b *seabird.Bot) error {
+	p := &watchdogPlugin{
+		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+	}
 
 	// Migrate any relevant tables
-	err := db.Sync(watchdogCheck{})
+	err := p.db.Sync(watchdogCheck{})
 	if err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("watchdog-check", p.check, &seabird.HelpInfo{
 		Description: "Used to check availability of Seabird optionally including its DB",
@@ -38,7 +43,7 @@ func newWatchdogPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandM
 	return nil
 }
 
-func (p *watchdogPlugin) checkDb(b *seabird.Bot, r *seabird.Request, nonce string) bool {
+func (p *watchdogPlugin) checkDb(ctx context.Context, r *seabird.Request, nonce string) bool {
 	check := &watchdogCheck{
 		Entity: r.Message.Prefix.String(),
 		Nonce:  nonce,
@@ -56,7 +61,7 @@ func (p *watchdogPlugin) checkDb(b *seabird.Bot, r *seabird.Request, nonce strin
 	return true
 }
 
-func (p *watchdogPlugin) check(b *seabird.Bot, r *seabird.Request) {
+func (p *watchdogPlugin) check(ctx context.Context, r *seabird.Request) {
 	timer := r.Timer("watchdog-check")
 	defer timer.Done()
 
@@ -67,8 +72,7 @@ func (p *watchdogPlugin) check(b *seabird.Bot, r *seabird.Request) {
 
 	nonce := r.Message.Trailing()
 
-	ok := p.checkDb(b, r, nonce)
-	if !ok {
+	if ok := p.checkDb(ctx, r, nonce); !ok {
 		return
 	}
 

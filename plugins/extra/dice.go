@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -16,11 +17,15 @@ func init() {
 
 var diceRe = regexp.MustCompile(`(?:^|\b)(\d*)d(\d+)\b`)
 
-func newDicePlugin(b *seabird.Bot, mm *seabird.MentionMux) {
+func newDicePlugin(b *seabird.Bot) error {
+	mm := b.MentionMux()
+
 	mm.Event(diceCallback)
+
+	return nil
 }
 
-func diceCallback(b *seabird.Bot, r *seabird.Request) {
+func diceCallback(ctx context.Context, r *seabird.Request) {
 	var rolls []string
 
 	totalCount := 0

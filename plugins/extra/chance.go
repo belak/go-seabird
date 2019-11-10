@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"math/rand"
 	"strings"
 
@@ -21,7 +22,9 @@ type chancePlugin struct {
 	rouletteShotsLeft map[string]int
 }
 
-func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
+func newChancePlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	p := &chancePlugin{
 		6,
 		make(map[string]int),
@@ -35,9 +38,11 @@ func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
 		Usage:       "[heads|tails]",
 		Description: "Guess the coin flip. If you guess wrong, you're out!",
 	})
+
+	return nil
 }
 
-func (p *chancePlugin) rouletteCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *chancePlugin) rouletteCallback(ctx context.Context, r *seabird.Request) {
 	if !r.FromChannel() {
 		return
 	}
@@ -46,6 +51,8 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, r *seabird.Request) {
 		// Invalid message
 		return
 	}
+
+	b := seabird.CtxBot(ctx)
 
 	shotsLeft := p.rouletteShotsLeft[r.Message.Params[0]]
 
@@ -68,10 +75,12 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, r *seabird.Request) {
 	p.rouletteShotsLeft[r.Message.Params[0]] = shotsLeft
 }
 
-func (p *chancePlugin) coinCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *chancePlugin) coinCallback(ctx context.Context, r *seabird.Request) {
 	if !r.FromChannel() {
 		return
 	}
+
+	b := seabird.CtxBot(ctx)
 
 	guess := -1
 	guessStr := r.Message.Trailing()

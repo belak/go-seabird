@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -20,7 +21,7 @@ type stockPlugin struct {
 	Client *iex.Client
 }
 
-func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newStockPlugin(b *seabird.Bot) error {
 	p := &stockPlugin{}
 
 	if err := b.Config("stock", p); err != nil {
@@ -28,6 +29,8 @@ func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	}
 
 	p.Client = iex.NewClient(p.Key, stockBaseURL)
+
+	cm := b.CommandMux()
 
 	cm.Event("stock", p.search, &seabird.HelpInfo{
 		Usage:       "<symbol>",
@@ -37,7 +40,7 @@ func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *stockPlugin) search(b *seabird.Bot, r *seabird.Request) {
+func (p *stockPlugin) search(ctx context.Context, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Symbol required")

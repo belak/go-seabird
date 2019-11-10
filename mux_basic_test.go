@@ -1,6 +1,7 @@
 package seabird
 
 import (
+	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -12,7 +13,7 @@ type messageHandler struct {
 	count int
 }
 
-func (mh *messageHandler) Handle(b *Bot, r *Request) {
+func (mh *messageHandler) Handle(ctx context.Context, r *Request) {
 	mh.count++
 }
 

@@ -1,6 +1,7 @@
 package seabird
 
 import (
+	"context"
 	"fmt"
 	"sync"
 )
@@ -35,7 +36,7 @@ func (mux *BasicMux) Event(c string, h HandlerFunc) {
 // HandleEvent allows us to be a Handler so we can nest Handlers
 //
 // The BasicMux simply dispatches all the Handler commands as needed
-func (mux *BasicMux) HandleEvent(b *Bot, r *Request) {
+func (mux *BasicMux) HandleEvent(ctx context.Context, r *Request) {
 	timer := r.Timer("basic_mux")
 	defer timer.Done()
 
@@ -46,7 +47,7 @@ func (mux *BasicMux) HandleEvent(b *Bot, r *Request) {
 
 	// Star means ALL THE THINGS. Really, this is only useful for logging.
 	for _, h := range mux.m["*"] {
-		h(b, r)
+		h(ctx, r)
 	}
 
 	allHandlersTimer := r.Timer("basic_mux_all_handlers")
@@ -55,7 +56,7 @@ func (mux *BasicMux) HandleEvent(b *Bot, r *Request) {
 	// this command.
 	for idx, handler := range mux.m[r.Message.Command] {
 		handlerTimer := r.Timer(fmt.Sprintf("basic_mux_handler:%s:%d", r.Message.Command, idx))
-		handler(b, r)
+		handler(ctx, r)
 		handlerTimer.Done()
 	}
 

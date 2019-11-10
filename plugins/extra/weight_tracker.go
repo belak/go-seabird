@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"strconv"
 	"time"
 
@@ -23,14 +24,18 @@ type Measurement struct {
 	Weight float64
 }
 
-func newWeightPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &weightPlugin{db: db}
+func newWeightPlugin(b *seabird.Bot) error {
+	p := &weightPlugin{
+		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+	}
 
 	// Migrate any relevant tables
-	err := db.Sync(Measurement{})
+	err := p.db.Sync(Measurement{})
 	if err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("add-weight", p.addWeight, &seabird.HelpInfo{
 		Usage:       "<value>",
@@ -45,7 +50,7 @@ func newWeightPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux
 	return nil
 }
 
-func (p *weightPlugin) addWeight(b *seabird.Bot, r *seabird.Request) {
+func (p *weightPlugin) addWeight(ctx context.Context, r *seabird.Request) {
 	if len(r.Message.Trailing()) == 0 {
 		r.MentionReply("You must specify a new weight measurement")
 		return
@@ -70,7 +75,7 @@ func (p *weightPlugin) addWeight(b *seabird.Bot, r *seabird.Request) {
 	r.MentionReply("Measurement added")
 }
 
-func (p *weightPlugin) lastWeight(b *seabird.Bot, r *seabird.Request) {
+func (p *weightPlugin) lastWeight(ctx context.Context, r *seabird.Request) {
 	user := r.Message.Prefix.Name
 	measurement := &Measurement{Name: user}
 

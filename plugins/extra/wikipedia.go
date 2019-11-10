@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"strings"
 
 	"github.com/yhat/scrape"
@@ -24,18 +25,22 @@ type wikiResponse struct {
 	} `json:"parse"`
 }
 
-func newWikiPlugin(cm *seabird.CommandMux) {
+func newWikiPlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	cm.Event("wiki", wikiCallback, &seabird.HelpInfo{
 		Usage:       "<topic>",
 		Description: "Retrieves first section from most relevant Wikipedia article to given topic",
 	})
+
+	return nil
 }
 
 func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func wikiCallback(b *seabird.Bot, r *seabird.Request) {
+func wikiCallback(ctx context.Context, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Query required")

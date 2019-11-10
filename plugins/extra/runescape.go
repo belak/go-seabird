@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -117,8 +118,10 @@ func newRunescapeLevelMetadata(name, player, line string) (runescapeLevelMetadat
 	}, nil
 }
 
-func newRunescapePlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newRunescapePlugin(b *seabird.Bot) error {
 	p := &runescapePlugin{}
+
+	cm := b.CommandMux()
 
 	cm.Event("rlvl", p.levelCallback, &seabird.HelpInfo{
 		Usage:       "<player> <skill>",
@@ -264,7 +267,7 @@ func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
 	return names
 }
 
-func (p *runescapePlugin) levelCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *runescapePlugin) levelCallback(ctx context.Context, r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -289,7 +292,7 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, r *seabird.Request) {
 	}()
 }
 
-func (p *runescapePlugin) expCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *runescapePlugin) expCallback(ctx context.Context, r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -314,7 +317,7 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, r *seabird.Request) {
 	}()
 }
 
-func (p *runescapePlugin) rankCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *runescapePlugin) rankCallback(ctx context.Context, r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {

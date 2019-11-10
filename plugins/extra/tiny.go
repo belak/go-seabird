@@ -1,6 +1,7 @@
 package extra
 
 import (
+	"context"
 	"fmt"
 
 	seabird "github.com/belak/go-seabird"
@@ -21,12 +22,14 @@ type shortenResult struct {
 	LongURL string `json:"longUrl"`
 }
 
-func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newTinyPlugin(b *seabird.Bot) error {
 	p := &tinyPlugin{}
 
 	if err := b.Config("tiny", p); err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("tiny", p.Shorten, &seabird.HelpInfo{
 		Usage:       "<url>",
@@ -36,7 +39,7 @@ func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (t *tinyPlugin) Shorten(b *seabird.Bot, r *seabird.Request) {
+func (t *tinyPlugin) Shorten(ctx context.Context, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("URL required")

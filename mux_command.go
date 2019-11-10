@@ -1,6 +1,7 @@
 package seabird
 
 import (
+	"context"
 	"sort"
 	"strings"
 )
@@ -43,7 +44,7 @@ func NewCommandMux(prefix string) *CommandMux {
 	return m
 }
 
-func (m *CommandMux) help(b *Bot, r *Request) {
+func (m *CommandMux) help(ctx context.Context, r *Request) {
 	cmd := r.Message.Trailing()
 	if cmd == "" {
 		// Get all keys
@@ -142,7 +143,7 @@ func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 
 // HandleEvent strips off the prefix, pulls the command out
 // and runs HandleEvent on the internal BasicMux
-func (m *CommandMux) HandleEvent(b *Bot, r *Request) {
+func (m *CommandMux) HandleEvent(ctx context.Context, r *Request) {
 	timer := r.Timer("command_mux")
 	defer timer.Done()
 
@@ -173,8 +174,8 @@ func (m *CommandMux) HandleEvent(b *Bot, r *Request) {
 	newRequest.Message.Command = strings.TrimPrefix(newRequest.Message.Command, m.prefix)
 
 	if newRequest.FromChannel() {
-		m.public.HandleEvent(b, newRequest)
+		m.public.HandleEvent(ctx, newRequest)
 	} else {
-		m.private.HandleEvent(b, newRequest)
+		m.private.HandleEvent(ctx, newRequest)
 	}
 }
