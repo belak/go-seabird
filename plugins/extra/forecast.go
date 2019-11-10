@@ -155,24 +155,24 @@ func (p *forecastPlugin) getLocation(r *seabird.Request) (*ForecastLocation, err
 func (p *forecastPlugin) forecastCallback(b *seabird.Bot, r *seabird.Request) {
 	loc, err := p.getLocation(r)
 	if err != nil {
-		b.MentionReply(r, "%s", err.Error())
+		r.MentionReply("%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		b.MentionReply(r, "%s", err.Error())
+		r.MentionReply("%s", err.Error())
 		return
 	}
 
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
-	b.MentionReply(r, "3 day forecast for %s.", loc.Address)
+	r.MentionReply("3 day forecast for %s.", loc.Address)
 
 	for _, block := range fc.Daily.Data[1:4] {
 		day := time.Unix(block.Time, 0).Weekday()
 
-		b.MentionReply(r,
+		r.MentionReply(
 			"%s: High %.2f%s, Low %.2f%s, Humidity %.f%%. %s",
 			day,
 			block.TemperatureMax,
@@ -187,20 +187,20 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, r *seabird.Request) {
 func (p *forecastPlugin) weatherCallback(b *seabird.Bot, r *seabird.Request) {
 	loc, err := p.getLocation(r)
 	if err != nil {
-		b.MentionReply(r, "%s", err.Error())
+		r.MentionReply("%s", err.Error())
 		return
 	}
 
 	fc, err := p.forecastQuery(loc)
 	if err != nil {
-		b.MentionReply(r, "%s", err.Error())
+		r.MentionReply("%s", err.Error())
 		return
 	}
 
 	unit := getUnit(darksky.Units(fc.Flags.Units))
 
 	today := fc.Daily.Data[0]
-	b.MentionReply(r,
+	r.MentionReply(
 		"%s. Currently %.1f%s. High %.2f%s, Low %.2f%s, Humidity %.f%%. %s.",
 		loc.Address,
 		fc.Currently.Temperature,

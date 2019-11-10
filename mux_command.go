@@ -55,30 +55,30 @@ func (m *CommandMux) help(b *Bot, r *Request) {
 		// Sort everything
 		sort.Strings(keys)
 
-		if b.FromChannel(r) {
+		if r.FromChannel() {
 			// If they said "!help" in a channel, list all available commands
-			b.Reply(r, "Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
+			r.Reply("Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
 		} else {
 			for _, v := range keys {
 				h := m.cmdHelp[v]
 				if h.Usage != "" {
-					b.Reply(r, "%s %s: %s", v, h.Usage, h.Description)
+					r.Reply("%s %s: %s", v, h.Usage, h.Description)
 				} else {
-					b.Reply(r, "%s: %s", v, h.Description)
+					r.Reply("%s: %s", v, h.Description)
 				}
 			}
 		}
 	} else if help, ok := m.cmdHelp[cmd]; ok {
 		if help == nil {
-			b.Reply(r, "There is no help available for command %q", cmd)
+			r.Reply("There is no help available for command %q", cmd)
 		} else {
 			lines := help.format(m.prefix, cmd)
 			for _, line := range lines {
-				b.Reply(r, "%s", line)
+				r.Reply("%s", line)
 			}
 		}
 	} else {
-		b.MentionReply(r, "There is no help available for command %q", cmd)
+		r.MentionReply("There is no help available for command %q", cmd)
 	}
 }
 
@@ -153,7 +153,7 @@ func (m *CommandMux) HandleEvent(b *Bot, r *Request) {
 
 	// Get the last arg and see if it starts with the command prefix
 	lastArg := r.Message.Trailing()
-	if b.FromChannel(r) && !strings.HasPrefix(lastArg, m.prefix) {
+	if r.FromChannel() && !strings.HasPrefix(lastArg, m.prefix) {
 		return
 	}
 
@@ -172,7 +172,7 @@ func (m *CommandMux) HandleEvent(b *Bot, r *Request) {
 	newRequest.Message.Command = strings.ToLower(msgParts[0])
 	newRequest.Message.Command = strings.TrimPrefix(newRequest.Message.Command, m.prefix)
 
-	if b.FromChannel(newRequest) {
+	if newRequest.FromChannel() {
 		m.public.HandleEvent(b, newRequest)
 	} else {
 		m.private.HandleEvent(b, newRequest)

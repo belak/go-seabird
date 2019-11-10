@@ -52,7 +52,7 @@ func newFccPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 func (p *fccPlugin) Search(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "Callsign required")
+			r.MentionReply("Callsign required")
 			return
 		}
 
@@ -61,16 +61,16 @@ func (p *fccPlugin) Search(b *seabird.Bot, r *seabird.Request) {
 		fr := &fccResponse{}
 		err := utils.GetJSON(url, fr)
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 
 		if len(fr.LicenseData.Licenses) == 0 {
-			b.MentionReply(r, "No licenses found")
+			r.MentionReply("No licenses found")
 			return
 		}
 
 		license := fr.LicenseData.Licenses[0]
-		b.MentionReply(r, "%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
+		r.MentionReply("%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
 	}()
 }

@@ -39,13 +39,13 @@ func diceCallback(b *seabird.Bot, r *seabird.Request) {
 
 		// Clamp count
 		if count < 0 {
-			b.MentionReply(r, "You cannot request a negative number of rolls")
+			r.MentionReply("You cannot request a negative number of rolls")
 			return
 		}
 
 		totalCount += count
 		if totalCount > 100 {
-			b.MentionReply(r, "You cannot request more than 100 dice")
+			r.MentionReply("You cannot request more than 100 dice")
 			return
 		}
 
@@ -53,13 +53,13 @@ func diceCallback(b *seabird.Bot, r *seabird.Request) {
 		size, _ := strconv.Atoi(match[2])
 
 		if size > 100 {
-			b.MentionReply(r, "You cannot request dice larger than 100")
+			r.MentionReply("You cannot request dice larger than 100")
 			return
 		}
 
 		// Clamp size
 		if size < 1 {
-			b.MentionReply(r, "You cannot request dice smaller than 1")
+			r.MentionReply("You cannot request dice smaller than 1")
 			return
 		}
 
@@ -72,6 +72,6 @@ func diceCallback(b *seabird.Bot, r *seabird.Request) {
 	}
 
 	if len(rolls) > 0 {
-		b.MentionReply(r, "%s", strings.Join(rolls, " "))
+		r.MentionReply("%s", strings.Join(rolls, " "))
 	}
 }

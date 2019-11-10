@@ -10,8 +10,8 @@ WORKDIR /seabird
 ADD . .
 
 RUN go get -d ./... && \
-        go build -v -o /build/seabird ./cmd/seabird && \
-        go build -v -o /build/seabird-migrate ./cmd/seabird-migrate
+  go build -v -o /build/seabird ./cmd/seabird && \
+  go build -v -o /build/seabird-migrate ./cmd/seabird-migrate
 
 # Stage 2: Copy files and configure what we need
 FROM alpine:latest

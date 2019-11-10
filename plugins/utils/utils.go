@@ -54,7 +54,7 @@ func RenderRespond(b *seabird.Bot, r *seabird.Request, logger *logrus.Entry, t *
 		return false
 	}
 
-	b.Reply(r, "%s %s", prefix, out)
+	r.Reply("%s %s", prefix, out)
 
 	return true
 }

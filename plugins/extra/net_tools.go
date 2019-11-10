@@ -64,21 +64,21 @@ func newNetToolsPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 func (p *netToolsPlugin) RDNS(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "Argument required")
+			r.MentionReply("Argument required")
 			return
 		}
 		names, err := net.LookupAddr(r.Message.Trailing())
 		if err != nil {
-			b.MentionReply(r, err.Error())
+			r.MentionReply(err.Error())
 			return
 		}
 
 		if len(names) == 0 {
-			b.MentionReply(r, "No results found")
+			r.MentionReply("No results found")
 			return
 		}
 
-		b.MentionReply(r, names[0])
+		r.MentionReply(names[0])
 
 		if len(names) > 1 {
 			for _, name := range names[1:] {
@@ -91,22 +91,22 @@ func (p *netToolsPlugin) RDNS(b *seabird.Bot, r *seabird.Request) {
 func (p *netToolsPlugin) Dig(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "Domain required")
+			r.MentionReply("Domain required")
 			return
 		}
 
 		addrs, err := net.LookupHost(r.Message.Trailing())
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 
 		if len(addrs) == 0 {
-			b.MentionReply(r, "No results found")
+			r.MentionReply("No results found")
 			return
 		}
 
-		b.MentionReply(r, addrs[0])
+		r.MentionReply(addrs[0])
 
 		if len(addrs) > 1 {
 			for _, addr := range addrs[1:] {
@@ -119,25 +119,25 @@ func (p *netToolsPlugin) Dig(b *seabird.Bot, r *seabird.Request) {
 func (p *netToolsPlugin) Ping(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "Host required")
+			r.MentionReply("Host required")
 			return
 		}
 
 		pinger, err := ping.NewPinger(r.Message.Trailing())
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 		pinger.Count = 1
 		pinger.SetPrivileged(p.PrivilegedPing)
 
 		pinger.OnRecv = func(pkt *ping.Packet) {
-			b.MentionReply(r, "%d bytes from %s: icmp_seq=%d time=%s",
+			r.MentionReply("%d bytes from %s: icmp_seq=%d time=%s",
 				pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 		}
 		err = pinger.Run()
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 	}()
@@ -170,17 +170,17 @@ func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) 
 
 func (p *netToolsPlugin) handleCommand(b *seabird.Bot, r *seabird.Request, command string, emptyMsg string) {
 	if r.Message.Trailing() == "" {
-		b.MentionReply(r, "Host required")
+		r.MentionReply("Host required")
 		return
 	}
 
 	url, err := p.runCommand("traceroute", r.Message.Trailing())
 	if err != nil {
-		b.MentionReply(r, "%s", err)
+		r.MentionReply("%s", err)
 		return
 	}
 
-	b.MentionReply(r, "%s", url)
+	r.MentionReply("%s", url)
 }
 
 func (p *netToolsPlugin) Traceroute(b *seabird.Bot, r *seabird.Request) {
@@ -193,11 +193,11 @@ func (p *netToolsPlugin) Whois(b *seabird.Bot, r *seabird.Request) {
 
 func (p *netToolsPlugin) DNSCheck(b *seabird.Bot, r *seabird.Request) {
 	if r.Message.Trailing() == "" {
-		b.MentionReply(r, "Domain required")
+		r.MentionReply("Domain required")
 		return
 	}
 
-	b.MentionReply(r, "https://www.whatsmydns.net/#A/"+r.Message.Trailing())
+	r.MentionReply("https://www.whatsmydns.net/#A/" + r.Message.Trailing())
 }
 
 type asnResponse struct {
@@ -211,7 +211,7 @@ type asnResponse struct {
 
 func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, r *seabird.Request) {
 	if r.Message.Trailing() == "" {
-		b.MentionReply(r, "IP required")
+		r.MentionReply("IP required")
 		return
 	}
 
@@ -221,17 +221,16 @@ func (p *netToolsPlugin) ASNLookup(b *seabird.Bot, r *seabird.Request) {
 		"https://api.iptoasn.com/v1/as/ip/"+r.Message.Trailing(),
 		&asnResp)
 	if err != nil {
-		b.MentionReply(r, "%s", err)
+		r.MentionReply("%s", err)
 		return
 	}
 
 	if !asnResp.Announced {
-		b.MentionReply(r, "ASN information not available")
+		r.MentionReply("ASN information not available")
 		return
 	}
 
-	b.MentionReply(
-		r,
+	r.MentionReply(
 		"#%d (%s - %s) - %s (%s)",
 		asnResp.AsNumber,
 		asnResp.FirstIP,

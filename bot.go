@@ -2,7 +2,6 @@ package seabird
 
 import (
 	"crypto/tls"
-	"errors"
 	"fmt"
 	"io"
 	"net"
@@ -14,6 +13,7 @@ import (
 	"github.com/sirupsen/logrus"
 
 	plugin "github.com/belak/go-plugin"
+	"github.com/belak/go-seabird/internal"
 	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
@@ -25,8 +25,8 @@ type coreConfig struct {
 	Name string
 	Pass string
 
-	PingFrequency duration
-	PingTimeout   duration
+	PingFrequency internal.Duration
+	PingTimeout   internal.Duration
 
 	Host        string
 	TLS         bool
@@ -42,7 +42,7 @@ type coreConfig struct {
 	Debug    bool
 	LogLevel string
 
-	SendLimit duration
+	SendLimit internal.Duration
 	SendBurst int
 }
 
@@ -53,20 +53,8 @@ type InfluxDbConfig struct {
 	Password       string
 	Database       string
 	Precision      string
-	SubmitInterval duration
+	SubmitInterval internal.Duration
 	BufferSize     int
-}
-
-type duration struct {
-	time.Duration
-}
-
-func (d *duration) UnmarshalText(text []byte) error {
-	var err error
-
-	d.Duration, err = time.ParseDuration(string(text))
-
-	return err
 }
 
 // A Bot is our wrapper around the irc.Client. It could be used for a general
@@ -198,92 +186,6 @@ func (b *Bot) Send(m *irc.Message) {
 	b.client.WriteMessage(m)
 }
 
-// Reply to a Request with a convenience wrapper around fmt.Sprintf
-func (b *Bot) Reply(r *Request, format string, v ...interface{}) error {
-	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
-		return errors.New("Invalid IRC message")
-	}
-
-	target := r.Message.Prefix.Name
-	if b.FromChannel(r) {
-		target = r.Message.Params[0]
-	}
-
-	fullMsg := fmt.Sprintf(format, v...)
-	for _, resp := range strings.Split(fullMsg, "\n") {
-		b.Send(&irc.Message{
-			Prefix:  &irc.Prefix{},
-			Command: "PRIVMSG",
-			Params: []string{
-				target,
-				resp,
-			},
-		})
-	}
-
-	return nil
-}
-
-// MentionReply acts the same as Bot.Reply but it will prefix it with the user's
-// nick if we are in a channel.
-func (b *Bot) MentionReply(r *Request, format string, v ...interface{}) error {
-	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
-		return errors.New("Invalid IRC message")
-	}
-
-	target := r.Message.Prefix.Name
-	prefix := ""
-
-	if b.FromChannel(r) {
-		target = r.Message.Params[0]
-		prefix = r.Message.Prefix.Name + ": "
-	}
-
-	fullMsg := fmt.Sprintf(format, v...)
-	for _, resp := range strings.Split(fullMsg, "\n") {
-		b.Send(&irc.Message{
-			Prefix:  &irc.Prefix{},
-			Command: "PRIVMSG",
-			Params: []string{
-				target,
-				prefix + resp,
-			},
-		})
-	}
-
-	return nil
-}
-
-// PrivateReply is similar to Reply, but it will always send privately.
-func (b *Bot) PrivateReply(r *Request, format string, v ...interface{}) {
-	b.Send(&irc.Message{
-		Prefix:  &irc.Prefix{},
-		Command: "PRIVMSG",
-		Params: []string{
-			r.Message.Prefix.Name,
-			fmt.Sprintf(format, v...),
-		},
-	})
-}
-
-// CTCPReply is a convenience function to respond to CTCP requests.
-func (b *Bot) CTCPReply(r *Request, format string, v ...interface{}) error {
-	if r.Message.Command != "CTCP" {
-		return errors.New("Invalid CTCP message")
-	}
-
-	b.Send(&irc.Message{
-		Prefix:  &irc.Prefix{},
-		Command: "NOTICE",
-		Params: []string{
-			r.Message.Prefix.Name,
-			fmt.Sprintf(format, v...),
-		},
-	})
-
-	return nil
-}
-
 // Write will write an raw IRC message to the stream
 func (b *Bot) Write(line string) {
 	b.client.Write(line)
@@ -294,13 +196,8 @@ func (b *Bot) Writef(format string, args ...interface{}) {
 	b.client.Writef(format, args...)
 }
 
-// FromChannel is a wrapper around the irc package's FromChannel.
-func (b *Bot) FromChannel(r *Request) bool {
-	return b.client.FromChannel(r.Message)
-}
-
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
-	r := NewRequest(m)
+	r := NewRequest(b, m)
 
 	timer := r.Timer("total_request")
 

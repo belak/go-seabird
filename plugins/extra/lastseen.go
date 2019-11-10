@@ -46,13 +46,13 @@ func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Eng
 func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, r *seabird.Request) {
 	nick := r.Message.Trailing()
 	if nick == "" {
-		b.MentionReply(r, "Nick required")
+		r.MentionReply("Nick required")
 		return
 	}
 
 	channel := r.Message.Params[0]
 
-	b.MentionReply(r, "%s", p.getLastSeen(nick, channel))
+	r.MentionReply("%s", p.getLastSeen(nick, channel))
 }
 
 func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {
@@ -78,7 +78,7 @@ func formatDate(t time.Time) string {
 }
 
 func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, r *seabird.Request) {
-	if len(r.Message.Params) < 2 || !b.FromChannel(r) || r.Message.Prefix.Name == "" {
+	if len(r.Message.Params) < 2 || !r.FromChannel() || r.Message.Prefix.Name == "" {
 		return
 	}
 

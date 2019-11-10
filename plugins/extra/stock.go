@@ -40,7 +40,7 @@ func newStockPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 func (p *stockPlugin) search(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "Symbol required")
+			r.MentionReply("Symbol required")
 			return
 		}
 
@@ -50,12 +50,12 @@ func (p *stockPlugin) search(b *seabird.Bot, r *seabird.Request) {
 		for _, symbol := range symbols {
 			price, err := p.Client.Price(symbol)
 			if err != nil {
-				b.MentionReply(r, "%s", err)
+				r.MentionReply("%s", err)
 				continue
 			}
 			prices = append(prices, fmt.Sprintf("%s: %.2f", symbol, price))
 		}
 
-		b.MentionReply(r, "%s", strings.Join(prices, ", "))
+		r.MentionReply("%s", strings.Join(prices, ", "))
 	}()
 }

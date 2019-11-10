@@ -38,7 +38,7 @@ func transformQuery(query string) string {
 func wikiCallback(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "Query required")
+			r.MentionReply("Query required")
 			return
 		}
 
@@ -47,13 +47,13 @@ func wikiCallback(b *seabird.Bot, r *seabird.Request) {
 			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(r.Message.Trailing()),
 			wr)
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 
 		z, err := html.Parse(strings.NewReader(wr.Parse.Text.Data))
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 
@@ -67,11 +67,11 @@ func wikiCallback(b *seabird.Bot, r *seabird.Request) {
 			}
 
 			if t != "" {
-				b.MentionReply(r, "%s", t)
+				r.MentionReply("%s", t)
 				return
 			}
 		}
 
-		b.MentionReply(r, "Error finding text")
+		r.MentionReply("Error finding text")
 	}()
 }

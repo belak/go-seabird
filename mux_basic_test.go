@@ -17,8 +17,8 @@ func (mh *messageHandler) Handle(b *Bot, r *Request) {
 }
 
 func TestBasicMux(t *testing.T) {
-	r := NewRequest(irc.MustParseMessage("001"))
-	r2 := NewRequest(irc.MustParseMessage("002"))
+	r := NewRequest(nil, irc.MustParseMessage("001"))
+	r2 := NewRequest(nil, irc.MustParseMessage("002"))
 
 	// Single message, single handler
 	mh := &messageHandler{}

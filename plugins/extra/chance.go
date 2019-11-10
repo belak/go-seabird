@@ -38,7 +38,7 @@ func newChancePlugin(b *seabird.Bot, cm *seabird.CommandMux) {
 }
 
 func (p *chancePlugin) rouletteCallback(b *seabird.Bot, r *seabird.Request) {
-	if !b.FromChannel(r) {
+	if !r.FromChannel() {
 		return
 	}
 
@@ -59,17 +59,17 @@ func (p *chancePlugin) rouletteCallback(b *seabird.Bot, r *seabird.Request) {
 	shotsLeft--
 
 	if shotsLeft < 1 {
-		b.MentionReply(r, "%sBANG!", msg)
+		r.MentionReply("%sBANG!", msg)
 		b.Writef("KICK %s %s", r.Message.Params[0], r.Message.Prefix.Name)
 	} else {
-		b.MentionReply(r, "%sClick.", msg)
+		r.MentionReply("%sClick.", msg)
 	}
 
 	p.rouletteShotsLeft[r.Message.Params[0]] = shotsLeft
 }
 
 func (p *chancePlugin) coinCallback(b *seabird.Bot, r *seabird.Request) {
-	if !b.FromChannel(r) {
+	if !r.FromChannel() {
 		return
 	}
 
@@ -96,7 +96,7 @@ func (p *chancePlugin) coinCallback(b *seabird.Bot, r *seabird.Request) {
 	flip := rand.Intn(2)
 
 	if flip == guess {
-		b.MentionReply(r, "Lucky guess!")
+		r.MentionReply("Lucky guess!")
 	} else {
 		b.Writef("KICK %s %s :%s", r.Message.Params[0], r.Message.Prefix.Name, "Sorry! Better luck next time!")
 	}

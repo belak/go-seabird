@@ -77,7 +77,7 @@ func (t *twitterProvider) getUser(b *seabird.Bot, r *seabird.Request, text strin
 	}
 
 	// Jay Vana (@jsvana) - Description description
-	b.Reply(r, "%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
+	r.Reply("%s %s (@%s) - %s", twitterPrefix, user.Name, user.ScreenName, user.Description)
 
 	return true
 }
@@ -94,7 +94,7 @@ func (t *twitterProvider) getTweet(b *seabird.Bot, r *seabird.Request, text stri
 	}
 
 	// Tweet text (@jsvana)
-	b.Reply(r, "%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
+	r.Reply("%s %s (@%s)", twitterPrefix, tweet.Text, tweet.User.ScreenName)
 
 	return true
 }

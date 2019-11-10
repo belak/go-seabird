@@ -85,11 +85,11 @@ func (p *karmaPlugin) karmaCallback(b *seabird.Bot, r *seabird.Request) {
 		term = r.Message.Prefix.Name
 	}
 
-	b.MentionReply(r, "%s's karma is %d", term, p.GetKarmaFor(term))
+	r.MentionReply("%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
 func (p *karmaPlugin) callback(b *seabird.Bot, r *seabird.Request) {
-	if len(r.Message.Params) < 2 || !b.FromChannel(r) {
+	if len(r.Message.Params) < 2 || !r.FromChannel() {
 		return
 	}
 
@@ -132,14 +132,14 @@ func (p *karmaPlugin) callback(b *seabird.Bot, r *seabird.Request) {
 			diff = -5
 		}
 
-		b.Reply(r, "%s's karma is now %d", name, p.UpdateKarma(name, diff))
+		r.Reply("%s's karma is now %d", name, p.UpdateKarma(name, diff))
 	}
 
 	if buzzkillTriggered {
-		b.Reply(r, "Buzzkill Mode (tm) enforced a maximum karma change of 5")
+		r.Reply("Buzzkill Mode (tm) enforced a maximum karma change of 5")
 	}
 
 	if jerkModeTriggered {
-		b.Reply(r, "Don't Be a Jerk Mode (tm) enforced a maximum karma change of 5")
+		r.Reply("Don't Be a Jerk Mode (tm) enforced a maximum karma change of 5")
 	}
 }

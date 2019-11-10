@@ -42,20 +42,20 @@ func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, r *seabird.Request) {
 
 	for _, digit := range number {
 		if !unicode.IsDigit(digit) {
-			b.MentionReply(r, "Error: Not a phone number")
+			r.MentionReply("Error: Not a phone number")
 			return
 		}
 	}
 
 	resp, err := http.Get(fmt.Sprintf("http://cnam.bulkcnam.com/?id=%s&did=%s", p.Key, number))
 	if err != nil {
-		b.MentionReply(r, "Error: BulkCNAM appears to be down")
+		r.MentionReply("Error: BulkCNAM appears to be down")
 		return
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode != 200 {
-		b.MentionReply(r, "Error: Server side error occurred")
+		r.MentionReply("Error: Server side error occurred")
 		return
 	}
 
@@ -63,8 +63,8 @@ func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, r *seabird.Request) {
 
 	line, err := in.ReadString('\n')
 	if err != nil || err == io.EOF {
-		b.MentionReply(r, "%s", strings.TrimSpace(line))
+		r.MentionReply("%s", strings.TrimSpace(line))
 	} else {
-		b.MentionReply(r, "Error: Something happened when parsing the response.")
+		r.MentionReply("Error: Something happened when parsing the response.")
 	}
 }

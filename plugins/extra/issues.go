@@ -104,7 +104,7 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, r *seabird.Request) {
 		}
 
 		if title == "" {
-			b.MentionReply(r, "Issue title required")
+			r.MentionReply("Issue title required")
 			return
 		}
 
@@ -114,11 +114,11 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, r *seabird.Request) {
 
 		issue, _, err := p.api.Issues.Create(context.TODO(), pathSegments[0], pathSegments[1], req)
 		if err != nil {
-			b.MentionReply(r, "%s", err.Error())
+			r.MentionReply("%s", err.Error())
 			return
 		}
 
-		b.MentionReply(r, "Issue created. %s", *issue.HTMLURL)
+		r.MentionReply("Issue created. %s", *issue.HTMLURL)
 	}()
 }
 
@@ -148,7 +148,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, r *seabird.Request) {
 
 	issues, _, err := p.api.Search.Issues(context.TODO(), strings.Join(split, " "), opt)
 	if err != nil {
-		b.MentionReply(r, "%s", err.Error())
+		r.MentionReply("%s", err.Error())
 		return
 	}
 
@@ -158,9 +158,9 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, r *seabird.Request) {
 	}
 
 	if total == 1 {
-		b.MentionReply(r, "There was %d result.", total)
+		r.MentionReply("There was %d result.", total)
 	} else {
-		b.MentionReply(r, "There were %d results.", total)
+		r.MentionReply("There were %d results.", total)
 	}
 
 	if total > 3 {
@@ -168,7 +168,7 @@ func (p *issuesPlugin) IssueSearch(b *seabird.Bot, r *seabird.Request) {
 	}
 
 	for _, issue := range issues.Issues[:total] {
-		b.MentionReply(r, "%s", encodeIssue(issue))
+		r.MentionReply("%s", encodeIssue(issue))
 	}
 }
 

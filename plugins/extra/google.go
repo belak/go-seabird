@@ -45,7 +45,7 @@ func googleImageCallback(b *seabird.Bot, r *seabird.Request) {
 func googleSearch(b *seabird.Bot, r *seabird.Request, service, query string) {
 	go func() {
 		if query == "" {
-			b.MentionReply(r, "Query required")
+			r.MentionReply("Query required")
 			return
 		}
 
@@ -55,15 +55,15 @@ func googleSearch(b *seabird.Bot, r *seabird.Request, service, query string) {
 			gr)
 
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 
 		if len(gr.ResponseData.Results) == 0 {
-			b.MentionReply(r, "Error fetching search results")
+			r.MentionReply("Error fetching search results")
 			return
 		}
 
-		b.MentionReply(r, "%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].URL)
+		r.MentionReply("%s: %s", html.UnescapeString(gr.ResponseData.Results[0].Title), gr.ResponseData.Results[0].URL)
 	}()
 }

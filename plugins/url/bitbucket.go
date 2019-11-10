@@ -95,7 +95,7 @@ func bitbucketGetUser(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	}
 
 	// Jay Vana @jsvana
-	b.Reply(r, "%s %s (@%s)", bitbucketPrefix, bu.DisplayName, bu.Username)
+	r.Reply("%s %s (@%s)", bitbucketPrefix, bu.DisplayName, bu.Username)
 
 	return true
 }
@@ -127,7 +127,7 @@ func bitbucketGetRepo(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 
 	out += " Last pushed to " + tm.Format("2 Jan 2006")
 
-	b.Reply(r, "%s %s", bitbucketPrefix, out)
+	r.Reply("%s %s", bitbucketPrefix, out)
 
 	return true
 }
@@ -170,7 +170,7 @@ func bitbucketGetIssue(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	}
 
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
-	b.Reply(r, "%s %s", bitbucketPrefix, out)
+	r.Reply("%s %s", bitbucketPrefix, out)
 
 	return true
 }
@@ -203,7 +203,7 @@ func bitbucketGetPull(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 
 	out += " [created " + tm.Format("2 Jan 2006") + "]"
 
-	b.Reply(r, "%s %s", bitbucketPrefix, out)
+	r.Reply("%s %s", bitbucketPrefix, out)
 
 	return true
 }

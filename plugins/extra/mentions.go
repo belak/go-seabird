@@ -15,10 +15,10 @@ func newMentionsPlugin(mm *seabird.MentionMux) {
 func mentionsCallback(b *seabird.Bot, r *seabird.Request) {
 	switch r.Message.Trailing() {
 	case "ping":
-		b.MentionReply(r, "pong")
+		r.MentionReply("pong")
 	case "scoobysnack", "scooby snack":
-		b.Reply(r, "Scooby Dooby Doo!")
+		r.Reply("Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
-		b.Reply(r, ":)")
+		r.Reply(":)")
 	}
 }

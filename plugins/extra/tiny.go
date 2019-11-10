@@ -39,7 +39,7 @@ func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 func (t *tinyPlugin) Shorten(b *seabird.Bot, r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			b.MentionReply(r, "URL required")
+			r.MentionReply("URL required")
 			return
 		}
 
@@ -49,10 +49,10 @@ func (t *tinyPlugin) Shorten(b *seabird.Bot, r *seabird.Request) {
 		sr := &shortenResult{}
 		err := utils.PostJSON(url, data, sr)
 		if err != nil {
-			b.MentionReply(r, "%s", err)
+			r.MentionReply("%s", err)
 			return
 		}
 
-		b.MentionReply(r, sr.ID)
+		r.MentionReply(sr.ID)
 	}()
 }

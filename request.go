@@ -2,40 +2,24 @@ package seabird
 
 import (
 	"context"
-	"time"
+	"errors"
+	"fmt"
+	"strings"
 
-	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
-type contextKey string
-
-const timingKey = contextKey("context: timing")
-
-type Timing struct {
-	Title     string
-	Start     time.Time
-	End       time.Time
-	Completed bool
-}
-
-func (t *Timing) Done() {
-	t.End = time.Now()
-	t.Completed = true
-}
-
-func (t *Timing) Elapsed() time.Duration {
-	return t.End.Sub(t.Start)
-}
-
 type Request struct {
 	Message *irc.Message
-	Context context.Context
+
+	bot     *Bot
+	context context.Context
 }
 
-func NewRequest(m *irc.Message) *Request {
+func NewRequest(b *Bot, m *irc.Message) *Request {
 	r := &Request{
 		m,
+		b,
 		context.TODO(),
 	}
 
@@ -47,71 +31,113 @@ func NewRequest(m *irc.Message) *Request {
 func (r *Request) Copy() *Request {
 	return &Request{
 		r.Message.Copy(),
-		r.Context,
+		r.bot,
+		r.context,
 	}
 }
 
-func (r *Request) TimingMap() map[string]*Timing {
-	return r.Context.Value(timingKey).(map[string]*Timing)
+// Send is a simple function to send an IRC event
+func (r *Request) Send(m *irc.Message) {
+	r.bot.Send(m)
 }
 
-func (r *Request) SetTimingMap(tc map[string]*Timing) {
-	r.Context = context.WithValue(r.Context, timingKey, tc)
+// Reply to a Request with a convenience wrapper around fmt.Sprintf
+func (r *Request) Reply(format string, v ...interface{}) error {
+	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
+		return errors.New("Invalid IRC message")
+	}
+
+	target := r.Message.Prefix.Name
+	if r.FromChannel() {
+		target = r.Message.Params[0]
+	}
+
+	fullMsg := fmt.Sprintf(format, v...)
+	for _, resp := range strings.Split(fullMsg, "\n") {
+		r.Send(&irc.Message{
+			Prefix:  &irc.Prefix{},
+			Command: "PRIVMSG",
+			Params: []string{
+				target,
+				resp,
+			},
+		})
+	}
+
+	return nil
 }
 
-func (r *Request) Timer(event string) *Timing {
-	timer := &Timing{
-		Title:     event,
-		Start:     time.Now(),
-		Completed: false,
+// MentionReply acts the same as Bot.Reply but it will prefix it with the user's
+// nick if we are in a channel.
+func (r *Request) MentionReply(format string, v ...interface{}) error {
+	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
+		return errors.New("Invalid IRC message")
 	}
 
-	ctx := r.TimingMap()
-	ctx[event] = timer
+	target := r.Message.Prefix.Name
+	prefix := ""
 
-	return timer
+	if r.FromChannel() {
+		target = r.Message.Params[0]
+		prefix = r.Message.Prefix.Name + ": "
+	}
+
+	fullMsg := fmt.Sprintf(format, v...)
+	for _, resp := range strings.Split(fullMsg, "\n") {
+		r.Send(&irc.Message{
+			Prefix:  &irc.Prefix{},
+			Command: "PRIVMSG",
+			Params: []string{
+				target,
+				prefix + resp,
+			},
+		})
+	}
+
+	return nil
 }
 
-func (r *Request) Log(bot *Bot) {
-	timings := r.TimingMap()
+// PrivateReply is similar to Reply, but it will always send privately.
+func (r *Request) PrivateReply(format string, v ...interface{}) {
+	r.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
+		Command: "PRIVMSG",
+		Params: []string{
+			r.Message.Prefix.Name,
+			fmt.Sprintf(format, v...),
+		},
+	})
+}
 
-	fields := make(map[string]interface{})
-
-	completeEvents := 0
-	incompleteEvents := 0
-
-	for _, timing := range timings {
-		keyBase := timing.Title
-		fields[keyBase+"-start"] = timing.Start.UnixNano()
-
-		if !timing.Completed {
-			incompleteEvents++
-			continue
-		}
-
-		fields[keyBase+"-end"] = timing.End.UnixNano()
-		fields[keyBase+"-elapsed"] = timing.Elapsed().Nanoseconds()
-
-		completeEvents++
+// CTCPReply is a convenience function to respond to CTCP requests.
+func (r *Request) CTCPReply(format string, v ...interface{}) error {
+	if r.Message.Command != "CTCP" {
+		return errors.New("Invalid CTCP message")
 	}
 
-	fields["complete-events"] = completeEvents
-	fields["incomplete-events"] = incompleteEvents
+	r.Send(&irc.Message{
+		Prefix:  &irc.Prefix{},
+		Command: "NOTICE",
+		Params: []string{
+			r.Message.Prefix.Name,
+			fmt.Sprintf(format, v...),
+		},
+	})
 
-	now := time.Now()
+	return nil
+}
 
-	point, err := client.NewPoint("request_timing", make(map[string]string), fields, now)
-	if err != nil {
-		bot.log.Warning("Error creating a new InfluxDB datapoint: ", err.Error())
-		return
-	}
+// Write will write an raw IRC message to the stream
+func (r *Request) Write(line string) {
+	r.bot.Write(line)
+}
 
-	// Ensure that we don't block the bot by using a blocking insert. Instead, drop
-	// requests as necessary.
-	select {
-	case bot.points <- point:
-		return
-	default:
-		bot.log.Warning("InfluxDB datapoint queue is full, dropping datapoint")
-	}
+// Writef is a convenience method around fmt.Sprintf and Bot.Write
+func (r *Request) Writef(format string, args ...interface{}) {
+	r.bot.Writef(format, args...)
+}
+
+// FromChannel is a wrapper around the irc package's FromChannel.
+func (r *Request) FromChannel() bool {
+	return r.bot.client.FromChannel(r.Message)
 }
