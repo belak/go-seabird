@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"strconv"
 	"time"
 
@@ -25,8 +24,12 @@ type Measurement struct {
 }
 
 func newWeightPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &weightPlugin{
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	// Migrate any relevant tables
@@ -50,7 +53,7 @@ func newWeightPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *weightPlugin) addWeight(ctx context.Context, r *seabird.Request) {
+func (p *weightPlugin) addWeight(r *seabird.Request) {
 	if len(r.Message.Trailing()) == 0 {
 		r.MentionReply("You must specify a new weight measurement")
 		return
@@ -75,7 +78,7 @@ func (p *weightPlugin) addWeight(ctx context.Context, r *seabird.Request) {
 	r.MentionReply("Measurement added")
 }
 
-func (p *weightPlugin) lastWeight(ctx context.Context, r *seabird.Request) {
+func (p *weightPlugin) lastWeight(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 	measurement := &Measurement{Name: user}
 

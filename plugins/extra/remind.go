@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"errors"
 	"regexp"
 	"strings"
@@ -49,14 +48,16 @@ func newReminderPlugin(b *seabird.Bot) error {
 	bm := b.BasicMux()
 	cm := b.CommandMux()
 
-	// TODO: ensure db is loaded
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
 
 	p := &reminderPlugin{
 		roomLock:   &sync.Mutex{},
 		rooms:      make(map[string]bool),
 		updateChan: make(chan struct{}, 1),
 
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	err := p.db.Sync(Reminder{})
@@ -77,8 +78,8 @@ func newReminderPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *reminderPlugin) joinHandler(ctx context.Context, r *seabird.Request) {
-	if r.Message.Prefix.Name != seabird.CtxCurrentNick(ctx) {
+func (p *reminderPlugin) joinHandler(r *seabird.Request) {
+	if r.Message.Prefix.Name != r.CurrentNick() {
 		return
 	}
 
@@ -89,8 +90,8 @@ func (p *reminderPlugin) joinHandler(ctx context.Context, r *seabird.Request) {
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) partHandler(ctx context.Context, r *seabird.Request) {
-	if r.Message.Prefix.Name != seabird.CtxCurrentNick(ctx) {
+func (p *reminderPlugin) partHandler(r *seabird.Request) {
+	if r.Message.Prefix.Name != r.CurrentNick() {
 		return
 	}
 
@@ -101,8 +102,8 @@ func (p *reminderPlugin) partHandler(ctx context.Context, r *seabird.Request) {
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) kickHandler(ctx context.Context, r *seabird.Request) {
-	if r.Message.Params[1] != seabird.CtxCurrentNick(ctx) {
+func (p *reminderPlugin) kickHandler(r *seabird.Request) {
+	if r.Message.Params[1] != r.CurrentNick() {
 		return
 	}
 
@@ -125,13 +126,16 @@ func (p *reminderPlugin) nextReminder() (*Reminder, error) {
 	return r, err
 }
 
-func (p *reminderPlugin) remindLoop(ctx context.Context) {
-	logger := seabird.CtxLogger(ctx)
+func (p *reminderPlugin) remindLoop(r *seabird.Request) {
+	logger := r.GetLogger("remind")
 
 	logger.Info("Starting reminder loop")
 
+	// TODO: this should use the bot, not the request, as they're scoped
+	// differently.
+
 	for {
-		r, err := p.nextReminder()
+		reminder, err := p.nextReminder()
 		if err != nil {
 			logger.WithError(err).Error("Transaction failure. Exiting loop.")
 			return
@@ -140,11 +144,11 @@ func (p *reminderPlugin) remindLoop(ctx context.Context) {
 		var timer <-chan time.Time
 
 		if r != nil {
-			logger.WithField("reminder", r).Debug("Next reminder")
+			logger.WithField("reminder", reminder).Debug("Next reminder")
 
-			waitDur := time.Until(r.ReminderTime)
+			waitDur := time.Until(reminder.ReminderTime)
 			if waitDur <= 0 {
-				p.dispatch(ctx, r)
+				p.dispatch(r, reminder)
 				continue
 			}
 
@@ -153,22 +157,21 @@ func (p *reminderPlugin) remindLoop(ctx context.Context) {
 
 		select {
 		case <-timer:
-			p.dispatch(ctx, r)
+			p.dispatch(r, reminder)
 		case <-p.updateChan:
 			continue
 		}
 	}
 }
 
-func (p *reminderPlugin) dispatch(ctx context.Context, r *Reminder) {
-	b := seabird.CtxBot(ctx)
-	logger := seabird.CtxLogger(ctx).WithField("reminder", r)
+func (p *reminderPlugin) dispatch(r *seabird.Request, reminder *Reminder) {
+	logger := r.GetLogger("remind").WithField("reminder", r)
 
 	// Send the message
-	b.Send(&irc.Message{
+	r.WriteMessage(&irc.Message{
 		Prefix:  &irc.Prefix{},
 		Command: "PRIVMSG",
-		Params:  []string{r.Target, r.Content},
+		Params:  []string{reminder.Target, reminder.Content},
 	})
 
 	// Nuke the reminder now that it's been sent
@@ -182,8 +185,8 @@ func (p *reminderPlugin) dispatch(ctx context.Context, r *Reminder) {
 
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
-func (p *reminderPlugin) InitialDispatch(ctx context.Context, r *seabird.Request) {
-	go p.remindLoop(ctx)
+func (p *reminderPlugin) InitialDispatch(r *seabird.Request) {
+	go p.remindLoop(r)
 }
 
 // ParseTime parses the text string and turns it into a time.Duration
@@ -217,7 +220,7 @@ func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
 	return ret, nil
 }
 
-func (p *reminderPlugin) RemindCommand(ctx context.Context, r *seabird.Request) {
+func (p *reminderPlugin) RemindCommand(r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) != 2 {
 		r.MentionReply("Not enough args")
@@ -252,7 +255,7 @@ func (p *reminderPlugin) RemindCommand(ctx context.Context, r *seabird.Request) 
 
 	r.MentionReply("Event stored")
 
-	logger := seabird.CtxLogger(ctx)
+	logger := r.GetLogger("remind")
 	logger.WithField("reminder", rem).Debug("Stored reminder")
 
 	p.updateChan <- struct{}{}

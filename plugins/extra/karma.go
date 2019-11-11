@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"regexp"
 	"strings"
 	"unicode"
@@ -29,8 +28,12 @@ type Karma struct {
 var karmaRegex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
 func newKarmaPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &karmaPlugin{
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	// Migrate any relevant tables
@@ -83,7 +86,7 @@ func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
 	return out.Score
 }
 
-func (p *karmaPlugin) karmaCallback(ctx context.Context, r *seabird.Request) {
+func (p *karmaPlugin) karmaCallback(r *seabird.Request) {
 	term := strings.TrimSpace(r.Message.Trailing())
 
 	// If we don't provide a term, search for the current nick
@@ -94,17 +97,16 @@ func (p *karmaPlugin) karmaCallback(ctx context.Context, r *seabird.Request) {
 	r.MentionReply("%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
-func (p *karmaPlugin) callback(ctx context.Context, r *seabird.Request) {
+func (p *karmaPlugin) callback(r *seabird.Request) {
 	if len(r.Message.Params) < 2 || !r.FromChannel() {
 		return
 	}
 
-	var (
-		buzzkillTriggered bool
-		jerkModeTriggered bool
+	var buzzkillTriggered bool
 
-		changes = make(map[string]int)
-	)
+	var jerkModeTriggered bool
+
+	var changes = make(map[string]int)
 
 	matches := karmaRegex.FindAllStringSubmatch(r.Message.Trailing(), -1)
 	for _, v := range matches {

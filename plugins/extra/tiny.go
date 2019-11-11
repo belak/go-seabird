@@ -1,11 +1,10 @@
 package extra
 
 import (
-	"context"
 	"fmt"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -39,7 +38,7 @@ func newTinyPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (t *tinyPlugin) Shorten(ctx context.Context, r *seabird.Request) {
+func (t *tinyPlugin) Shorten(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("URL required")
@@ -50,7 +49,7 @@ func (t *tinyPlugin) Shorten(ctx context.Context, r *seabird.Request) {
 
 		data := map[string]string{"longUrl": r.Message.Trailing()}
 		sr := &shortenResult{}
-		err := utils.PostJSON(url, data, sr)
+		err := internal.PostJSON(url, data, sr)
 		if err != nil {
 			r.MentionReply("%s", err)
 			return

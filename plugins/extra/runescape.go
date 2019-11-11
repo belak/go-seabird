@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -13,7 +12,7 @@ import (
 	"strings"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 var runescapeOldSchoolSkillNames = []string{
@@ -267,7 +266,7 @@ func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
 	return names
 }
 
-func (p *runescapePlugin) levelCallback(ctx context.Context, r *seabird.Request) {
+func (p *runescapePlugin) levelCallback(r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -285,14 +284,14 @@ func (p *runescapePlugin) levelCallback(ctx context.Context, r *seabird.Request)
 		for _, name := range names {
 			skill = skills[name]
 			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("level %s %s", utils.PrettifyNumber(skill.Level), skill.Skill))
+			responses = append(responses, fmt.Sprintf("level %s %s", internal.PrettifyNumber(skill.Level), skill.Skill))
 		}
 
 		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
-func (p *runescapePlugin) expCallback(ctx context.Context, r *seabird.Request) {
+func (p *runescapePlugin) expCallback(r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -310,14 +309,14 @@ func (p *runescapePlugin) expCallback(ctx context.Context, r *seabird.Request) {
 		for _, name := range names {
 			skill = skills[name]
 			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("%s experience in %s", utils.PrettifySuffix(skill.Exp), skill.Skill))
+			responses = append(responses, fmt.Sprintf("%s experience in %s", internal.PrettifySuffix(skill.Exp), skill.Skill))
 		}
 
 		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
-func (p *runescapePlugin) rankCallback(ctx context.Context, r *seabird.Request) {
+func (p *runescapePlugin) rankCallback(r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -335,7 +334,7 @@ func (p *runescapePlugin) rankCallback(ctx context.Context, r *seabird.Request) 
 		for _, name := range names {
 			skill = skills[name]
 			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("rank %s in %s", utils.PrettifyNumber(skill.Rank), skill.Skill))
+			responses = append(responses, fmt.Sprintf("rank %s in %s", internal.PrettifyNumber(skill.Rank), skill.Skill))
 		}
 
 		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))

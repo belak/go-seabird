@@ -8,7 +8,7 @@ import (
 	duration "github.com/channelmeter/iso8601duration"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -64,7 +64,14 @@ type ytVideos struct {
 	} `json:"items"`
 }
 
-func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
+func newYoutubeProvider(b *seabird.Bot) error {
+	err := b.EnsurePlugin("url")
+	if err != nil {
+		return err
+	}
+
+	urlPlugin := CtxPlugin(b.Context())
+
 	// Get API key from seabird config
 	yp := &youtubePlugin{}
 	if err := b.Config("youtube", yp); err != nil {
@@ -78,7 +85,7 @@ func newYoutubeProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (yp *youtubePlugin) Handle(b *seabird.Bot, r *seabird.Request, req *url.URL) bool {
+func (yp *youtubePlugin) Handle(r *seabird.Request, req *url.URL) bool {
 	// Get the Video ID from the URL
 	p, _ := url.ParseQuery(req.RawQuery)
 
@@ -116,7 +123,7 @@ func getVideo(id string, key string) (time string, title string) {
 	api := fmt.Sprintf("https://www.googleapis.com/youtube/v3/videos?part=contentDetails%%2Csnippet&id=%s&fields=items(contentDetails%%2Csnippet)&key=%s", id, key)
 
 	var videos ytVideos
-	if err := utils.GetJSON(api, &videos); err != nil {
+	if err := internal.GetJSON(api, &videos); err != nil {
 		return "", ""
 	}
 

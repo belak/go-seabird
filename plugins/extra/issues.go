@@ -69,7 +69,7 @@ func newIssuesPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *issuesPlugin) CreateIssue(ctx context.Context, r *seabird.Request) {
+func (p *issuesPlugin) CreateIssue(r *seabird.Request) {
 	go func() {
 		req := &github.IssueRequest{}
 
@@ -124,7 +124,7 @@ func (p *issuesPlugin) CreateIssue(ctx context.Context, r *seabird.Request) {
 	}()
 }
 
-func (p *issuesPlugin) IssueSearch(ctx context.Context, r *seabird.Request) {
+func (p *issuesPlugin) IssueSearch(r *seabird.Request) {
 	hasState := false
 	split := strings.Split(r.Message.Trailing(), " ")
 

@@ -58,8 +58,12 @@ type ForecastLocation struct {
 }
 
 func newForecastPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &forecastPlugin{
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	// Ensure DB tables are up to date
@@ -156,7 +160,7 @@ func (p *forecastPlugin) getLocation(r *seabird.Request) (*ForecastLocation, err
 	return newLocation, err
 }
 
-func (p *forecastPlugin) forecastCallback(ctx context.Context, r *seabird.Request) {
+func (p *forecastPlugin) forecastCallback(r *seabird.Request) {
 	loc, err := p.getLocation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())
@@ -188,7 +192,7 @@ func (p *forecastPlugin) forecastCallback(ctx context.Context, r *seabird.Reques
 	}
 }
 
-func (p *forecastPlugin) weatherCallback(ctx context.Context, r *seabird.Request) {
+func (p *forecastPlugin) weatherCallback(r *seabird.Request) {
 	loc, err := p.getLocation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())

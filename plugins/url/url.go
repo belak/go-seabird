@@ -1,6 +1,7 @@
 package url
 
 import (
+	"context"
 	"crypto/tls"
 	"io"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -25,6 +27,8 @@ func init() {
 var (
 	urlRegex     = regexp.MustCompile(`https?://[^ ]+`)
 	newlineRegex = regexp.MustCompile(`\s*\n\s*`)
+
+	contextKeyURLPlugin = internal.ContextKey("seabird-url-plugin")
 )
 
 // NOTE: This nasty work is done so we ignore invalid ssl certs. We know what
@@ -41,26 +45,35 @@ var client = &http.Client{
 // takes the same parameters as a normal IRC callback in addition to a
 // *url.URL representing the found url. It returns true if it was able
 // to handle that url and false otherwise.
-type LinkProvider func(b *seabird.Bot, r *seabird.Request, url *url.URL) bool
+type LinkProvider func(r *seabird.Request, url *url.URL) bool
 
 // Plugin stores all registered URL LinkProviders
 type Plugin struct {
 	providers map[string][]LinkProvider
 }
 
-func newPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux) *Plugin {
+func CtxPlugin(ctx context.Context) *Plugin {
+	return ctx.Value(contextKeyURLPlugin).(*Plugin)
+}
+
+func newPlugin(b *seabird.Bot) error {
 	p := &Plugin{
 		providers: make(map[string][]LinkProvider),
 	}
 
-	m.Event("PRIVMSG", p.callback)
+	bm := b.BasicMux()
+	cm := b.CommandMux()
+
+	bm.Event("PRIVMSG", p.callback)
 
 	cm.Event("down", isItDownCallback, &seabird.HelpInfo{
 		Usage:       "<website>",
 		Description: "Checks if given website is down",
 	})
 
-	return p
+	b.SetValue(contextKeyURLPlugin, p)
+
+	return nil
 }
 
 // RegisterProvider registers a LinkProvider for a specific domain.
@@ -70,7 +83,7 @@ func (p *Plugin) RegisterProvider(domain string, f LinkProvider) error {
 	return nil
 }
 
-func (p *Plugin) callback(b *seabird.Bot, r *seabird.Request) {
+func (p *Plugin) callback(r *seabird.Request) {
 	for _, rawurl := range urlRegex.FindAllString(r.Message.Trailing(), -1) {
 		go func(raw string) {
 			u, err := url.ParseRequestURI(raw)
@@ -82,7 +95,7 @@ func (p *Plugin) callback(b *seabird.Bot, r *seabird.Request) {
 			u.Path = strings.TrimRight(u.Path, "/")
 
 			for _, provider := range p.providers[u.Host] {
-				if provider(b, r, u) {
+				if provider(r, u) {
 					return
 				}
 			}
@@ -94,18 +107,18 @@ func (p *Plugin) callback(b *seabird.Bot, r *seabird.Request) {
 			if strings.HasPrefix(u.Host, "www.") {
 				host := u.Host[4:]
 				for _, provider := range p.providers[host] {
-					if provider(b, r, u) {
+					if provider(r, u) {
 						return
 					}
 				}
 			}
 
-			defaultLinkProvider(raw, b, r)
+			defaultLinkProvider(raw, r)
 		}(rawurl)
 	}
 }
 
-func defaultLinkProvider(url string, b *seabird.Bot, r *seabird.Request) bool {
+func defaultLinkProvider(url string, r *seabird.Request) bool {
 	resp, err := client.Get(url)
 	if err != nil {
 		return false
@@ -119,7 +132,7 @@ func defaultLinkProvider(url string, b *seabird.Bot, r *seabird.Request) bool {
 	// We search the first 1K and if a title isn't in there, we deal with it
 	z, err := html.Parse(io.LimitReader(resp.Body, 1024*1024))
 	if err != nil {
-		b.GetLogger().WithError(err).Warn("Failed to grab URL")
+		r.GetLogger("url").WithError(err).Warn("Failed to grab URL")
 		return false
 	}
 
@@ -135,7 +148,7 @@ func defaultLinkProvider(url string, b *seabird.Bot, r *seabird.Request) bool {
 	return ok
 }
 
-func isItDownCallback(b *seabird.Bot, r *seabird.Request) {
+func isItDownCallback(r *seabird.Request) {
 	go func() {
 		url, err := url.Parse(r.Message.Trailing())
 		if err != nil {

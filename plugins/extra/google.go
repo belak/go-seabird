@@ -1,12 +1,11 @@
 package extra
 
 import (
-	"context"
 	"html"
 	"net/url"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -39,15 +38,15 @@ func newGooglePlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func googleWebCallback(ctx context.Context, r *seabird.Request) {
-	googleSearch(ctx, r, "web", r.Message.Trailing())
+func googleWebCallback(r *seabird.Request) {
+	googleSearch(r, "web", r.Message.Trailing())
 }
 
-func googleImageCallback(ctx context.Context, r *seabird.Request) {
-	googleSearch(ctx, r, "images", r.Message.Trailing())
+func googleImageCallback(r *seabird.Request) {
+	googleSearch(r, "images", r.Message.Trailing())
 }
 
-func googleSearch(ctx context.Context, r *seabird.Request, service, query string) {
+func googleSearch(r *seabird.Request, service, query string) {
 	go func() {
 		if query == "" {
 			r.MentionReply("Query required")
@@ -55,7 +54,7 @@ func googleSearch(ctx context.Context, r *seabird.Request, service, query string
 		}
 
 		gr := &googleResponse{}
-		err := utils.GetJSON(
+		err := internal.GetJSON(
 			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(query),
 			gr)
 

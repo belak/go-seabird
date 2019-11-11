@@ -1,8 +1,6 @@
 package extra
 
 import (
-	"context"
-
 	seabird "github.com/belak/go-seabird"
 )
 
@@ -18,7 +16,7 @@ func newMentionsPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func mentionsCallback(ctx context.Context, r *seabird.Request) {
+func mentionsCallback(r *seabird.Request) {
 	switch r.Message.Trailing() {
 	case "ping":
 		r.MentionReply("pong")

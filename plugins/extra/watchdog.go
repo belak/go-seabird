@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"time"
 
 	"github.com/go-xorm/xorm"
@@ -43,7 +42,7 @@ func newWatchdogPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *watchdogPlugin) checkDb(ctx context.Context, r *seabird.Request, nonce string) bool {
+func (p *watchdogPlugin) checkDb(r *seabird.Request, nonce string) bool {
 	check := &watchdogCheck{
 		Entity: r.Message.Prefix.String(),
 		Nonce:  nonce,
@@ -61,7 +60,7 @@ func (p *watchdogPlugin) checkDb(ctx context.Context, r *seabird.Request, nonce 
 	return true
 }
 
-func (p *watchdogPlugin) check(ctx context.Context, r *seabird.Request) {
+func (p *watchdogPlugin) check(r *seabird.Request) {
 	timer := r.Timer("watchdog-check")
 	defer timer.Done()
 
@@ -72,7 +71,7 @@ func (p *watchdogPlugin) check(ctx context.Context, r *seabird.Request) {
 
 	nonce := r.Message.Trailing()
 
-	if ok := p.checkDb(ctx, r, nonce); !ok {
+	if ok := p.checkDb(r, nonce); !ok {
 		return
 	}
 

@@ -41,8 +41,8 @@ func newISupportPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *ISupportPlugin) handle005(ctx context.Context, r *seabird.Request) {
-	logger := seabird.CtxLogger(ctx)
+func (p *ISupportPlugin) handle005(r *seabird.Request) {
+	logger := r.GetLogger("isupport")
 
 	// Check for really old servers (or servers which based 005 off of rfc2812
 	if !strings.HasSuffix(r.Message.Trailing(), "server") {

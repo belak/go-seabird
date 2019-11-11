@@ -96,7 +96,10 @@ type ChannelTracker struct {
 func newChannelTracker(b *seabird.Bot) error {
 	bm := b.BasicMux()
 
-	// TODO: ensure isupport loaded
+	err := b.EnsurePlugin("isupport")
+	if err != nil {
+		return err
+	}
 
 	p := &ChannelTracker{
 		channels: make(map[string]*Channel),
@@ -174,59 +177,59 @@ func (p *ChannelTracker) RegisterSessionCleanupCallback(f func(u *User)) {
 
 // Private functions
 
-func (p *ChannelTracker) joinCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) joinCallback(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 	channel := r.Message.Trailing()
 
-	p.addUserToChannel(ctx, user, channel)
+	p.addUserToChannel(r, user, channel)
 
 	//fmt.Printf("%s (%s) joined %s\n", user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) partCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) partCallback(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 	channel := r.Message.Params[0]
 
-	p.removeUserFromChannel(ctx, user, channel)
+	p.removeUserFromChannel(r, user, channel)
 
 	//fmt.Printf("%s (%s) left %s\n", user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) kickCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) kickCallback(r *seabird.Request) {
 	//actor := m.Prefix.Name
 	user := r.Message.Params[1]
 	channel := r.Message.Params[0]
 
-	p.removeUserFromChannel(ctx, user, channel)
+	p.removeUserFromChannel(r, user, channel)
 
 	//fmt.Printf("%s (%s) kicked %s (%s) from %s\n", actor, p.uuids[actor], user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) quitCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) quitCallback(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 
-	p.removeUser(ctx, user)
+	p.removeUser(r, user)
 
 	//fmt.Printf("%s (%s) quit\n", user, p.uuids[user])
 } //nolint:wsl
 
-func (p *ChannelTracker) nickCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) nickCallback(r *seabird.Request) {
 	oldUser := r.Message.Prefix.Name
 	newUser := r.Message.Params[0]
 
-	p.renameUser(ctx, oldUser, newUser)
+	p.renameUser(r, oldUser, newUser)
 
 	//fmt.Printf("%s (%s) changed their name to %s\n", oldUser, p.uuids[newUser], newUser)
 } //nolint:wsl
 
-func (p *ChannelTracker) modeCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) modeCallback(r *seabird.Request) {
 	// We only care about MODE messages where a specific user is
 	// changed.
 	if len(r.Message.Params) < 3 {
 		return
 	}
 
-	logger := seabird.CtxLogger(ctx)
+	logger := r.GetLogger("channel_track")
 
 	channel := r.Message.Params[0]
 	target := r.Message.Params[2]
@@ -247,13 +250,13 @@ func (p *ChannelTracker) modeCallback(ctx context.Context, r *seabird.Request) {
 	r.Writef("WHO :%s", target)
 }
 
-func (p *ChannelTracker) whoCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) whoCallback(r *seabird.Request) {
 	// Filter out broken messages
 	if len(r.Message.Params) < 7 {
 		return
 	}
 
-	prefixes, ok := p.getSymbolToPrefixMapping(ctx)
+	prefixes, ok := p.getSymbolToPrefixMapping(r)
 	if !ok {
 		return
 	}
@@ -264,7 +267,7 @@ func (p *ChannelTracker) whoCallback(ctx context.Context, r *seabird.Request) {
 		modes   = r.Message.Params[5]
 	)
 
-	logger := seabird.CtxLogger(ctx)
+	logger := r.GetLogger("channel_track")
 
 	u := p.LookupUser(nick)
 	c := p.LookupChannel(channel)
@@ -291,10 +294,10 @@ func (p *ChannelTracker) whoCallback(ctx context.Context, r *seabird.Request) {
 // parses prefix into a mapping of the symbol to the mode. Eventually
 // this should be moved into the isupport plugin with a few more prefix
 // helper functions.
-func (p *ChannelTracker) getSymbolToPrefixMapping(ctx context.Context) (map[rune]rune, bool) {
-	logger := seabird.CtxLogger(ctx)
+func (p *ChannelTracker) getSymbolToPrefixMapping(r *seabird.Request) (map[rune]rune, bool) {
+	logger := r.GetLogger("channel_track")
 
-	isupport := CtxISupport(ctx)
+	isupport := CtxISupport(r.Context())
 
 	// Sample: (qaohv)~&@%+
 	prefix, _ := isupport.GetRaw("PREFIX")
@@ -337,13 +340,13 @@ func (p *ChannelTracker) getSymbolToPrefixMapping(ctx context.Context) (map[rune
 	return prefixes, true
 }
 
-func (p *ChannelTracker) namesCallback(ctx context.Context, r *seabird.Request) {
-	prefixes, ok := p.getSymbolToPrefixMapping(ctx)
+func (p *ChannelTracker) namesCallback(r *seabird.Request) {
+	prefixes, ok := p.getSymbolToPrefixMapping(r)
 	if !ok {
 		return
 	}
 
-	logger := seabird.CtxLogger(ctx)
+	logger := r.GetLogger("channel_track")
 
 	channel := r.Message.Params[2]
 
@@ -361,11 +364,11 @@ func (p *ChannelTracker) namesCallback(ctx context.Context, r *seabird.Request) 
 		}
 
 		// The bot user should be added via JOIN
-		if user == seabird.CtxCurrentNick(ctx) {
+		if user == r.CurrentNick() {
 			continue
 		}
 
-		p.addUserToChannel(ctx, user, channel)
+		p.addUserToChannel(r, user, channel)
 
 		u := p.LookupUser(user)
 		if u == nil {
@@ -388,7 +391,7 @@ func (p *ChannelTracker) namesCallback(ctx context.Context, r *seabird.Request) 
 	}
 }
 
-func (p *ChannelTracker) endOfNamesCallback(ctx context.Context, r *seabird.Request) {
+func (p *ChannelTracker) endOfNamesCallback(r *seabird.Request) {
 	channel := r.Message.Params[1]
 
 	fmt.Printf("Got all names for %s\n", channel)
@@ -396,16 +399,16 @@ func (p *ChannelTracker) endOfNamesCallback(ctx context.Context, r *seabird.Requ
 
 // Implementation below
 
-func (p *ChannelTracker) addUserToChannel(ctx context.Context, user, channel string) {
-	logger := seabird.CtxLogger(ctx).WithFields(logrus.Fields{
+func (p *ChannelTracker) addUserToChannel(r *seabird.Request, user, channel string) {
+	logger := r.GetLogger("channel_track").WithFields(logrus.Fields{
 		"channel": channel,
 		"user":    user,
 	})
 
 	// If the current user is joining a channel, we need to add it
 	// before adding our user.
-	if user == seabird.CtxCurrentNick(ctx) {
-		p.addChannel(ctx, channel)
+	if user == r.CurrentNick() {
+		p.addChannel(r, channel)
 	}
 
 	// If we're not in this channel, issue a warning and bail.
@@ -442,11 +445,11 @@ func (p *ChannelTracker) addUserToChannel(ctx context.Context, user, channel str
 	logger.Info("User added to channel")
 }
 
-func (p *ChannelTracker) removeUserFromChannel(ctx context.Context, user, channel string) {
-	logger := seabird.CtxLogger(ctx).WithField("channel", channel)
+func (p *ChannelTracker) removeUserFromChannel(r *seabird.Request, user, channel string) {
+	logger := r.GetLogger("channel_track").WithField("channel", channel)
 
-	if user == seabird.CtxCurrentNick(ctx) {
-		p.removeChannel(ctx, channel)
+	if user == r.CurrentNick() {
+		p.removeChannel(r, channel)
 	} else {
 		u := p.LookupUser(user)
 		if u == nil {
@@ -466,15 +469,15 @@ func (p *ChannelTracker) removeUserFromChannel(ctx context.Context, user, channe
 		logger.Info("Removing user from channel")
 
 		if len(u.channels) == 0 {
-			p.removeUser(ctx, user)
+			p.removeUser(r, user)
 		}
 
 		logger.Info("Removed user from channel")
 	}
 }
 
-func (p *ChannelTracker) addChannel(ctx context.Context, channel string) {
-	logger := seabird.CtxLogger(ctx).WithField("channel", channel)
+func (p *ChannelTracker) addChannel(r *seabird.Request, channel string) {
+	logger := r.GetLogger("channel_track").WithField("channel", channel)
 
 	if _, ok := p.channels[channel]; ok {
 		logger.Warn("Already in channel")
@@ -488,8 +491,8 @@ func (p *ChannelTracker) addChannel(ctx context.Context, channel string) {
 	logger.Info("Added channel")
 }
 
-func (p *ChannelTracker) removeChannel(ctx context.Context, channel string) {
-	logger := seabird.CtxLogger(ctx).WithField("channel", channel)
+func (p *ChannelTracker) removeChannel(r *seabird.Request, channel string) {
+	logger := r.GetLogger("channel_track").WithField("channel", channel)
 
 	c, ok := p.channels[channel]
 	if !ok {
@@ -507,7 +510,7 @@ func (p *ChannelTracker) removeChannel(ctx context.Context, channel string) {
 
 		// If this user has no more channels, they need to be removed.
 		if len(u.channels) == 0 {
-			p.removeUser(ctx, u.Nick)
+			p.removeUser(r, u.Nick)
 		}
 	}
 
@@ -520,8 +523,8 @@ func (p *ChannelTracker) removeChannel(ctx context.Context, channel string) {
 	logger.Info("Removed channel")
 }
 
-func (p *ChannelTracker) removeUser(ctx context.Context, user string) {
-	logger := seabird.CtxLogger(ctx).WithField("user", user)
+func (p *ChannelTracker) removeUser(r *seabird.Request, user string) {
+	logger := r.GetLogger("channel_track").WithField("user", user)
 
 	u := p.LookupUser(user)
 	if u == nil {
@@ -551,8 +554,8 @@ func (p *ChannelTracker) removeUser(ctx context.Context, user string) {
 	logger.Info("Removed user")
 }
 
-func (p *ChannelTracker) renameUser(ctx context.Context, oldNick, newNick string) {
-	logger := seabird.CtxLogger(ctx).WithFields(logrus.Fields{
+func (p *ChannelTracker) renameUser(r *seabird.Request, oldNick, newNick string) {
+	logger := r.GetLogger("channel_track").WithFields(logrus.Fields{
 		"oldNick": oldNick,
 		"newNick": newNick,
 	})

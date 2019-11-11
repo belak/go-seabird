@@ -1,11 +1,10 @@
 package extra
 
 import (
-	"context"
 	"net/url"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -52,7 +51,7 @@ func newFccPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *fccPlugin) Search(ctx context.Context, r *seabird.Request) {
+func (p *fccPlugin) Search(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Callsign required")
@@ -62,7 +61,7 @@ func (p *fccPlugin) Search(ctx context.Context, r *seabird.Request) {
 		url := "http://data.fcc.gov/api/license-view/basicSearch/getLicenses?format=json&searchValue=" + url.QueryEscape(r.Message.Trailing())
 
 		fr := &fccResponse{}
-		err := utils.GetJSON(url, fr)
+		err := internal.GetJSON(url, fr)
 		if err != nil {
 			r.MentionReply("%s", err)
 			return

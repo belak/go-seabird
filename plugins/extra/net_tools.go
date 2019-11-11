@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"io/ioutil"
 	"net"
 	"net/http"
@@ -9,9 +8,9 @@ import (
 	"os/exec"
 
 	ping "github.com/belak/go-ping"
+	"github.com/belak/go-seabird/internal"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
 )
 
 func init() {
@@ -65,9 +64,7 @@ func newNetToolsPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *netToolsPlugin) RDNS(ctx context.Context, r *seabird.Request) {
-	b := seabird.CtxBot(ctx)
-
+func (p *netToolsPlugin) RDNS(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Argument required")
@@ -88,15 +85,13 @@ func (p *netToolsPlugin) RDNS(ctx context.Context, r *seabird.Request) {
 
 		if len(names) > 1 {
 			for _, name := range names[1:] {
-				b.Writef("NOTICE %s :%s", r.Message.Prefix.Name, name)
+				r.Writef("NOTICE %s :%s", r.Message.Prefix.Name, name)
 			}
 		}
 	}()
 }
 
-func (p *netToolsPlugin) Dig(ctx context.Context, r *seabird.Request) {
-	b := seabird.CtxBot(ctx)
-
+func (p *netToolsPlugin) Dig(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Domain required")
@@ -118,13 +113,13 @@ func (p *netToolsPlugin) Dig(ctx context.Context, r *seabird.Request) {
 
 		if len(addrs) > 1 {
 			for _, addr := range addrs[1:] {
-				b.Writef("NOTICE %s :%s", r.Message.Prefix.Name, addr)
+				r.Writef("NOTICE %s :%s", r.Message.Prefix.Name, addr)
 			}
 		}
 	}()
 }
 
-func (p *netToolsPlugin) Ping(ctx context.Context, r *seabird.Request) {
+func (p *netToolsPlugin) Ping(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Host required")
@@ -176,7 +171,7 @@ func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) 
 	return p.pasteData(string(out))
 }
 
-func (p *netToolsPlugin) handleCommand(ctx context.Context, r *seabird.Request, command string, emptyMsg string) {
+func (p *netToolsPlugin) handleCommand(r *seabird.Request, command string, emptyMsg string) {
 	if r.Message.Trailing() == "" {
 		r.MentionReply("Host required")
 		return
@@ -191,15 +186,15 @@ func (p *netToolsPlugin) handleCommand(ctx context.Context, r *seabird.Request, 
 	r.MentionReply("%s", url)
 }
 
-func (p *netToolsPlugin) Traceroute(ctx context.Context, r *seabird.Request) {
-	go p.handleCommand(ctx, r, "traceroute", "Host required")
+func (p *netToolsPlugin) Traceroute(r *seabird.Request) {
+	go p.handleCommand(r, "traceroute", "Host required")
 }
 
-func (p *netToolsPlugin) Whois(ctx context.Context, r *seabird.Request) {
-	go p.handleCommand(ctx, r, "whois", "Domain required")
+func (p *netToolsPlugin) Whois(r *seabird.Request) {
+	go p.handleCommand(r, "whois", "Domain required")
 }
 
-func (p *netToolsPlugin) DNSCheck(ctx context.Context, r *seabird.Request) {
+func (p *netToolsPlugin) DNSCheck(r *seabird.Request) {
 	if r.Message.Trailing() == "" {
 		r.MentionReply("Domain required")
 		return
@@ -217,7 +212,7 @@ type asnResponse struct {
 	LastIP        string `json:"last_ip"`
 }
 
-func (p *netToolsPlugin) ASNLookup(ctx context.Context, r *seabird.Request) {
+func (p *netToolsPlugin) ASNLookup(r *seabird.Request) {
 	if r.Message.Trailing() == "" {
 		r.MentionReply("IP required")
 		return
@@ -225,7 +220,7 @@ func (p *netToolsPlugin) ASNLookup(ctx context.Context, r *seabird.Request) {
 
 	asnResp := asnResponse{}
 
-	err := utils.GetJSON(
+	err := internal.GetJSON(
 		"https://api.iptoasn.com/v1/as/ip/"+r.Message.Trailing(),
 		&asnResp)
 	if err != nil {

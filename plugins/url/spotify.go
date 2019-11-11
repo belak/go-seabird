@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2/clientcredentials"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -42,7 +42,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 1,
 		regex:      regexp.MustCompile(`^/artist/(.+)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:artist:(\w+)\b`),
-		template:   utils.TemplateMustCompile("spotifyArtist", `{{- .Name -}}`),
+		template:   internal.TemplateMustCompile("spotifyArtist", `{{- .Name -}}`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
 			artist, err := s.api.GetArtist(spotify.ID(matches[0]))
 			if err != nil {
@@ -56,7 +56,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 1,
 		regex:      regexp.MustCompile(`^/album/(.+)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:album:(\w+)\b`),
-		template: utils.TemplateMustCompile("spotifyAlbum", `
+		template: internal.TemplateMustCompile("spotifyAlbum", `
 			{{- .Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name -}}
@@ -74,7 +74,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 1,
 		regex:      regexp.MustCompile(`^/track/(.+)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:track:(\w+)\b`),
-		template: utils.TemplateMustCompile("spotifyTrack", `
+		template: internal.TemplateMustCompile("spotifyTrack", `
 			"{{ .Name }}" from {{ .Album.Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name }}
@@ -92,7 +92,7 @@ var spotifyMatchers = []spotifyMatch{
 		matchCount: 2,
 		regex:      regexp.MustCompile(`^/user/([^/]*)/playlist/([^/]*)$`),
 		uriRegex:   regexp.MustCompile(`\bspotify:user:(\w+):playlist:(\w+)\b`),
-		template: utils.TemplateMustCompile("spotifyPlaylist", `
+		template: internal.TemplateMustCompile("spotifyPlaylist", `
 			"{{- .Name }}" playlist by {{ .Owner.DisplayName }} ({{ pluralize .Tracks.Total "track" }})`),
 		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
 			// playlist, err := s.api.GetPlaylist(matches[0], spotify.ID(matches[1]))
@@ -106,7 +106,15 @@ var spotifyMatchers = []spotifyMatch{
 	},
 }
 
-func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) error {
+func newSpotifyProvider(b *seabird.Bot) error {
+	err := b.EnsurePlugin("url")
+	if err != nil {
+		return err
+	}
+
+	bm := b.BasicMux()
+	urlPlugin := CtxPlugin(b.Context())
+
 	s := &spotifyProvider{}
 
 	sc := &spotifyConfig{}
@@ -127,24 +135,24 @@ func newSpotifyProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 
 	s.api = spotify.Authenticator{}.NewClient(token)
 
-	m.Event("PRIVMSG", s.privmsgCallback)
+	bm.Event("PRIVMSG", s.privmsgCallback)
 
 	urlPlugin.RegisterProvider("open.spotify.com", s.HandleURL)
 
 	return nil
 }
 
-func (s *spotifyProvider) privmsgCallback(b *seabird.Bot, r *seabird.Request) {
+func (s *spotifyProvider) privmsgCallback(r *seabird.Request) {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, r, matcher, matcher.uriRegex, r.Message.Trailing()) {
+		if s.handleTarget(r, matcher, matcher.uriRegex, r.Message.Trailing()) {
 			return
 		}
 	}
 }
 
-func (s *spotifyProvider) HandleURL(b *seabird.Bot, r *seabird.Request, u *url.URL) bool {
+func (s *spotifyProvider) HandleURL(r *seabird.Request, u *url.URL) bool {
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(b, r, matcher, matcher.regex, u.Path) {
+		if s.handleTarget(r, matcher, matcher.regex, u.Path) {
 			return true
 		}
 	}
@@ -152,8 +160,8 @@ func (s *spotifyProvider) HandleURL(b *seabird.Bot, r *seabird.Request, u *url.U
 	return false
 }
 
-func (s *spotifyProvider) handleTarget(b *seabird.Bot, r *seabird.Request, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
-	logger := b.GetLogger()
+func (s *spotifyProvider) handleTarget(r *seabird.Request, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
+	logger := r.GetLogger("url/spotify")
 
 	if !regex.MatchString(target) {
 		return false
@@ -169,5 +177,5 @@ func (s *spotifyProvider) handleTarget(b *seabird.Bot, r *seabird.Request, match
 		return false
 	}
 
-	return utils.RenderRespond(b, r, logger, matcher.template, spotifyPrefix, data)
+	return internal.RenderRespond(r.Reply, logger, matcher.template, spotifyPrefix, data)
 }

@@ -2,7 +2,6 @@ package extra
 
 import (
 	"bufio"
-	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -40,7 +39,7 @@ func newBulkCNAMPlugin(b *seabird.Bot) error {
 
 // This function queries the BulkCNAM API for a Phone #'s
 // corresponding CNAM, and returns it
-func (p *bulkCNAMPlugin) bulkCNAMCallback(ctx context.Context, r *seabird.Request) {
+func (p *bulkCNAMPlugin) bulkCNAMCallback(r *seabird.Request) {
 	number := r.Message.Trailing()
 
 	for _, digit := range number {

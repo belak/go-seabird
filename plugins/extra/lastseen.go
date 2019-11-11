@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"fmt"
 	"strings"
 	"time"
@@ -28,8 +27,12 @@ type LastSeen struct {
 }
 
 func newLastSeenPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &lastSeenPlugin{
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	if err := p.db.Sync(LastSeen{}); err != nil {
@@ -49,7 +52,7 @@ func newLastSeenPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *lastSeenPlugin) activeCallback(ctx context.Context, r *seabird.Request) {
+func (p *lastSeenPlugin) activeCallback(r *seabird.Request) {
 	nick := r.Message.Trailing()
 	if nick == "" {
 		r.MentionReply("Nick required")
@@ -83,7 +86,7 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), t.Month().String(), t.Year())
 }
 
-func (p *lastSeenPlugin) msgCallback(ctx context.Context, r *seabird.Request) {
+func (p *lastSeenPlugin) msgCallback(r *seabird.Request) {
 	if len(r.Message.Params) < 2 || !r.FromChannel() || r.Message.Prefix.Name == "" {
 		return
 	}
@@ -91,12 +94,12 @@ func (p *lastSeenPlugin) msgCallback(ctx context.Context, r *seabird.Request) {
 	nick := r.Message.Prefix.Name
 	channel := r.Message.Params[0]
 
-	p.updateLastSeen(ctx, nick, channel)
+	p.updateLastSeen(r, nick, channel)
 }
 
 // Thanks to @belak for the comments
-func (p *lastSeenPlugin) updateLastSeen(ctx context.Context, rawNick, rawChannel string) {
-	l := seabird.CtxLogger(ctx)
+func (p *lastSeenPlugin) updateLastSeen(r *seabird.Request, rawNick, rawChannel string) {
+	l := r.GetLogger("lastseen")
 
 	search := LastSeen{
 		Channel: strings.ToLower(rawChannel),

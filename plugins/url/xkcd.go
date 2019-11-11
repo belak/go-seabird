@@ -20,11 +20,20 @@ func init() {
 var xkcdRegex = regexp.MustCompile(`^/([^/]+)$`)
 var xkcdPrefix = "[XKCD]"
 
-func newXKCDProvider(urlPlugin *Plugin) {
+func newXKCDProvider(b *seabird.Bot) error {
+	err := b.EnsurePlugin("url")
+	if err != nil {
+		return err
+	}
+
+	urlPlugin := CtxPlugin(b.Context())
+
 	urlPlugin.RegisterProvider("xkcd.com", handleXKCD)
+
+	return nil
 }
 
-func handleXKCD(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func handleXKCD(r *seabird.Request, url *url.URL) bool {
 	if url.Path != "" && !xkcdRegex.MatchString(url.Path) {
 		return false
 	}

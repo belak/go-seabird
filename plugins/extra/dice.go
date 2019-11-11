@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"fmt"
 	"math/rand"
 	"regexp"
@@ -25,7 +24,7 @@ func newDicePlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func diceCallback(ctx context.Context, r *seabird.Request) {
+func diceCallback(r *seabird.Request) {
 	var rolls []string
 
 	totalCount := 0

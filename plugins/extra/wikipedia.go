@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"strings"
 
 	"github.com/yhat/scrape"
@@ -9,7 +8,7 @@ import (
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -40,7 +39,7 @@ func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func wikiCallback(ctx context.Context, r *seabird.Request) {
+func wikiCallback(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Query required")
@@ -48,7 +47,7 @@ func wikiCallback(ctx context.Context, r *seabird.Request) {
 		}
 
 		wr := &wikiResponse{}
-		err := utils.GetJSON(
+		err := internal.GetJSON(
 			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(r.Message.Trailing()),
 			wr)
 		if err != nil {

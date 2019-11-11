@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"math/rand"
 	"strings"
 
@@ -42,7 +41,7 @@ func newChancePlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *chancePlugin) rouletteCallback(ctx context.Context, r *seabird.Request) {
+func (p *chancePlugin) rouletteCallback(r *seabird.Request) {
 	if !r.FromChannel() {
 		return
 	}
@@ -51,8 +50,6 @@ func (p *chancePlugin) rouletteCallback(ctx context.Context, r *seabird.Request)
 		// Invalid message
 		return
 	}
-
-	b := seabird.CtxBot(ctx)
 
 	shotsLeft := p.rouletteShotsLeft[r.Message.Params[0]]
 
@@ -67,7 +64,7 @@ func (p *chancePlugin) rouletteCallback(ctx context.Context, r *seabird.Request)
 
 	if shotsLeft < 1 {
 		r.MentionReply("%sBANG!", msg)
-		b.Writef("KICK %s %s", r.Message.Params[0], r.Message.Prefix.Name)
+		r.Writef("KICK %s %s", r.Message.Params[0], r.Message.Prefix.Name)
 	} else {
 		r.MentionReply("%sClick.", msg)
 	}
@@ -75,12 +72,10 @@ func (p *chancePlugin) rouletteCallback(ctx context.Context, r *seabird.Request)
 	p.rouletteShotsLeft[r.Message.Params[0]] = shotsLeft
 }
 
-func (p *chancePlugin) coinCallback(ctx context.Context, r *seabird.Request) {
+func (p *chancePlugin) coinCallback(r *seabird.Request) {
 	if !r.FromChannel() {
 		return
 	}
-
-	b := seabird.CtxBot(ctx)
 
 	guess := -1
 	guessStr := r.Message.Trailing()
@@ -93,7 +88,7 @@ func (p *chancePlugin) coinCallback(ctx context.Context, r *seabird.Request) {
 	}
 
 	if guess == -1 {
-		b.Writef(
+		r.Writef(
 			"KICK %s %s :That's not a valid coin side. Options are: %s",
 			r.Message.Params[0],
 			r.Message.Prefix.Name,
@@ -107,6 +102,6 @@ func (p *chancePlugin) coinCallback(ctx context.Context, r *seabird.Request) {
 	if flip == guess {
 		r.MentionReply("Lucky guess!")
 	} else {
-		b.Writef("KICK %s %s :%s", r.Message.Params[0], r.Message.Prefix.Name, "Sorry! Better luck next time!")
+		r.Writef("KICK %s %s :%s", r.Message.Params[0], r.Message.Prefix.Name, "Sorry! Better luck next time!")
 	}
 }

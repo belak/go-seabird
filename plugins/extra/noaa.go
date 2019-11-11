@@ -3,7 +3,6 @@ package extra
 import (
 	"bufio"
 	"bytes"
-	"context"
 	"errors"
 	"fmt"
 	"io"
@@ -33,8 +32,12 @@ func init() {
 }
 
 func newMetarPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &noaaPlugin{
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	// Ensure DB tables are up to date
@@ -57,7 +60,7 @@ func newMetarPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *noaaPlugin) getStation(ctx context.Context, r *seabird.Request) (string, error) {
+func (p *noaaPlugin) getStation(r *seabird.Request) (string, error) {
 	l := r.Message.Trailing()
 
 	target := &NOAAStation{Nick: r.Message.Prefix.Name}
@@ -89,8 +92,8 @@ func (p *noaaPlugin) getStation(ctx context.Context, r *seabird.Request) (string
 	return newStation.Station, err
 }
 
-func (p *noaaPlugin) metarCallback(ctx context.Context, r *seabird.Request) {
-	station, err := p.getStation(ctx, r)
+func (p *noaaPlugin) metarCallback(r *seabird.Request) {
+	station, err := p.getStation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())
 		return
@@ -105,8 +108,8 @@ func (p *noaaPlugin) metarCallback(ctx context.Context, r *seabird.Request) {
 	r.MentionReply("%s", resp)
 }
 
-func (p *noaaPlugin) tafCallback(ctx context.Context, r *seabird.Request) {
-	station, err := p.getStation(ctx, r)
+func (p *noaaPlugin) tafCallback(r *seabird.Request) {
+	station, err := p.getStation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())
 		return

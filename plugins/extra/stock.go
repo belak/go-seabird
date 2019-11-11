@@ -1,7 +1,6 @@
 package extra
 
 import (
-	"context"
 	"fmt"
 	"strings"
 
@@ -40,7 +39,7 @@ func newStockPlugin(b *seabird.Bot) error {
 	return nil
 }
 
-func (p *stockPlugin) search(ctx context.Context, r *seabird.Request) {
+func (p *stockPlugin) search(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Symbol required")

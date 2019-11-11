@@ -11,6 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
+	"github.com/unknwon/com"
 
 	"github.com/belak/go-seabird/internal"
 	client "github.com/influxdata/influxdb1-client/v2"
@@ -71,9 +72,11 @@ type Bot struct {
 	influxDbConfig InfluxDbConfig
 
 	// Internal things
-	client  *irc.Client
-	log     *logrus.Entry
-	context context.Context
+	client         *irc.Client
+	log            *logrus.Entry
+	context        context.Context
+	loadedPlugins  map[string]bool
+	loadingContext []string
 
 	influxDbClient client.Client
 	points         chan *client.Point
@@ -85,9 +88,10 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	var err error
 
 	b := &Bot{
-		mux:        NewBasicMux(),
-		confValues: make(map[string]toml.Primitive),
-		md:         toml.MetaData{},
+		mux:           NewBasicMux(),
+		confValues:    make(map[string]toml.Primitive),
+		md:            toml.MetaData{},
+		loadedPlugins: make(map[string]bool),
 	}
 
 	// Decode the file, but leave all the config sections intact so we can
@@ -309,15 +313,58 @@ func (b *Bot) ConnectAndRun() error {
 	return b.Run(c)
 }
 
+func (b *Bot) EnsurePlugin(name string) error {
+	loaded, ok := b.loadedPlugins[name]
+	if !ok {
+		return fmt.Errorf("Plugin %q not loaded", name)
+	}
+
+	// If it's already loaded, return nil
+	if loaded {
+		return nil
+	}
+
+	return b.loadPlugin(name)
+}
+
+func (b *Bot) loadPlugin(name string) error {
+	tmpLoadingContext := append(b.loadingContext, name)
+
+	if com.IsSliceContainsStr(b.loadingContext, name) {
+		return fmt.Errorf(
+			"Plugin load loop: %s",
+			strings.Join(tmpLoadingContext, ", "),
+		)
+	}
+
+	// Push the current plugin onto the stack
+	b.loadingContext = tmpLoadingContext
+
+	err := plugins[name](b)
+
+	// Pop the current plugin off the stack
+	b.loadingContext = b.loadingContext[:len(b.loadingContext)-1]
+
+	return err
+}
+
 func (b *Bot) loadPlugins() error {
 	pluginNames, err := matchingPlugins(b.config.Plugins, nil)
 	if err != nil {
 		return err
 	}
 
+	// Update the loadedPlugins map to say which ones we're loading.
+	for _, name := range pluginNames {
+		b.loadedPlugins[name] = false
+	}
+
 	// Loop through all our plugins and load them
 	for _, name := range pluginNames {
-		plugins[name](b)
+		err = b.EnsurePlugin(name)
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
