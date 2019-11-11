@@ -143,7 +143,7 @@ func (p *reminderPlugin) remindLoop(r *seabird.Request) {
 
 		var timer <-chan time.Time
 
-		if r != nil {
+		if reminder != nil {
 			logger.WithField("reminder", reminder).Debug("Next reminder")
 
 			waitDur := time.Until(reminder.ReminderTime)

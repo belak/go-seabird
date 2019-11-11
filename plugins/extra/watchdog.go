@@ -23,8 +23,12 @@ type watchdogCheck struct {
 }
 
 func newWatchdogPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &watchdogPlugin{
-		db: CtxDB(b.Context()), // TODO: ensure DB loaded
+		db: CtxDB(b.Context()),
 	}
 
 	// Migrate any relevant tables
