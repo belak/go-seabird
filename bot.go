@@ -11,7 +11,7 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
-	"github.com/unknwon/com"
+	"github.com/unknwon/com" //nolint:misspell
 
 	"github.com/belak/go-seabird/internal"
 	client "github.com/influxdata/influxdb1-client/v2"
@@ -333,8 +333,7 @@ func (b *Bot) loadPlugin(name string) error {
 	if com.IsSliceContainsStr(b.loadingContext, name) {
 		return fmt.Errorf(
 			"Plugin load loop: %s",
-			strings.Join(tmpLoadingContext, ", "),
-		)
+			strings.Join(tmpLoadingContext, ", "))
 	}
 
 	// Push the current plugin onto the stack

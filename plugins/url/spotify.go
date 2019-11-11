@@ -107,8 +107,7 @@ var spotifyMatchers = []spotifyMatch{
 }
 
 func newSpotifyProvider(b *seabird.Bot) error {
-	err := b.EnsurePlugin("url")
-	if err != nil {
+	if err := b.EnsurePlugin("url"); err != nil {
 		return err
 	}
 

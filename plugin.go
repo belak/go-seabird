@@ -4,12 +4,12 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/unknwon/com"
+	"github.com/unknwon/com" //nolint:misspell
 )
 
 type PluginFactory func(b *Bot) error
 
-var plugins = map[string]PluginFactory{}
+var plugins = make(map[string]PluginFactory)
 
 // RegisterPlugin registers a PluginFactory for a given name. It will
 // panic if multiple plugins are registered with the same name.
@@ -23,6 +23,7 @@ func RegisterPlugin(name string, factory PluginFactory) {
 
 func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
 	var whitelist []glob.Glob
+
 	var blacklist []glob.Glob
 
 	// Compile all of the whitelist into globs
@@ -31,6 +32,7 @@ func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		whitelist = append(whitelist, g)
 	}
 
@@ -40,6 +42,7 @@ func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
 		if err != nil {
 			return nil, err
 		}
+
 		blacklist = append(blacklist, g)
 	}
 
@@ -49,6 +52,7 @@ func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
 	}
 
 	var matching []string
+
 	for item := range plugins {
 		if matchesGloblist(item, whitelist) && !matchesGloblist(item, blacklist) {
 			matching = com.AppendStr(matching, item)
