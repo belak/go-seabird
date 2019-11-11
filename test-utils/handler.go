@@ -1,9 +1,9 @@
 package utils
 
 import (
+	"context"
 	"sync"
 
-	seabird "github.com/belak/go-seabird"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -15,7 +15,7 @@ type TestHandler struct {
 }
 
 // Handle implements the Handler interface
-func (th *TestHandler) Handle(b *seabird.Bot, m *irc.Message) {
+func (th *TestHandler) Handle(ctx context.Context, m *irc.Message) {
 	th.lock.Lock()
 	defer th.lock.Unlock()
 

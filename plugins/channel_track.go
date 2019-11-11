@@ -226,7 +226,6 @@ func (p *ChannelTracker) modeCallback(ctx context.Context, r *seabird.Request) {
 		return
 	}
 
-	b := seabird.CtxBot(ctx)
 	logger := seabird.CtxLogger(ctx)
 
 	channel := r.Message.Params[0]
@@ -245,7 +244,7 @@ func (p *ChannelTracker) modeCallback(ctx context.Context, r *seabird.Request) {
 	// mode parsing is hard.
 	u.channels[channel] = make(map[rune]bool)
 
-	b.Writef("WHO :%s", target)
+	r.Writef("WHO :%s", target)
 }
 
 func (p *ChannelTracker) whoCallback(ctx context.Context, r *seabird.Request) {

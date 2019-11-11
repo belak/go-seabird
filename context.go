@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/belak/go-seabird/internal"
+	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
 )
 
@@ -11,8 +12,8 @@ const (
 	contextKeyBot    = internal.ContextKey("seabird-bot")
 	contextKeyLogger = internal.ContextKey("seabird-logger-entry")
 
-	// TODO: set this
 	contextKeyCurrentNick = internal.ContextKey("seabird-current-nick")
+	contextKeyRequestID   = internal.ContextKey("seabird-request-id")
 )
 
 func withSeabirdValues(ctx context.Context, b *Bot, log *logrus.Entry) context.Context {
@@ -26,10 +27,15 @@ func CtxBot(ctx context.Context) *Bot {
 	return ctx.Value(contextKeyBot).(*Bot)
 }
 
-func CtxLogger(ctx context.Context) *logrus.Entry {
-	return ctx.Value(contextKeyLogger).(*logrus.Entry)
+func CtxLogger(ctx context.Context, name string) *logrus.Entry {
+	logger := ctx.Value(contextKeyLogger).(*logrus.Entry)
+	return logger.WithField("category", name)
 }
 
 func CtxCurrentNick(ctx context.Context) string {
 	return ctx.Value(contextKeyCurrentNick).(string)
+}
+
+func CtxRequestID(ctx context.Context) uuid.UUID {
+	return ctx.Value(contextKeyRequestID).(uuid.UUID)
 }

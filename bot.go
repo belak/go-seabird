@@ -130,7 +130,6 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	b.mux.Event("PRIVMSG", b.commandMux.HandleEvent)
 	b.mux.Event("PRIVMSG", b.mentionMux.HandleEvent)
 
-	// Set all the
 	b.context = withSeabirdValues(context.TODO(), b, b.log)
 
 	return b, nil
@@ -188,23 +187,8 @@ func (b *Bot) Config(name string, c interface{}) error {
 	return fmt.Errorf("Config section for %q missing", name)
 }
 
-// Send is a simple function to send an IRC event
-func (b *Bot) Send(m *irc.Message) {
-	b.client.WriteMessage(m)
-}
-
-// Write will write an raw IRC message to the stream
-func (b *Bot) Write(line string) {
-	b.client.Write(line)
-}
-
-// Writef is a convenience method around fmt.Sprintf and Bot.Write
-func (b *Bot) Writef(format string, args ...interface{}) {
-	b.client.Writef(format, args...)
-}
-
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
-	r := NewRequest(b, m)
+	r := NewRequest(b.context, b, c.CurrentNick(), m)
 
 	timer := r.Timer("total_request")
 
@@ -213,7 +197,7 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 		b.log.Info("Connected")
 
 		for _, v := range b.config.Cmds {
-			b.Write(v)
+			b.client.Write(v)
 		}
 	} else if r.Message.Command == "PRIVMSG" {
 		// Clean up CTCP stuff so plugins don't need to parse it manually
@@ -225,7 +209,7 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 		}
 	}
 
-	b.mux.HandleEvent(b.context, r)
+	b.mux.HandleEvent(r)
 	timer.Done()
 
 	r.Log(b)
