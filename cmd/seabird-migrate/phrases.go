@@ -26,7 +26,7 @@ type phraseBucket struct {
 }
 
 func migratePhrases(b *seabird.Bot, ndb *nut.DB, xdb *xorm.Engine) error {
-	l := b.GetLogger()
+	l := seabird.CtxLogger(b.Context(), "migrate")
 
 	err := xdb.Sync(Phrase{})
 	if err != nil {

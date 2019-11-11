@@ -21,10 +21,12 @@ func openDBs(b *seabird.Bot) (*nut.DB, *xorm.Engine, error) {
 		return nil, nil, err
 	}
 
-	xdb, err := extra.NewDBPlugin(b)
+	err := extra.NewDBPlugin(b)
 	if err != nil {
 		return nil, nil, err
 	}
+
+	xdb := extra.CtxDB(b.Context())
 
 	ndb, err := nut.Open(dbc.Filename, 0700)
 	if err != nil {
