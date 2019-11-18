@@ -4,7 +4,8 @@ import (
 	"fmt"
 
 	"github.com/gobwas/glob"
-	"github.com/unknwon/com" //nolint:misspell
+
+	"github.com/belak/go-seabird/internal"
 )
 
 type PluginFactory func(b *Bot) error
@@ -21,10 +22,8 @@ func RegisterPlugin(name string, factory PluginFactory) {
 	plugins[name] = factory
 }
 
-func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
+func matchingPlugins(rawWhitelist []string) ([]string, error) {
 	var whitelist []glob.Glob
-
-	var blacklist []glob.Glob
 
 	// Compile all of the whitelist into globs
 	for _, rawGlob := range rawWhitelist {
@@ -36,16 +35,6 @@ func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
 		whitelist = append(whitelist, g)
 	}
 
-	// Compile all of the blacklist into globs
-	for _, rawGlob := range rawBlacklist {
-		g, err := glob.Compile(rawGlob, '.')
-		if err != nil {
-			return nil, err
-		}
-
-		blacklist = append(blacklist, g)
-	}
-
 	// If the whitelist is empty, we want to match all plugins.
 	if len(rawWhitelist) == 0 {
 		whitelist = append(whitelist, glob.MustCompile("**", '.'))
@@ -54,8 +43,8 @@ func matchingPlugins(rawWhitelist, rawBlacklist []string) ([]string, error) {
 	var matching []string
 
 	for item := range plugins {
-		if matchesGloblist(item, whitelist) && !matchesGloblist(item, blacklist) {
-			matching = com.AppendStr(matching, item)
+		if matchesGloblist(item, whitelist) {
+			matching = internal.AppendStr(matching, item)
 		}
 	}
 

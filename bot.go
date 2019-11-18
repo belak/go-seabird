@@ -10,11 +10,10 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/sirupsen/logrus"
-	"github.com/unknwon/com" //nolint:misspell
 
 	"github.com/belak/go-seabird/internal"
-	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -330,7 +329,7 @@ func (b *Bot) EnsurePlugin(name string) error {
 func (b *Bot) loadPlugin(name string) error {
 	tmpLoadingContext := append(b.loadingContext, name)
 
-	if com.IsSliceContainsStr(b.loadingContext, name) {
+	if internal.IsSliceContainsStr(b.loadingContext, name) {
 		return fmt.Errorf(
 			"Plugin load loop: %s",
 			strings.Join(tmpLoadingContext, ", "))
@@ -339,6 +338,8 @@ func (b *Bot) loadPlugin(name string) error {
 	// Push the current plugin onto the stack
 	b.loadingContext = tmpLoadingContext
 
+	// Note that this is where it's possible for a plugin to recurse.
+	// EnsurePlugin can be called by Plugins which can in turn call loadPlugin.
 	err := plugins[name](b)
 
 	// Pop the current plugin off the stack
@@ -348,7 +349,7 @@ func (b *Bot) loadPlugin(name string) error {
 }
 
 func (b *Bot) loadPlugins() error {
-	pluginNames, err := matchingPlugins(b.config.Plugins, nil)
+	pluginNames, err := matchingPlugins(b.config.Plugins)
 	if err != nil {
 		return err
 	}
