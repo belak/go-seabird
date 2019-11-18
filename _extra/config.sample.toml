@@ -22,7 +22,9 @@ cmds = [
 
 plugins = [
   "db",
-  "chance"
+  "chance",
+  "url",
+  "url/*"
 ]
 
 [influxdb]

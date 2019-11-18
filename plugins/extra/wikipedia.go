@@ -8,7 +8,7 @@ import (
 	"golang.org/x/net/html/atom"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -24,18 +24,22 @@ type wikiResponse struct {
 	} `json:"parse"`
 }
 
-func newWikiPlugin(cm *seabird.CommandMux) {
+func newWikiPlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	cm.Event("wiki", wikiCallback, &seabird.HelpInfo{
 		Usage:       "<topic>",
 		Description: "Retrieves first section from most relevant Wikipedia article to given topic",
 	})
+
+	return nil
 }
 
 func transformQuery(query string) string {
 	return strings.Replace(query, " ", "_", -1)
 }
 
-func wikiCallback(b *seabird.Bot, r *seabird.Request) {
+func wikiCallback(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("Query required")
@@ -43,7 +47,7 @@ func wikiCallback(b *seabird.Bot, r *seabird.Request) {
 		}
 
 		wr := &wikiResponse{}
-		err := utils.GetJSON(
+		err := internal.GetJSON(
 			"http://en.wikipedia.org/w/api.php?format=json&action=parse&page="+transformQuery(r.Message.Trailing()),
 			wr)
 		if err != nil {

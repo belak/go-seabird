@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -21,12 +21,14 @@ type shortenResult struct {
 	LongURL string `json:"longUrl"`
 }
 
-func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newTinyPlugin(b *seabird.Bot) error {
 	p := &tinyPlugin{}
 
 	if err := b.Config("tiny", p); err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("tiny", p.Shorten, &seabird.HelpInfo{
 		Usage:       "<url>",
@@ -36,7 +38,7 @@ func newTinyPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (t *tinyPlugin) Shorten(b *seabird.Bot, r *seabird.Request) {
+func (t *tinyPlugin) Shorten(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
 			r.MentionReply("URL required")
@@ -47,7 +49,7 @@ func (t *tinyPlugin) Shorten(b *seabird.Bot, r *seabird.Request) {
 
 		data := map[string]string{"longUrl": r.Message.Trailing()}
 		sr := &shortenResult{}
-		err := utils.PostJSON(url, data, sr)
+		err := internal.PostJSON(url, data, sr)
 		if err != nil {
 			r.MentionReply("%s", err)
 			return

@@ -26,24 +26,33 @@ type LastSeen struct {
 	Time    time.Time
 }
 
-func newLastSeenPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &lastSeenPlugin{db: db}
+func newLastSeenPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
+	p := &lastSeenPlugin{
+		db: CtxDB(b.Context()),
+	}
 
 	if err := p.db.Sync(LastSeen{}); err != nil {
 		return err
 	}
+
+	bm := b.BasicMux()
+	cm := b.CommandMux()
 
 	cm.Event("active", p.activeCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
 		Description: "Reports the last time user was seen",
 	})
 
-	m.Event("PRIVMSG", p.msgCallback)
+	bm.Event("PRIVMSG", p.msgCallback)
 
 	return nil
 }
 
-func (p *lastSeenPlugin) activeCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *lastSeenPlugin) activeCallback(r *seabird.Request) {
 	nick := r.Message.Trailing()
 	if nick == "" {
 		r.MentionReply("Nick required")
@@ -77,7 +86,7 @@ func formatDate(t time.Time) string {
 	return fmt.Sprintf("%d %s %d", t.Day(), t.Month().String(), t.Year())
 }
 
-func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *lastSeenPlugin) msgCallback(r *seabird.Request) {
 	if len(r.Message.Params) < 2 || !r.FromChannel() || r.Message.Prefix.Name == "" {
 		return
 	}
@@ -85,12 +94,12 @@ func (p *lastSeenPlugin) msgCallback(b *seabird.Bot, r *seabird.Request) {
 	nick := r.Message.Prefix.Name
 	channel := r.Message.Params[0]
 
-	p.updateLastSeen(b, nick, channel)
+	p.updateLastSeen(r, nick, channel)
 }
 
 // Thanks to @belak for the comments
-func (p *lastSeenPlugin) updateLastSeen(b *seabird.Bot, rawNick, rawChannel string) {
-	l := b.GetLogger()
+func (p *lastSeenPlugin) updateLastSeen(r *seabird.Request, rawNick, rawChannel string) {
+	l := r.GetLogger("lastseen")
 
 	search := LastSeen{
 		Channel: strings.ToLower(rawChannel),

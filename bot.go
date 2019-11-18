@@ -1,6 +1,7 @@
 package seabird
 
 import (
+	"context"
 	"crypto/tls"
 	"fmt"
 	"io"
@@ -9,12 +10,10 @@ import (
 	"time"
 
 	"github.com/BurntSushi/toml"
-	"github.com/codegangsta/inject"
+	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/sirupsen/logrus"
 
-	plugin "github.com/belak/go-plugin"
 	"github.com/belak/go-seabird/internal"
-	client "github.com/influxdata/influxdb1-client/v2"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -61,7 +60,9 @@ type InfluxDbConfig struct {
 // client, but the provided convenience functions are designed around using this
 // package to write a bot.
 type Bot struct {
-	mux *BasicMux
+	mux        *BasicMux
+	commandMux *CommandMux
+	mentionMux *MentionMux
 
 	// Config stuff
 	confValues     map[string]toml.Primitive
@@ -70,10 +71,11 @@ type Bot struct {
 	influxDbConfig InfluxDbConfig
 
 	// Internal things
-	client   *irc.Client
-	registry *plugin.Registry
-	log      *logrus.Entry
-	injector inject.Injector
+	client         *irc.Client
+	log            *logrus.Entry
+	context        context.Context
+	loadedPlugins  map[string]bool
+	loadingContext []string
 
 	influxDbClient client.Client
 	points         chan *client.Point
@@ -85,10 +87,10 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 	var err error
 
 	b := &Bot{
-		mux:        NewBasicMux(),
-		confValues: make(map[string]toml.Primitive),
-		md:         toml.MetaData{},
-		registry:   plugins.Copy(),
+		mux:           NewBasicMux(),
+		confValues:    make(map[string]toml.Primitive),
+		md:            toml.MetaData{},
+		loadedPlugins: make(map[string]bool),
 	}
 
 	// Decode the file, but leave all the config sections intact so we can
@@ -125,18 +127,23 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		return nil, err
 	}
 
-	commandMux := NewCommandMux(b.config.Prefix)
-	mentionMux := NewMentionMux()
+	b.commandMux = NewCommandMux(b.config.Prefix)
+	b.mentionMux = NewMentionMux()
 
-	b.mux.Event("PRIVMSG", commandMux.HandleEvent)
-	b.mux.Event("PRIVMSG", mentionMux.HandleEvent)
+	b.mux.Event("PRIVMSG", b.commandMux.HandleEvent)
+	b.mux.Event("PRIVMSG", b.mentionMux.HandleEvent)
 
-	// Register all the things we want with the plugin registry.
-	b.registry.RegisterProvider("seabird/core", func() (*Bot, *BasicMux, *CommandMux, *MentionMux) {
-		return b, b.mux, commandMux, mentionMux
-	})
+	b.context = withSeabirdValues(context.TODO(), b, b.log)
 
 	return b, nil
+}
+
+func (b *Bot) Context() context.Context {
+	return b.context
+}
+
+func (b *Bot) SetValue(key interface{}, value interface{}) {
+	b.context = context.WithValue(b.context, key, value)
 }
 
 func (b *Bot) setupInfluxDb() error {
@@ -161,14 +168,16 @@ func (b *Bot) setupInfluxDb() error {
 	return err
 }
 
-// GetLogger grabs the underlying logger for this bot.
-func (b *Bot) GetLogger() *logrus.Entry {
-	return b.log
+func (b *Bot) BasicMux() *BasicMux {
+	return b.mux
 }
 
-// CurrentNick returns the current nick of the bot.
-func (b *Bot) CurrentNick() string {
-	return b.client.CurrentNick()
+func (b *Bot) CommandMux() *CommandMux {
+	return b.commandMux
+}
+
+func (b *Bot) MentionMux() *MentionMux {
+	return b.mentionMux
 }
 
 // Config will decode the config section for the given name into the given
@@ -181,23 +190,8 @@ func (b *Bot) Config(name string, c interface{}) error {
 	return fmt.Errorf("Config section for %q missing", name)
 }
 
-// Send is a simple function to send an IRC event
-func (b *Bot) Send(m *irc.Message) {
-	b.client.WriteMessage(m)
-}
-
-// Write will write an raw IRC message to the stream
-func (b *Bot) Write(line string) {
-	b.client.Write(line)
-}
-
-// Writef is a convenience method around fmt.Sprintf and Bot.Write
-func (b *Bot) Writef(format string, args ...interface{}) {
-	b.client.Writef(format, args...)
-}
-
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
-	r := NewRequest(b, m)
+	r := NewRequest(b.context, b, c.CurrentNick(), m)
 
 	timer := r.Timer("total_request")
 
@@ -206,7 +200,7 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 		b.log.Info("Connected")
 
 		for _, v := range b.config.Cmds {
-			b.Write(v)
+			b.client.Write(v)
 		}
 	} else if r.Message.Command == "PRIVMSG" {
 		// Clean up CTCP stuff so plugins don't need to parse it manually
@@ -218,7 +212,7 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 		}
 	}
 
-	b.mux.HandleEvent(b, r)
+	b.mux.HandleEvent(r)
 	timer.Done()
 
 	r.Log(b)
@@ -280,9 +274,8 @@ func (b *Bot) submit(batch client.BatchPoints) {
 	b.log.Debugf("Submitted a batch of %d point(s) to InfluxDB", submittedPoints)
 }
 
-// ConnectAndRun is a convenience function which will pull the
-// connection information out of the config and connect, then call
-// Run.
+// ConnectAndRun is a convenience function which will pull the connection
+// information out of the config and connect, then call Run.
 func (b *Bot) ConnectAndRun() error {
 	// The ReadWriteCloser will contain either a *net.Conn or *tls.Conn
 	var (
@@ -319,13 +312,68 @@ func (b *Bot) ConnectAndRun() error {
 	return b.Run(c)
 }
 
-// Run starts the bot and loops until it dies. It accepts a
-// ReadWriter. If you wish to use the connection feature from the
-// config, use ConnectAndRun.
-func (b *Bot) Run(c io.ReadWriter) error {
-	var err error
+func (b *Bot) EnsurePlugin(name string) error {
+	loaded, ok := b.loadedPlugins[name]
+	if !ok {
+		return fmt.Errorf("Plugin %q not loaded", name)
+	}
 
-	b.injector, err = b.registry.Load(b.config.Plugins, nil)
+	// If it's already loaded, return nil
+	if loaded {
+		return nil
+	}
+
+	return b.loadPlugin(name)
+}
+
+func (b *Bot) loadPlugin(name string) error {
+	tmpLoadingContext := append(b.loadingContext, name)
+
+	if internal.IsSliceContainsStr(b.loadingContext, name) {
+		return fmt.Errorf(
+			"Plugin load loop: %s",
+			strings.Join(tmpLoadingContext, ", "))
+	}
+
+	// Push the current plugin onto the stack
+	b.loadingContext = tmpLoadingContext
+
+	// Note that this is where it's possible for a plugin to recurse.
+	// EnsurePlugin can be called by Plugins which can in turn call loadPlugin.
+	err := plugins[name](b)
+
+	// Pop the current plugin off the stack
+	b.loadingContext = b.loadingContext[:len(b.loadingContext)-1]
+
+	return err
+}
+
+func (b *Bot) loadPlugins() error {
+	pluginNames, err := matchingPlugins(b.config.Plugins)
+	if err != nil {
+		return err
+	}
+
+	// Update the loadedPlugins map to say which ones we're loading.
+	for _, name := range pluginNames {
+		b.loadedPlugins[name] = false
+	}
+
+	// Loop through all our plugins and load them
+	for _, name := range pluginNames {
+		err = b.EnsurePlugin(name)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// Run starts the bot and loops until it dies. It accepts a ReadWriter. If you
+// wish to use the connection feature from the config, use ConnectAndRun.
+func (b *Bot) Run(c io.ReadWriter) error {
+	err := b.loadPlugins()
 	if err != nil {
 		return err
 	}

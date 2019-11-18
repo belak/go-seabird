@@ -1,6 +1,7 @@
 package plugins
 
 import (
+	"context"
 	"fmt"
 	"strings"
 
@@ -8,10 +9,17 @@ import (
 	"github.com/sirupsen/logrus"
 
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
 	seabird.RegisterPlugin("channel_track", newChannelTracker)
+}
+
+const contextKeyChannelTracker = internal.ContextKey("seabird-channel-tracker")
+
+func CtxChannelTracker(ctx context.Context) *ChannelTracker {
+	return ctx.Value(contextKeyChannelTracker).(*ChannelTracker)
 }
 
 // Channel is an internal type for representing a channel.
@@ -65,8 +73,6 @@ func (u *User) InChannel(channel string) bool {
 // provides a uuid mapping to a user, so if a user's nick changes,
 // we'll still have a sort of "session" to keep track of them.
 type ChannelTracker struct {
-	isupport *ISupportPlugin
-
 	// Notes for internal fields. Be very careful when modifying the
 	// state. Because we control all of this, it is valid to make the
 	// assumption that if a user is in p.uuids, it will be possible to
@@ -87,9 +93,15 @@ type ChannelTracker struct {
 	cleanupCallbacks []func(u *User)
 }
 
-func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelTracker {
+func newChannelTracker(b *seabird.Bot) error {
+	bm := b.BasicMux()
+
+	err := b.EnsurePlugin("isupport")
+	if err != nil {
+		return err
+	}
+
 	p := &ChannelTracker{
-		isupport: isupport,
 		channels: make(map[string]*Channel),
 		users:    make(map[string]*User),
 		uuids:    make(map[string]string),
@@ -106,7 +118,9 @@ func newChannelTracker(bm *seabird.BasicMux, isupport *ISupportPlugin) *ChannelT
 	bm.Event("353", p.namesCallback)
 	bm.Event("366", p.endOfNamesCallback)
 
-	return p
+	b.SetValue(contextKeyChannelTracker, p)
+
+	return nil
 }
 
 // Public interfaces
@@ -163,59 +177,59 @@ func (p *ChannelTracker) RegisterSessionCleanupCallback(f func(u *User)) {
 
 // Private functions
 
-func (p *ChannelTracker) joinCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) joinCallback(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 	channel := r.Message.Trailing()
 
-	p.addUserToChannel(b, user, channel)
+	p.addUserToChannel(r, user, channel)
 
 	//fmt.Printf("%s (%s) joined %s\n", user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) partCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) partCallback(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 	channel := r.Message.Params[0]
 
-	p.removeUserFromChannel(b, user, channel)
+	p.removeUserFromChannel(r, user, channel)
 
 	//fmt.Printf("%s (%s) left %s\n", user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) kickCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) kickCallback(r *seabird.Request) {
 	//actor := m.Prefix.Name
 	user := r.Message.Params[1]
 	channel := r.Message.Params[0]
 
-	p.removeUserFromChannel(b, user, channel)
+	p.removeUserFromChannel(r, user, channel)
 
 	//fmt.Printf("%s (%s) kicked %s (%s) from %s\n", actor, p.uuids[actor], user, p.uuids[user], channel)
 } //nolint:wsl
 
-func (p *ChannelTracker) quitCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) quitCallback(r *seabird.Request) {
 	user := r.Message.Prefix.Name
 
-	p.removeUser(b, user)
+	p.removeUser(r, user)
 
 	//fmt.Printf("%s (%s) quit\n", user, p.uuids[user])
 } //nolint:wsl
 
-func (p *ChannelTracker) nickCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) nickCallback(r *seabird.Request) {
 	oldUser := r.Message.Prefix.Name
 	newUser := r.Message.Params[0]
 
-	p.renameUser(b, oldUser, newUser)
+	p.renameUser(r, oldUser, newUser)
 
 	//fmt.Printf("%s (%s) changed their name to %s\n", oldUser, p.uuids[newUser], newUser)
 } //nolint:wsl
 
-func (p *ChannelTracker) modeCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) modeCallback(r *seabird.Request) {
 	// We only care about MODE messages where a specific user is
 	// changed.
 	if len(r.Message.Params) < 3 {
 		return
 	}
 
-	logger := b.GetLogger()
+	logger := r.GetLogger("channel_track")
 
 	channel := r.Message.Params[0]
 	target := r.Message.Params[2]
@@ -233,16 +247,16 @@ func (p *ChannelTracker) modeCallback(b *seabird.Bot, r *seabird.Request) {
 	// mode parsing is hard.
 	u.channels[channel] = make(map[rune]bool)
 
-	b.Writef("WHO :%s", target)
+	r.Writef("WHO :%s", target)
 }
 
-func (p *ChannelTracker) whoCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) whoCallback(r *seabird.Request) {
 	// Filter out broken messages
 	if len(r.Message.Params) < 7 {
 		return
 	}
 
-	prefixes, ok := p.getSymbolToPrefixMapping(b)
+	prefixes, ok := p.getSymbolToPrefixMapping(r)
 	if !ok {
 		return
 	}
@@ -253,7 +267,7 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, r *seabird.Request) {
 		modes   = r.Message.Params[5]
 	)
 
-	logger := b.GetLogger()
+	logger := r.GetLogger("channel_track")
 
 	u := p.LookupUser(nick)
 	c := p.LookupChannel(channel)
@@ -280,11 +294,13 @@ func (p *ChannelTracker) whoCallback(b *seabird.Bot, r *seabird.Request) {
 // parses prefix into a mapping of the symbol to the mode. Eventually
 // this should be moved into the isupport plugin with a few more prefix
 // helper functions.
-func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune, bool) {
-	logger := b.GetLogger()
+func (p *ChannelTracker) getSymbolToPrefixMapping(r *seabird.Request) (map[rune]rune, bool) {
+	logger := r.GetLogger("channel_track")
+
+	isupport := CtxISupport(r.Context())
 
 	// Sample: (qaohv)~&@%+
-	prefix, _ := p.isupport.GetRaw("PREFIX")
+	prefix, _ := isupport.GetRaw("PREFIX")
 
 	logger = logger.WithField("prefix", prefix)
 
@@ -324,13 +340,13 @@ func (p *ChannelTracker) getSymbolToPrefixMapping(b *seabird.Bot) (map[rune]rune
 	return prefixes, true
 }
 
-func (p *ChannelTracker) namesCallback(b *seabird.Bot, r *seabird.Request) {
-	prefixes, ok := p.getSymbolToPrefixMapping(b)
+func (p *ChannelTracker) namesCallback(r *seabird.Request) {
+	prefixes, ok := p.getSymbolToPrefixMapping(r)
 	if !ok {
 		return
 	}
 
-	logger := b.GetLogger()
+	logger := r.GetLogger("channel_track")
 
 	channel := r.Message.Params[2]
 
@@ -348,11 +364,11 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, r *seabird.Request) {
 		}
 
 		// The bot user should be added via JOIN
-		if user == b.CurrentNick() {
+		if user == r.CurrentNick() {
 			continue
 		}
 
-		p.addUserToChannel(b, user, channel)
+		p.addUserToChannel(r, user, channel)
 
 		u := p.LookupUser(user)
 		if u == nil {
@@ -375,7 +391,7 @@ func (p *ChannelTracker) namesCallback(b *seabird.Bot, r *seabird.Request) {
 	}
 }
 
-func (p *ChannelTracker) endOfNamesCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *ChannelTracker) endOfNamesCallback(r *seabird.Request) {
 	channel := r.Message.Params[1]
 
 	fmt.Printf("Got all names for %s\n", channel)
@@ -383,16 +399,16 @@ func (p *ChannelTracker) endOfNamesCallback(b *seabird.Bot, r *seabird.Request) 
 
 // Implementation below
 
-func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) {
-	logger := b.GetLogger().WithFields(logrus.Fields{
+func (p *ChannelTracker) addUserToChannel(r *seabird.Request, user, channel string) {
+	logger := r.GetLogger("channel_track").WithFields(logrus.Fields{
 		"channel": channel,
 		"user":    user,
 	})
 
 	// If the current user is joining a channel, we need to add it
 	// before adding our user.
-	if user == b.CurrentNick() {
-		p.addChannel(b, channel)
+	if user == r.CurrentNick() {
+		p.addChannel(r, channel)
 	}
 
 	// If we're not in this channel, issue a warning and bail.
@@ -429,11 +445,11 @@ func (p *ChannelTracker) addUserToChannel(b *seabird.Bot, user, channel string) 
 	logger.Info("User added to channel")
 }
 
-func (p *ChannelTracker) removeUserFromChannel(b *seabird.Bot, user, channel string) {
-	logger := b.GetLogger().WithField("channel", channel)
+func (p *ChannelTracker) removeUserFromChannel(r *seabird.Request, user, channel string) {
+	logger := r.GetLogger("channel_track").WithField("channel", channel)
 
-	if user == b.CurrentNick() {
-		p.removeChannel(b, channel)
+	if user == r.CurrentNick() {
+		p.removeChannel(r, channel)
 	} else {
 		u := p.LookupUser(user)
 		if u == nil {
@@ -453,15 +469,15 @@ func (p *ChannelTracker) removeUserFromChannel(b *seabird.Bot, user, channel str
 		logger.Info("Removing user from channel")
 
 		if len(u.channels) == 0 {
-			p.removeUser(b, user)
+			p.removeUser(r, user)
 		}
 
 		logger.Info("Removed user from channel")
 	}
 }
 
-func (p *ChannelTracker) addChannel(b *seabird.Bot, channel string) {
-	logger := b.GetLogger().WithField("channel", channel)
+func (p *ChannelTracker) addChannel(r *seabird.Request, channel string) {
+	logger := r.GetLogger("channel_track").WithField("channel", channel)
 
 	if _, ok := p.channels[channel]; ok {
 		logger.Warn("Already in channel")
@@ -475,8 +491,8 @@ func (p *ChannelTracker) addChannel(b *seabird.Bot, channel string) {
 	logger.Info("Added channel")
 }
 
-func (p *ChannelTracker) removeChannel(b *seabird.Bot, channel string) {
-	logger := b.GetLogger().WithField("channel", channel)
+func (p *ChannelTracker) removeChannel(r *seabird.Request, channel string) {
+	logger := r.GetLogger("channel_track").WithField("channel", channel)
 
 	c, ok := p.channels[channel]
 	if !ok {
@@ -494,7 +510,7 @@ func (p *ChannelTracker) removeChannel(b *seabird.Bot, channel string) {
 
 		// If this user has no more channels, they need to be removed.
 		if len(u.channels) == 0 {
-			p.removeUser(b, u.Nick)
+			p.removeUser(r, u.Nick)
 		}
 	}
 
@@ -507,8 +523,8 @@ func (p *ChannelTracker) removeChannel(b *seabird.Bot, channel string) {
 	logger.Info("Removed channel")
 }
 
-func (p *ChannelTracker) removeUser(b *seabird.Bot, user string) {
-	logger := b.GetLogger().WithField("user", user)
+func (p *ChannelTracker) removeUser(r *seabird.Request, user string) {
+	logger := r.GetLogger("channel_track").WithField("user", user)
 
 	u := p.LookupUser(user)
 	if u == nil {
@@ -538,8 +554,8 @@ func (p *ChannelTracker) removeUser(b *seabird.Bot, user string) {
 	logger.Info("Removed user")
 }
 
-func (p *ChannelTracker) renameUser(b *seabird.Bot, oldNick, newNick string) {
-	logger := b.GetLogger().WithFields(logrus.Fields{
+func (p *ChannelTracker) renameUser(r *seabird.Request, oldNick, newNick string) {
+	logger := r.GetLogger("channel_track").WithFields(logrus.Fields{
 		"oldNick": oldNick,
 		"newNick": newNick,
 	})

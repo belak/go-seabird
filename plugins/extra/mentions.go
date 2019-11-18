@@ -8,11 +8,15 @@ func init() {
 	seabird.RegisterPlugin("mentions", newMentionsPlugin)
 }
 
-func newMentionsPlugin(mm *seabird.MentionMux) {
+func newMentionsPlugin(b *seabird.Bot) error {
+	mm := b.MentionMux()
+
 	mm.Event(mentionsCallback)
+
+	return nil
 }
 
-func mentionsCallback(b *seabird.Bot, r *seabird.Request) {
+func mentionsCallback(r *seabird.Request) {
 	switch r.Message.Trailing() {
 	case "ping":
 		r.MentionReply("pong")

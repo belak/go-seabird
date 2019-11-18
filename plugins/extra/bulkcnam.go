@@ -19,7 +19,9 @@ type bulkCNAMPlugin struct {
 	Key string
 }
 
-func newBulkCNAMPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newBulkCNAMPlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	p := &bulkCNAMPlugin{}
 
 	err := b.Config("bulkcnam", p)
@@ -37,7 +39,7 @@ func newBulkCNAMPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 
 // This function queries the BulkCNAM API for a Phone #'s
 // corresponding CNAM, and returns it
-func (p *bulkCNAMPlugin) bulkCNAMCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *bulkCNAMPlugin) bulkCNAMCallback(r *seabird.Request) {
 	number := r.Message.Trailing()
 
 	for _, digit := range number {

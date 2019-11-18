@@ -33,14 +33,14 @@ func (m *MentionMux) Event(h HandlerFunc) {
 }
 
 // HandleEvent strips off the nick punctuation and spaces and runs the handlers
-func (m *MentionMux) HandleEvent(b *Bot, r *Request) {
+func (m *MentionMux) HandleEvent(r *Request) {
 	if r.Message.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
 	}
 
 	lastArg := r.Message.Trailing()
-	nick := b.CurrentNick()
+	nick := r.CurrentNick()
 
 	// We only handle this event if it starts with the
 	// current bot's nick followed by punctuation
@@ -61,6 +61,6 @@ func (m *MentionMux) HandleEvent(b *Bot, r *Request) {
 	defer m.lock.RUnlock()
 
 	for _, h := range m.handlers {
-		h(b, newRequest)
+		h(newRequest)
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"net/url"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -22,7 +22,9 @@ type googleResponse struct {
 	ResponseStatus int `json:"responseStatus"`
 }
 
-func newGooglePlugin(cm *seabird.CommandMux) {
+func newGooglePlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	cm.Event("g", googleWebCallback, &seabird.HelpInfo{
 		Usage:       "<query>",
 		Description: "Retrieves top Google web search result for given query",
@@ -32,17 +34,19 @@ func newGooglePlugin(cm *seabird.CommandMux) {
 		Usage:       "<query>",
 		Description: "Retrieves top Google images search result for given query",
 	})
+
+	return nil
 }
 
-func googleWebCallback(b *seabird.Bot, r *seabird.Request) {
-	googleSearch(b, r, "web", r.Message.Trailing())
+func googleWebCallback(r *seabird.Request) {
+	googleSearch(r, "web", r.Message.Trailing())
 }
 
-func googleImageCallback(b *seabird.Bot, r *seabird.Request) {
-	googleSearch(b, r, "images", r.Message.Trailing())
+func googleImageCallback(r *seabird.Request) {
+	googleSearch(r, "images", r.Message.Trailing())
 }
 
-func googleSearch(b *seabird.Bot, r *seabird.Request, service, query string) {
+func googleSearch(r *seabird.Request, service, query string) {
 	go func() {
 		if query == "" {
 			r.MentionReply("Query required")
@@ -50,7 +54,7 @@ func googleSearch(b *seabird.Bot, r *seabird.Request, service, query string) {
 		}
 
 		gr := &googleResponse{}
-		err := utils.GetJSON(
+		err := internal.GetJSON(
 			"https://ajax.googleapis.com/ajax/services/search/"+service+"?v=1.0&q="+url.QueryEscape(query),
 			gr)
 

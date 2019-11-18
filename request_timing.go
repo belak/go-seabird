@@ -87,6 +87,9 @@ func (r *Request) Log(bot *Bot) {
 	case bot.points <- point:
 		return
 	default:
-		bot.log.Warning("InfluxDB datapoint queue is full, dropping datapoint")
+		// Only log dropped datapoints if it's enabled
+		if bot.influxDbConfig.Enabled {
+			bot.log.Warning("InfluxDB datapoint queue is full, dropping datapoint")
+		}
 	}
 }

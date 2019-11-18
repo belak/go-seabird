@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 var runescapeOldSchoolSkillNames = []string{
@@ -117,8 +117,10 @@ func newRunescapeLevelMetadata(name, player, line string) (runescapeLevelMetadat
 	}, nil
 }
 
-func newRunescapePlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newRunescapePlugin(b *seabird.Bot) error {
 	p := &runescapePlugin{}
+
+	cm := b.CommandMux()
 
 	cm.Event("rlvl", p.levelCallback, &seabird.HelpInfo{
 		Usage:       "<player> <skill>",
@@ -264,7 +266,7 @@ func sortedSkillNames(skills map[string]runescapeLevelMetadata) []string {
 	return names
 }
 
-func (p *runescapePlugin) levelCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *runescapePlugin) levelCallback(r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -282,14 +284,14 @@ func (p *runescapePlugin) levelCallback(b *seabird.Bot, r *seabird.Request) {
 		for _, name := range names {
 			skill = skills[name]
 			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("level %s %s", utils.PrettifyNumber(skill.Level), skill.Skill))
+			responses = append(responses, fmt.Sprintf("level %s %s", internal.PrettifyNumber(skill.Level), skill.Skill))
 		}
 
 		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
-func (p *runescapePlugin) expCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *runescapePlugin) expCallback(r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -307,14 +309,14 @@ func (p *runescapePlugin) expCallback(b *seabird.Bot, r *seabird.Request) {
 		for _, name := range names {
 			skill = skills[name]
 			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("%s experience in %s", utils.PrettifySuffix(skill.Exp), skill.Skill))
+			responses = append(responses, fmt.Sprintf("%s experience in %s", internal.PrettifySuffix(skill.Exp), skill.Skill))
 		}
 
 		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
-func (p *runescapePlugin) rankCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *runescapePlugin) rankCallback(r *seabird.Request) {
 	trailing := strings.ToLower(r.Message.Trailing())
 
 	go func() {
@@ -332,7 +334,7 @@ func (p *runescapePlugin) rankCallback(b *seabird.Bot, r *seabird.Request) {
 		for _, name := range names {
 			skill = skills[name]
 			playerName = skill.Player
-			responses = append(responses, fmt.Sprintf("rank %s in %s", utils.PrettifyNumber(skill.Rank), skill.Skill))
+			responses = append(responses, fmt.Sprintf("rank %s in %s", internal.PrettifyNumber(skill.Rank), skill.Skill))
 		}
 
 		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))

@@ -9,3 +9,4 @@ config.toml
 *.pem
 go.sum
 dist
+*.test

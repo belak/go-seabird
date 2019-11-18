@@ -25,7 +25,7 @@ type issuesPlugin struct {
 	api *github.Client
 }
 
-func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
+func newIssuesPlugin(b *seabird.Bot) error {
 	p := &issuesPlugin{
 		DefaultRepo: "belak/go-seabird",
 		RepoTags: map[string]string{
@@ -54,6 +54,8 @@ func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	// Create a github client from the oauth2 client
 	p.api = github.NewClient(tc)
 
+	cm := b.CommandMux()
+
 	cm.Event("issue", p.CreateIssue, &seabird.HelpInfo{
 		Usage:       "<issue title> [#repo_tag] [@user]",
 		Description: "Creates a new issue for seabird. Be nice. Abuse this and it will be removed.",
@@ -67,7 +69,7 @@ func newIssuesPlugin(b *seabird.Bot, cm *seabird.CommandMux) error {
 	return nil
 }
 
-func (p *issuesPlugin) CreateIssue(b *seabird.Bot, r *seabird.Request) {
+func (p *issuesPlugin) CreateIssue(r *seabird.Request) {
 	go func() {
 		req := &github.IssueRequest{}
 
@@ -122,7 +124,7 @@ func (p *issuesPlugin) CreateIssue(b *seabird.Bot, r *seabird.Request) {
 	}()
 }
 
-func (p *issuesPlugin) IssueSearch(b *seabird.Bot, r *seabird.Request) {
+func (p *issuesPlugin) IssueSearch(r *seabird.Request) {
 	hasState := false
 	split := strings.Split(r.Message.Trailing(), " ")
 

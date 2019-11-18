@@ -1,15 +1,23 @@
 package plugins
 
 import (
+	"context"
 	"strings"
 
 	"github.com/sirupsen/logrus"
 
 	seabird "github.com/belak/go-seabird"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
 	seabird.RegisterPlugin("isupport", newISupportPlugin)
+}
+
+const contextKeyISupport = internal.ContextKey("seabird-isupport")
+
+func CtxISupport(ctx context.Context) *ISupportPlugin {
+	return ctx.Value(contextKeyISupport).(*ISupportPlugin)
 }
 
 // ISupportPlugin tracks which ISupport features are enabled on the
@@ -18,7 +26,9 @@ type ISupportPlugin struct {
 	raw map[string]string
 }
 
-func newISupportPlugin(b *seabird.Bot, bm *seabird.BasicMux) *ISupportPlugin {
+func newISupportPlugin(b *seabird.Bot) error {
+	bm := b.BasicMux()
+
 	p := &ISupportPlugin{
 		raw: map[string]string{
 			"PREFIX": "(ov)@+",
@@ -26,11 +36,13 @@ func newISupportPlugin(b *seabird.Bot, bm *seabird.BasicMux) *ISupportPlugin {
 	}
 	bm.Event("005", p.handle005)
 
-	return p
+	b.SetValue(contextKeyISupport, p)
+
+	return nil
 }
 
-func (p *ISupportPlugin) handle005(b *seabird.Bot, r *seabird.Request) {
-	logger := b.GetLogger()
+func (p *ISupportPlugin) handle005(r *seabird.Request) {
+	logger := r.GetLogger("isupport")
 
 	// Check for really old servers (or servers which based 005 off of rfc2812
 	if !strings.HasSuffix(r.Message.Trailing(), "server") {

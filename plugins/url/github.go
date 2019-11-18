@@ -11,7 +11,7 @@ import (
 	"golang.org/x/oauth2"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -49,7 +49,14 @@ func parseUserRepoNum(matches []string) (string, string, int, error) {
 	return matches[1], matches[2], int(retInt), nil
 }
 
-func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
+func newGithubProvider(b *seabird.Bot) error {
+	err := b.EnsurePlugin("url")
+	if err != nil {
+		return err
+	}
+
+	urlPlugin := CtxPlugin(b.Context())
+
 	t := &githubProvider{}
 
 	gc := &githubConfig{}
@@ -72,31 +79,31 @@ func newGithubProvider(b *seabird.Bot, urlPlugin *Plugin) error {
 	return nil
 }
 
-func (t *githubProvider) githubCallback(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func (t *githubProvider) githubCallback(r *seabird.Request, url *url.URL) bool {
 	//nolint:gocritic
 	if githubUserRegex.MatchString(url.Path) {
-		return t.getUser(b, r, url.Path)
+		return t.getUser(r, url.Path)
 	} else if githubRepoRegex.MatchString(url.Path) {
-		return t.getRepo(b, r, url.Path)
+		return t.getRepo(r, url.Path)
 	} else if githubIssueRegex.MatchString(url.Path) {
-		return t.getIssue(b, r, url.Path)
+		return t.getIssue(r, url.Path)
 	} else if githubPullRegex.MatchString(url.Path) {
-		return t.getPull(b, r, url.Path)
+		return t.getPull(r, url.Path)
 	}
 
 	return false
 }
 
-func (t *githubProvider) gistCallback(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func (t *githubProvider) gistCallback(r *seabird.Request, url *url.URL) bool {
 	if githubGistRegex.MatchString(url.Path) {
-		return t.getGist(b, r, url.Path)
+		return t.getGist(r, url.Path)
 	}
 
 	return false
 }
 
 // Jay Vana (@jsvana) at Facebook - Bio bio bio
-var userTemplate = utils.TemplateMustCompile("githubUser", `
+var userTemplate = internal.TemplateMustCompile("githubUser", `
 {{- if .user.Name -}}
 {{ .user.Name }}
 {{- with .user.Login }}(@{{ . }}){{ end -}}
@@ -107,8 +114,8 @@ var userTemplate = utils.TemplateMustCompile("githubUser", `
 {{- with .user.Bio }} - {{ . }}{{ end -}}
 `)
 
-func (t *githubProvider) getUser(b *seabird.Bot, r *seabird.Request, url string) bool {
-	logger := b.GetLogger()
+func (t *githubProvider) getUser(r *seabird.Request, url string) bool {
+	logger := r.GetLogger("url/github")
 
 	matches := githubUserRegex.FindStringSubmatch(url)
 	if len(matches) != 2 {
@@ -121,8 +128,8 @@ func (t *githubProvider) getUser(b *seabird.Bot, r *seabird.Request, url string)
 		return false
 	}
 
-	return utils.RenderRespond(
-		b, r, logger, userTemplate, githubPrefix,
+	return internal.RenderRespond(
+		r.Reply, logger, userTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 		},
@@ -130,7 +137,7 @@ func (t *githubProvider) getUser(b *seabird.Bot, r *seabird.Request, url string)
 }
 
 // jsvana/alfred [PHP] (forked from belak/alfred) Last pushed to 2 Jan 2015 - Description, 1 fork, 2 open issues, 4 stars
-var repoTemplate = utils.TemplateMustCompile("githubRepo", `
+var repoTemplate = internal.TemplateMustCompile("githubRepo", `
 {{- .repo.FullName -}}
 {{- with .repo.Language }} [{{ . }}]{{ end -}}
 {{- if and .repo.Fork .repo.Parent }} (forked from {{ .repo.Parent.FullName }}){{ end }}
@@ -141,8 +148,8 @@ var repoTemplate = utils.TemplateMustCompile("githubRepo", `
 {{- with .repo.StargazersCount }}, {{ prettifySuffix . }} {{ pluralizeWord . "star" }}{{ end }}
 `)
 
-func (t *githubProvider) getRepo(b *seabird.Bot, r *seabird.Request, url string) bool {
-	logger := b.GetLogger()
+func (t *githubProvider) getRepo(r *seabird.Request, url string) bool {
+	logger := r.GetLogger("url/github")
 
 	matches := githubRepoRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
@@ -166,8 +173,8 @@ func (t *githubProvider) getRepo(b *seabird.Bot, r *seabird.Request, url string)
 		return false
 	}
 
-	return utils.RenderRespond(
-		b, r, logger, repoTemplate, githubPrefix,
+	return internal.RenderRespond(
+		r.Reply, logger, repoTemplate, githubPrefix,
 		map[string]interface{}{
 			"repo": repo,
 		},
@@ -175,15 +182,15 @@ func (t *githubProvider) getRepo(b *seabird.Bot, r *seabird.Request, url string)
 }
 
 // Issue #42 on belak/go-seabird [open] (assigned to jsvana) - Issue title [created 2 Jan 2015]
-var issueTemplate = utils.TemplateMustCompile("githubIssue", `
+var issueTemplate = internal.TemplateMustCompile("githubIssue", `
 Issue #{{ .issue.Number }} on {{ .user }}/{{ .repo }} [{{ .issue.State }}]
 {{- with .issue.Assignee }} (assigned to {{ .Login }}){{ end }}
 {{- with .issue.Title }} - {{ . }}{{ end }}
 {{- with .issue.CreatedAt }} [created {{ . | dateFormat "2 Jan 2006" }}]{{ end }}
 `)
 
-func (t *githubProvider) getIssue(b *seabird.Bot, r *seabird.Request, url string) bool {
-	logger := b.GetLogger()
+func (t *githubProvider) getIssue(r *seabird.Request, url string) bool {
+	logger := r.GetLogger("url/github")
 
 	matches := githubIssueRegex.FindStringSubmatch(url)
 
@@ -199,8 +206,8 @@ func (t *githubProvider) getIssue(b *seabird.Bot, r *seabird.Request, url string
 		return false
 	}
 
-	return utils.RenderRespond(
-		b, r, logger, issueTemplate, githubPrefix,
+	return internal.RenderRespond(
+		r.Reply, logger, issueTemplate, githubPrefix,
 		map[string]interface{}{
 			"issue": issue,
 			"user":  user,
@@ -210,7 +217,7 @@ func (t *githubProvider) getIssue(b *seabird.Bot, r *seabird.Request, url string
 }
 
 // Pull request #59 on belak/go-seabird [open] - Title title title [created 4 Jan 2015], 1 commit, 4 comments, 2 changed files
-var prTemplate = utils.TemplateMustCompile("githubPRTemplate", `
+var prTemplate = internal.TemplateMustCompile("githubPRTemplate", `
 Pull request #{{ .pull.Number }} on {{ .user }}/{{ .repo }} [{{ .pull.State }}]
 {{- with .pull.User.Login }} created by {{ . }}{{ end }}
 {{- with .pull.Title }} - {{ . }}{{ end }}
@@ -220,8 +227,8 @@ Pull request #{{ .pull.Number }} on {{ .user }}/{{ .repo }} [{{ .pull.State }}]
 {{- with .pull.ChangedFiles }}, {{ pluralize . "changed file" }}{{ end }}
 `)
 
-func (t *githubProvider) getPull(b *seabird.Bot, r *seabird.Request, url string) bool {
-	logger := b.GetLogger()
+func (t *githubProvider) getPull(r *seabird.Request, url string) bool {
+	logger := r.GetLogger("url/github")
 
 	matches := githubPullRegex.FindStringSubmatch(url)
 
@@ -237,8 +244,8 @@ func (t *githubProvider) getPull(b *seabird.Bot, r *seabird.Request, url string)
 		return false
 	}
 
-	return utils.RenderRespond(
-		b, r, logger, prTemplate, githubPrefix,
+	return internal.RenderRespond(
+		r.Reply, logger, prTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 			"repo": repo,
@@ -248,15 +255,15 @@ func (t *githubProvider) getPull(b *seabird.Bot, r *seabird.Request, url string)
 }
 
 // Created 3 Jan 2015 by belak - Description description, 1 file, 3 comments
-var gistTemplate = utils.TemplateMustCompile("gist", `
+var gistTemplate = internal.TemplateMustCompile("gist", `
 Created {{ .gist.CreatedAt | dateFormat "2 Jan 2006" }}
 {{- with .gist.Owner.Login }} by {{ . }}{{ end }}
 {{- with .gist.Description }} - {{ . }}{{ end }}
 {{- with .gist.Comments }}, {{ pluralize . "comment" }}{{ end }}
 `)
 
-func (t *githubProvider) getGist(b *seabird.Bot, r *seabird.Request, url string) bool {
-	logger := b.GetLogger()
+func (t *githubProvider) getGist(r *seabird.Request, url string) bool {
+	logger := r.GetLogger("url/github")
 
 	matches := githubGistRegex.FindStringSubmatch(url)
 	if len(matches) != 3 {
@@ -271,8 +278,8 @@ func (t *githubProvider) getGist(b *seabird.Bot, r *seabird.Request, url string)
 		return false
 	}
 
-	return utils.RenderRespond(
-		b, r, logger, gistTemplate, githubPrefix,
+	return internal.RenderRespond(
+		r.Reply, logger, gistTemplate, githubPrefix,
 		map[string]interface{}{
 			"gist": gist,
 		},

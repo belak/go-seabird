@@ -31,14 +31,22 @@ func init() {
 	seabird.RegisterPlugin("noaa", newMetarPlugin)
 }
 
-func newMetarPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &noaaPlugin{db: db}
+func newMetarPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
+	p := &noaaPlugin{
+		db: CtxDB(b.Context()),
+	}
 
 	// Ensure DB tables are up to date
 	err := p.db.Sync(NOAAStation{})
 	if err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("metar", p.metarCallback, &seabird.HelpInfo{
 		Usage:       "<station>",
@@ -52,7 +60,7 @@ func newMetarPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) err
 	return nil
 }
 
-func (p *noaaPlugin) getStation(b *seabird.Bot, r *seabird.Request) (string, error) {
+func (p *noaaPlugin) getStation(r *seabird.Request) (string, error) {
 	l := r.Message.Trailing()
 
 	target := &NOAAStation{Nick: r.Message.Prefix.Name}
@@ -84,8 +92,8 @@ func (p *noaaPlugin) getStation(b *seabird.Bot, r *seabird.Request) (string, err
 	return newStation.Station, err
 }
 
-func (p *noaaPlugin) metarCallback(b *seabird.Bot, r *seabird.Request) {
-	station, err := p.getStation(b, r)
+func (p *noaaPlugin) metarCallback(r *seabird.Request) {
+	station, err := p.getStation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())
 		return
@@ -100,8 +108,8 @@ func (p *noaaPlugin) metarCallback(b *seabird.Bot, r *seabird.Request) {
 	r.MentionReply("%s", resp)
 }
 
-func (p *noaaPlugin) tafCallback(b *seabird.Bot, r *seabird.Request) {
-	station, err := p.getStation(b, r)
+func (p *noaaPlugin) tafCallback(r *seabird.Request) {
+	station, err := p.getStation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())
 		return

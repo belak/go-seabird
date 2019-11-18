@@ -8,7 +8,7 @@ import (
 	"time"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/utils"
+	"github.com/belak/go-seabird/internal"
 )
 
 func init() {
@@ -62,26 +62,35 @@ var (
 	repoPullRequestsURL = "https://bitbucket.org/api/2.0/repositories/%s/%s/pullrequests/%s"
 )
 
-func newBitbucketProvider(urlPlugin *Plugin) {
+func newBitbucketProvider(b *seabird.Bot) error {
+	err := b.EnsurePlugin("url")
+	if err != nil {
+		return err
+	}
+
+	urlPlugin := CtxPlugin(b.Context())
+
 	urlPlugin.RegisterProvider("bitbucket.org", bitbucketCallback)
+
+	return nil
 }
 
-func bitbucketCallback(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func bitbucketCallback(r *seabird.Request, url *url.URL) bool {
 	//nolint:gocritic
 	if bitbucketUserRegex.MatchString(url.Path) {
-		return bitbucketGetUser(b, r, url)
+		return bitbucketGetUser(r, url)
 	} else if bitbucketRepoRegex.MatchString(url.Path) {
-		return bitbucketGetRepo(b, r, url)
+		return bitbucketGetRepo(r, url)
 	} else if bitbucketIssueRegex.MatchString(url.Path) {
-		return bitbucketGetIssue(b, r, url)
+		return bitbucketGetIssue(r, url)
 	} else if bitbucketPullRegex.MatchString(url.Path) {
-		return bitbucketGetPull(b, r, url)
+		return bitbucketGetPull(r, url)
 	}
 
 	return false
 }
 
-func bitbucketGetUser(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func bitbucketGetUser(r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketUserRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 2 {
 		return false
@@ -90,7 +99,7 @@ func bitbucketGetUser(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	user := matches[1]
 
 	bu := &bitbucketUser{}
-	if err := utils.GetJSON(fmt.Sprintf(userURL, user), bu); err != nil {
+	if err := internal.GetJSON(fmt.Sprintf(userURL, user), bu); err != nil {
 		return false
 	}
 
@@ -100,7 +109,7 @@ func bitbucketGetUser(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetRepo(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func bitbucketGetRepo(r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketRepoRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 3 {
 		return false
@@ -110,7 +119,7 @@ func bitbucketGetRepo(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	repo := matches[2]
 
 	br := &bitbucketRepo{}
-	if err := utils.GetJSON(fmt.Sprintf(repoURL, user, repo), br); err != nil {
+	if err := internal.GetJSON(fmt.Sprintf(repoURL, user, repo), br); err != nil {
 		return false
 	}
 
@@ -132,7 +141,7 @@ func bitbucketGetRepo(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetIssue(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func bitbucketGetIssue(r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketIssueRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
@@ -143,7 +152,7 @@ func bitbucketGetIssue(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	issueNum := matches[3]
 
 	bi := &bitbucketIssue{}
-	if err := utils.GetJSON(fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi); err != nil {
+	if err := internal.GetJSON(fmt.Sprintf(repoIssuesURL, user, repo, issueNum), bi); err != nil {
 		return false
 	}
 
@@ -175,7 +184,7 @@ func bitbucketGetIssue(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	return true
 }
 
-func bitbucketGetPull(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
+func bitbucketGetPull(r *seabird.Request, url *url.URL) bool {
 	matches := bitbucketPullRegex.FindStringSubmatch(url.Path)
 	if len(matches) != 4 {
 		return false
@@ -186,7 +195,7 @@ func bitbucketGetPull(b *seabird.Bot, r *seabird.Request, url *url.URL) bool {
 	pullNum := matches[3]
 
 	bpr := &bitbucketPullRequest{}
-	if err := utils.GetJSON(fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr); err != nil {
+	if err := internal.GetJSON(fmt.Sprintf(repoPullRequestsURL, user, repo, pullNum), bpr); err != nil {
 		return false
 	}
 

@@ -36,7 +36,15 @@ var (
 	twitterUserRegex   = regexp.MustCompile(`^/([^/]+)$`)
 )
 
-func newtwitterProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) error {
+func newtwitterProvider(b *seabird.Bot) error {
+	err := b.EnsurePlugin("url")
+	if err != nil {
+		return err
+	}
+
+	bm := b.BasicMux()
+	urlPlugin := CtxPlugin(b.Context())
+
 	t := &twitterProvider{}
 
 	tc := &twitterConfig{}
@@ -48,29 +56,29 @@ func newtwitterProvider(b *seabird.Bot, m *seabird.BasicMux, urlPlugin *Plugin) 
 	anaconda.SetConsumerSecret(tc.ConsumerSecret)
 	t.api = anaconda.NewTwitterApi(tc.AccessToken, tc.AccessTokenSecret)
 
-	m.Event("PRIVMSG", t.privmsg)
+	bm.Event("PRIVMSG", t.privmsg)
 	urlPlugin.RegisterProvider("twitter.com", t.Handle)
 
 	return nil
 }
 
-func (t *twitterProvider) privmsg(b *seabird.Bot, r *seabird.Request) {
+func (t *twitterProvider) privmsg(r *seabird.Request) {
 	for _, matches := range twitterPrivmsgUserRegex.FindAllStringSubmatch(r.Message.Trailing(), -1) {
-		t.getUser(b, r, matches[1])
+		t.getUser(r, matches[1])
 	}
 }
 
-func (t *twitterProvider) Handle(b *seabird.Bot, r *seabird.Request, u *url.URL) bool {
+func (t *twitterProvider) Handle(r *seabird.Request, u *url.URL) bool {
 	if matches := twitterUserRegex.FindStringSubmatch(u.Path); len(matches) == 2 {
-		return t.getUser(b, r, matches[1])
+		return t.getUser(r, matches[1])
 	} else if matches := twitterStatusRegex.FindStringSubmatch(u.Path); len(matches) == 2 {
-		return t.getTweet(b, r, matches[1])
+		return t.getTweet(r, matches[1])
 	}
 
 	return false
 }
 
-func (t *twitterProvider) getUser(b *seabird.Bot, r *seabird.Request, text string) bool {
+func (t *twitterProvider) getUser(r *seabird.Request, text string) bool {
 	user, err := t.api.GetUsersShow(text, nil)
 	if err != nil {
 		return false
@@ -82,7 +90,7 @@ func (t *twitterProvider) getUser(b *seabird.Bot, r *seabird.Request, text strin
 	return true
 }
 
-func (t *twitterProvider) getTweet(b *seabird.Bot, r *seabird.Request, text string) bool {
+func (t *twitterProvider) getTweet(r *seabird.Request, text string) bool {
 	id, err := strconv.ParseInt(text, 10, 64)
 	if err != nil {
 		return false

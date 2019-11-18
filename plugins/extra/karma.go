@@ -27,21 +27,30 @@ type Karma struct {
 
 var karmaRegex = regexp.MustCompile(`([\w]{2,}|".+?")(\+\++|--+)(?:\s|$)`)
 
-func newKarmaPlugin(b *seabird.Bot, m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &karmaPlugin{db: db}
+func newKarmaPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
+	p := &karmaPlugin{
+		db: CtxDB(b.Context()),
+	}
 
 	// Migrate any relevant tables
-	err := db.Sync(Karma{})
+	err := p.db.Sync(Karma{})
 	if err != nil {
 		return err
 	}
+
+	bm := b.BasicMux()
+	cm := b.CommandMux()
 
 	cm.Event("karma", p.karmaCallback, &seabird.HelpInfo{
 		Usage:       "<nick>",
 		Description: "Displays karma for given user",
 	})
 
-	m.Event("PRIVMSG", p.callback)
+	bm.Event("PRIVMSG", p.callback)
 
 	return nil
 }
@@ -77,7 +86,7 @@ func (p *karmaPlugin) UpdateKarma(name string, diff int) int {
 	return out.Score
 }
 
-func (p *karmaPlugin) karmaCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *karmaPlugin) karmaCallback(r *seabird.Request) {
 	term := strings.TrimSpace(r.Message.Trailing())
 
 	// If we don't provide a term, search for the current nick
@@ -88,17 +97,16 @@ func (p *karmaPlugin) karmaCallback(b *seabird.Bot, r *seabird.Request) {
 	r.MentionReply("%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
-func (p *karmaPlugin) callback(b *seabird.Bot, r *seabird.Request) {
+func (p *karmaPlugin) callback(r *seabird.Request) {
 	if len(r.Message.Params) < 2 || !r.FromChannel() {
 		return
 	}
 
-	var (
-		buzzkillTriggered bool
-		jerkModeTriggered bool
+	var buzzkillTriggered bool
 
-		changes = make(map[string]int)
-	)
+	var jerkModeTriggered bool
+
+	var changes = make(map[string]int)
 
 	matches := karmaRegex.FindAllStringSubmatch(r.Message.Trailing(), -1)
 	for _, v := range matches {

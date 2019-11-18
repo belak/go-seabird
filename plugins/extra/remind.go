@@ -7,9 +7,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/go-xorm/xorm"
-
 	seabird "github.com/belak/go-seabird"
+	"github.com/go-xorm/xorm"
 	irc "gopkg.in/irc.v3"
 )
 
@@ -45,12 +44,20 @@ type Reminder struct {
 	ReminderTime time.Time
 }
 
-func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Engine) error {
+func newReminderPlugin(b *seabird.Bot) error {
+	bm := b.BasicMux()
+	cm := b.CommandMux()
+
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
 	p := &reminderPlugin{
-		db:         db,
 		roomLock:   &sync.Mutex{},
 		rooms:      make(map[string]bool),
 		updateChan: make(chan struct{}, 1),
+
+		db: CtxDB(b.Context()),
 	}
 
 	err := p.db.Sync(Reminder{})
@@ -58,10 +65,10 @@ func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Eng
 		return err
 	}
 
-	m.Event("001", p.InitialDispatch)
-	m.Event("JOIN", p.joinHandler)
-	m.Event("PART", p.partHandler)
-	m.Event("KICK", p.kickHandler)
+	bm.Event("001", p.InitialDispatch)
+	bm.Event("JOIN", p.joinHandler)
+	bm.Event("PART", p.partHandler)
+	bm.Event("KICK", p.kickHandler)
 
 	cm.Event("remind", p.RemindCommand, &seabird.HelpInfo{
 		Usage:       "<duration> <message>",
@@ -71,8 +78,8 @@ func newReminderPlugin(m *seabird.BasicMux, cm *seabird.CommandMux, db *xorm.Eng
 	return nil
 }
 
-func (p *reminderPlugin) joinHandler(b *seabird.Bot, r *seabird.Request) {
-	if r.Message.Prefix.Name != b.CurrentNick() {
+func (p *reminderPlugin) joinHandler(r *seabird.Request) {
+	if r.Message.Prefix.Name != r.CurrentNick() {
 		return
 	}
 
@@ -83,8 +90,8 @@ func (p *reminderPlugin) joinHandler(b *seabird.Bot, r *seabird.Request) {
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) partHandler(b *seabird.Bot, r *seabird.Request) {
-	if r.Message.Prefix.Name != b.CurrentNick() {
+func (p *reminderPlugin) partHandler(r *seabird.Request) {
+	if r.Message.Prefix.Name != r.CurrentNick() {
 		return
 	}
 
@@ -95,8 +102,8 @@ func (p *reminderPlugin) partHandler(b *seabird.Bot, r *seabird.Request) {
 	p.updateChan <- struct{}{}
 }
 
-func (p *reminderPlugin) kickHandler(b *seabird.Bot, r *seabird.Request) {
-	if r.Message.Params[1] != b.CurrentNick() {
+func (p *reminderPlugin) kickHandler(r *seabird.Request) {
+	if r.Message.Params[1] != r.CurrentNick() {
 		return
 	}
 
@@ -119,13 +126,16 @@ func (p *reminderPlugin) nextReminder() (*Reminder, error) {
 	return r, err
 }
 
-func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
-	logger := b.GetLogger()
+func (p *reminderPlugin) remindLoop(r *seabird.Request) {
+	logger := r.GetLogger("remind")
 
 	logger.Info("Starting reminder loop")
 
+	// TODO: this should use the bot, not the request, as they're scoped
+	// differently.
+
 	for {
-		r, err := p.nextReminder()
+		reminder, err := p.nextReminder()
 		if err != nil {
 			logger.WithError(err).Error("Transaction failure. Exiting loop.")
 			return
@@ -133,12 +143,12 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 
 		var timer <-chan time.Time
 
-		if r != nil {
-			logger.WithField("reminder", r).Debug("Next reminder")
+		if reminder != nil {
+			logger.WithField("reminder", reminder).Debug("Next reminder")
 
-			waitDur := time.Until(r.ReminderTime)
+			waitDur := time.Until(reminder.ReminderTime)
 			if waitDur <= 0 {
-				p.dispatch(b, r)
+				p.dispatch(r, reminder)
 				continue
 			}
 
@@ -147,21 +157,21 @@ func (p *reminderPlugin) remindLoop(b *seabird.Bot) {
 
 		select {
 		case <-timer:
-			p.dispatch(b, r)
+			p.dispatch(r, reminder)
 		case <-p.updateChan:
 			continue
 		}
 	}
 }
 
-func (p *reminderPlugin) dispatch(b *seabird.Bot, r *Reminder) {
-	logger := b.GetLogger().WithField("reminder", r)
+func (p *reminderPlugin) dispatch(r *seabird.Request, reminder *Reminder) {
+	logger := r.GetLogger("remind").WithField("reminder", r)
 
 	// Send the message
-	b.Send(&irc.Message{
+	r.WriteMessage(&irc.Message{
 		Prefix:  &irc.Prefix{},
 		Command: "PRIVMSG",
-		Params:  []string{r.Target, r.Content},
+		Params:  []string{reminder.Target, reminder.Content},
 	})
 
 	// Nuke the reminder now that it's been sent
@@ -175,8 +185,8 @@ func (p *reminderPlugin) dispatch(b *seabird.Bot, r *Reminder) {
 
 // InitialDispatch is used to send private messages to users on connection. We
 // can't queue up the channels yet because we haven't joined them.
-func (p *reminderPlugin) InitialDispatch(b *seabird.Bot, r *seabird.Request) {
-	go p.remindLoop(b)
+func (p *reminderPlugin) InitialDispatch(r *seabird.Request) {
+	go p.remindLoop(r)
 }
 
 // ParseTime parses the text string and turns it into a time.Duration
@@ -210,7 +220,7 @@ func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
 	return ret, nil
 }
 
-func (p *reminderPlugin) RemindCommand(b *seabird.Bot, r *seabird.Request) {
+func (p *reminderPlugin) RemindCommand(r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) != 2 {
 		r.MentionReply("Not enough args")
@@ -245,7 +255,7 @@ func (p *reminderPlugin) RemindCommand(b *seabird.Bot, r *seabird.Request) {
 
 	r.MentionReply("Event stored")
 
-	logger := b.GetLogger()
+	logger := r.GetLogger("remind")
 	logger.WithField("reminder", rem).Debug("Stored reminder")
 
 	p.updateChan <- struct{}{}

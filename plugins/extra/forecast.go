@@ -57,8 +57,14 @@ type ForecastLocation struct {
 	Lon     float64
 }
 
-func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) error {
-	p := &forecastPlugin{db: db}
+func newForecastPlugin(b *seabird.Bot) error {
+	if err := b.EnsurePlugin("db"); err != nil {
+		return err
+	}
+
+	p := &forecastPlugin{
+		db: CtxDB(b.Context()),
+	}
 
 	// Ensure DB tables are up to date
 	err := p.db.Sync(ForecastLocation{})
@@ -70,6 +76,8 @@ func newForecastPlugin(b *seabird.Bot, cm *seabird.CommandMux, db *xorm.Engine) 
 	if err != nil {
 		return err
 	}
+
+	cm := b.CommandMux()
 
 	cm.Event("weather", p.weatherCallback, &seabird.HelpInfo{
 		Usage:       "<location>",
@@ -152,7 +160,7 @@ func (p *forecastPlugin) getLocation(r *seabird.Request) (*ForecastLocation, err
 	return newLocation, err
 }
 
-func (p *forecastPlugin) forecastCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *forecastPlugin) forecastCallback(r *seabird.Request) {
 	loc, err := p.getLocation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())
@@ -184,7 +192,7 @@ func (p *forecastPlugin) forecastCallback(b *seabird.Bot, r *seabird.Request) {
 	}
 }
 
-func (p *forecastPlugin) weatherCallback(b *seabird.Bot, r *seabird.Request) {
+func (p *forecastPlugin) weatherCallback(r *seabird.Request) {
 	loc, err := p.getLocation(r)
 	if err != nil {
 		r.MentionReply("%s", err.Error())

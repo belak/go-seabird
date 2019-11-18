@@ -13,20 +13,23 @@ func init() {
 	seabird.RegisterPlugin("math", newMathPlugin)
 }
 
-func newMathPlugin(cm *seabird.CommandMux) {
+func newMathPlugin(b *seabird.Bot) error {
+	cm := b.CommandMux()
+
 	cm.Event("math", exprCallback, &seabird.HelpInfo{
 		Usage:       "<expr>",
 		Description: "Math. Like calculators and stuff. Bug somebody if you don't know how to math.",
 	})
+
+	return nil
 }
 
-func exprCallback(b *seabird.Bot, r *seabird.Request) {
-	var (
-		err error
-		res *big.Rat
+func exprCallback(r *seabird.Request) {
+	var err error
 
-		mc = mathcat.New()
-	)
+	var res *big.Rat
+
+	var mc = mathcat.New()
 
 	for _, expr := range strings.Split(r.Message.Trailing(), ";") {
 		res, err = mc.Run(expr)

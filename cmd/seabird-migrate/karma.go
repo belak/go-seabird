@@ -14,7 +14,7 @@ type Karma struct {
 }
 
 func migrateKarma(b *seabird.Bot, ndb *nut.DB, xdb *xorm.Engine) error {
-	l := b.GetLogger()
+	l := seabird.CtxLogger(b.Context(), "migrate")
 
 	// Migrate any relevant tables
 	err := xdb.Sync(Karma{})
