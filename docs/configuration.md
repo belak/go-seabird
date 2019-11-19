@@ -54,7 +54,7 @@ In this example the `db` is enabled, as well as all plugins whose names start wi
 Standard:
 
 | Plugin | Description |
-|--------|-------------||
+|--------|-------------|
 |`bulkcnam` | This plugin is currently broken.|
 |`chance` | This plugin adds support for flipping a coin and Russian Roulette.|
 |`db` | This plugin adds support for other plugins to use a database. It doesn't expose commands.|
