@@ -36,6 +36,8 @@ func commandCallback(r *seabird.Request) {
 
 This plugin adds a single command called `my_command` that will reply to a user when the command is called.
 
+Note that you must add the plugin's name (`my_cool_plugin` from `init()`) to your bot's configuration under the `plugins` list for the new command to be active.
+
 ## Registering Callbacks
 
 You've already seen one way to register bot callbacks in `CommandMux.Event`. There are a few different ways to register message callbacks in a plugin:
@@ -61,12 +63,15 @@ You've already seen one way to register bot callbacks in `CommandMux.Event`. The
 You may send messages to a channel in a number of ways. The following are three common ways to do it.
 
 `Request().Reply`: This will simply send a message to the channel or private query that the source request came from.
+
 `Request().MentionReply`: This will send a message prefixed with the issuing user's nick to the channel or private query that the source request came from.
+
 `Request().PrivateReply`: This will open a private query with the user that issued the request and send the reply there.
 
 ## Depending on Other Plugins
 
 You can depend on other plugins with the `Bot().EnsurePlugin` method.
+
 ```go
 package extra
 

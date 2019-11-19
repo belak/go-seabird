@@ -36,6 +36,10 @@ func readUrl(r *seabird.Request, url *url.URL) bool {
 }
 ```
 
+This plugin adds a single URL hook that sends a message saying `Your message contained a link to my.cool.url!` any time a URL linking to the `my.cool.url` domain is sent to a channel where Seabird is present.
+
+Note that you must add the plugin's name (`url/my_cool_url` from `init()`) to your bot's configuration under the `plugins` list for the new hook to be active.
+
 ## Plugin Configuration
 
 To configure your URL plugin, you can create an object to wrap your configuration:
