@@ -51,7 +51,7 @@ In this example the `db` is enabled, as well as all plugins whose names start wi
 
 **What configuration options exist for Seabird?**
 
-Configuration for the underlying [irc](gopkg.in/irc.v3) connection (see [irc.CLientConfig](https://godoc.org/gopkg.in/irc.v3#ClientConfig) for more information):
+Configuration for the underlying [irc](gopkg.in/irc.v3) connection (see [irc.ClientConfig](https://godoc.org/gopkg.in/irc.v3#ClientConfig) for more information):
 
 ```
 # User info
@@ -82,7 +82,7 @@ tls = true
 # server's certificate chain and host name.
 # If [tlsnoverify] is true, TLS accepts any certificate
 # presented by the server and any host name in that certificate.
-# is mode, TLS is susceptible to man-in-the-middle attacks.
+# In this mode, TLS is susceptible to man-in-the-middle attacks.
 # This should be used only for testing.
 tlsnoverify false
 

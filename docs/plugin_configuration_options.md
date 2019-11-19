@@ -111,7 +111,31 @@ clientsecret = "stu901"
 
 ## `url/twitter`
 
-This plugin is not currently working.
+Section name is `[twitter]`.
+
+**Required:** `consumerkey` is an OAuth consumer key for the [Twitter API](https://developer.twitter.com/en/docs).
+
+```
+consumerkey = "abc123"
+```
+
+**Required:** `consumersecret` is an OAuth consumer secret for the [Twitter API](https://developer.twitter.com/en/docs).
+
+```
+consumersecret = "def456"
+```
+
+**Required:** `accesstoken` is an OAuth access token for the [Twitter API](https://developer.twitter.com/en/docs).
+
+```
+accesstoken = "ghi789"
+```
+
+**Required:** `accesstokensecret` is an OAuth access token secret for the [Twitter API](https://developer.twitter.com/en/docs).
+
+```
+accesstokensecret = "jkl012"
+```
 
 ## `url/youtube`
 

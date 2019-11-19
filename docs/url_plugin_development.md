@@ -42,55 +42,6 @@ Note that you must add the plugin's name (`url/my_cool_url` from `init()`) to yo
 
 ## Plugin Configuration
 
-To configure your URL plugin, you can create an object to wrap your configuration:
-
-```go
-package url
-
-import (
-    seabird "github.com/belak/go-seabird"
-)
-
-func init() {
-    seabird.RegisterPlugin("url/my_cool_url", newMyCoolUrlProvider)
-}
-
-// myCoolUrlConfig defines configuration for the URL plugin
-type myCoolUrlConfig struct {
-    firstConfigValue  string
-    secondConfigValue bool
-}
-
-// myCoolUrlProvider will store loaded configuration options
-type myCoolUrlProvider struct {
-    config *myCoolUrlConfig
-}
-
-func newMyCoolUrlProvider(b *seabird.Bot) error {
-    err := b.EnsurePlugin("url")
-    if err != nil {
-        return err
-    }
-
-    p := &myCoolUrlProvider{}
-
-    c := &myCoolUrlConfig{}
-    if err := b.COnfig("my_cool_url", c); err != nil {
-        return err
-    }
-
-    p.config = c
-
-    urlPlugin := CtxPlugin(b.Context())
-    urlPlugin.RegisterProvider("my.cool.url", readUrl)
-}
-
-func (p *myCoolUrlProvider) readUrl(r *seabird.Request, url *url.URL) bool {
-    // You can now access configuration values with:
-    // p.config.firstConfigValue
-
-    r.Reply("Your message contained a link to my.cool.url!")
-}
-```
+See Plugin Configuration in the [standard plugin configuration docs](./plugin_development.md).
 
 [documentation index](./README.md)

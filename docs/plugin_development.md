@@ -44,33 +44,33 @@ You've already seen one way to register bot callbacks in `CommandMux.Event`. The
 
 ### `BasicMux`
 
-`BasicMux().Event`: This will register a callback that will be called when Seabird sees specific raw IRC commands like `JOIN`, `PART`, and `KICK`.
+`BasicMux{}.Event`: This will register a callback that will be called when Seabird sees specific raw IRC commands like `JOIN`, `PART`, and `KICK`.
 
 ### `CommandMux`
 
-`CommandMux().Event`: This will register a callback that will be called for a specific command, either in a channel or in a private query. Only messages beginning with the bot's [configured command prefix](configuration.md) and the registered command (e.g. `~help`) will cause the callback to fire.
+`CommandMux{}.Event`: This will register a callback that will be called for a specific command, either in a channel or in a private query. Only messages beginning with the bot's [configured command prefix](configuration.md) and the registered command (e.g. `~help`) will cause the callback to fire.
 
-`CommandMux().Channel`: This will register a callback that will be called for a specific command only in a channel and not in a private query. Only messages beginning with the bot's [configured command prefix](configuration.md) and the registered command (e.g. `~help`) will cause the callback to fire.
+`CommandMux{}.Channel`: This will register a callback that will be called for a specific command only in a channel and not in a private query. Only messages beginning with the bot's [configured command prefix](configuration.md) and the registered command (e.g. `~help`) will cause the callback to fire.
 
-`CommandMux().Private`: This will register a callback that will be called for a specific command only in a private query and not in a channel. Only messages beginning with the bot's [configured command prefix](configuration.md) and the registered command (e.g. `~help`) will cause the callback to fire.
+`CommandMux{}.Private`: This will register a callback that will be called for a specific command only in a private query and not in a channel. Only messages beginning with the bot's [configured command prefix](configuration.md) and the registered command (e.g. `~help`) will cause the callback to fire.
 
 ### `MentionMux`
 
-`MentionMux().Event`: This will register a callback that will be called for every message that a Seabird bot sees. This is useful for parsing specific, common parts of messages like URLs.
+`MentionMux{}.Event`: This will register a callback that will be called for every message that a Seabird bot sees. This is useful for parsing specific, common parts of messages like URLs.
 
 ## Writing Messages
 
 You may send messages to a channel in a number of ways. The following are three common ways to do it.
 
-`Request().Reply`: This will simply send a message to the channel or private query that the source request came from.
+`Request{}.Reply`: This will simply send a message to the channel or private query that the source request came from.
 
-`Request().MentionReply`: This will send a message prefixed with the issuing user's nick to the channel or private query that the source request came from.
+`Request{}.MentionReply`: This will send a message prefixed with the issuing user's nick to the channel or private query that the source request came from.
 
-`Request().PrivateReply`: This will open a private query with the user that issued the request and send the reply there.
+`Request{}.PrivateReply`: This will open a private query with the user that issued the request and send the reply there.
 
 ## Depending on Other Plugins
 
-You can depend on other plugins with the `Bot().EnsurePlugin` method.
+You can depend on other plugins with the `Bot{}.EnsurePlugin` method.
 
 ```go
 package extra
@@ -104,6 +104,10 @@ func commandCallback(r *seabird.Request) {
     r.MentionReply("You ran my_command!")
 }
 ```
+
+If you want a required dependency, simply return the error if you get one from `Bot{}.EnsurePlugin`. Doing that will cause Seabird to fail to start if the plugin is missing.
+
+If you want an optional dependency you can ignore the error you get from `Bot{}.EnsurePlugin` and change the behavior of your plugin accordingly.
 
 ## Plugin Configuration
 
@@ -140,7 +144,7 @@ func newMyCoolUrlProvider(b *seabird.Bot) error {
     p := &myCoolUrlProvider{}
 
     c := &myCoolUrlConfig{}
-    if err := b.COnfig("my_cool_url", c); err != nil {
+    if err := b.Config("my_cool_url", c); err != nil {
         return err
     }
 
