@@ -97,6 +97,7 @@ IRC commands for the bot to send upon connecting:
 cmds = [
   "JOIN #my-channel",
 ]
+```
 
 Command prefix for the bot, e.g. setting `prefix = "~"` would mean that you'd call a command named `foo` with a message like `~foo`.
 
