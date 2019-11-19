@@ -49,6 +49,35 @@ plugins = [
 
 In this example the `db` is enabled, as well as all plugins whose names start with `"url/"`.
 
+**What plugins are available in Seabird?**
+
+Standard:
+
+| Plugin | Description |
+|--------|-------------||
+|`bulkcnam` | This plugin is currently broken.|
+|`chance` | This plugin adds support for flipping a coin and Russian Roulette.|
+|`db` | This plugin adds support for other plugins to use a database. It doesn't expose commands.|
+|`dice` | This plugin listens for [D&D](https://dnd.wizards.com)-style dice rolls and actions on them.|
+|`fcc` | This plugin adds support for querying [HAM radio](http://www.arrl.org/what-is-ham-radio) licenses.|
+|`forecast` | This plugin adds support for querying weather information for a location.|
+|`google` | This plugin links to a Google search page for a specific query.|
+|`issues` | This plugin adds support for Seabird GitHub issue search and creation.|
+|`karma` | This plugin adds support for tracking karma points for things.|
+|`lastseen` | This plugin adds support for showing when users last spoke in a channel.|
+|`math` | This plugin adds basic support for mathematical expression evaluation.|
+|`mentions` | This plugin enables Seabird to respond to certain fun messages.|
+|`net_tools` | This plugin adds support for various network information commands.|
+|`noaa` | This plugin adds support for querying [aviation weather information](https://en.wikipedia.org/wiki/METAR).|
+|`phrases` | This plugin adds support for key-value tracking and delivery of user-defined phrases.|
+|`remind` | This plugin adds support for user reminders.|
+|`runescape` | This plugin adds support for querying [Old School RuneScape](https://oldschool.runescape.com) account information.|
+|`stock` | This plugin adds support for querying stock information from the [IEX Cloud API](https://iexcloud.io/docs/api/).|
+|`tiny` | This plugin adds support for shortening URLs.|
+|`watchdog` | This plugin adds support for checking whether or not Seabird is alive and responding to commands.|
+|`weight_tracker` | This plugin adds support for tracking weight over time.|
+|`wikipedia` | This plugin adds support for querying Wikipedia.|
+
 **What configuration options exist for Seabird?**
 
 Configuration for the underlying [irc](gopkg.in/irc.v3) connection (see [irc.ClientConfig](https://godoc.org/gopkg.in/irc.v3#ClientConfig) for more information):
