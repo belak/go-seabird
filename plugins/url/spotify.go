@@ -4,10 +4,12 @@ import (
 	"context"
 	"net/url"
 	"regexp"
+	"sync"
 	"text/template"
 
 	"github.com/sirupsen/logrus"
 	"github.com/zmb3/spotify"
+	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/clientcredentials"
 
 	seabird "github.com/belak/go-seabird"
@@ -24,27 +26,27 @@ type spotifyConfig struct {
 }
 
 type spotifyProvider struct {
-	api spotify.Client
+	lock   *sync.RWMutex
+	config *clientcredentials.Config
+	token  *oauth2.Token
 }
 
 var spotifyPrefix = "[Spotify]"
 
 type spotifyMatch struct {
-	matchCount int
-	regex      *regexp.Regexp
-	uriRegex   *regexp.Regexp
-	template   *template.Template
-	lookup     func(*spotifyProvider, *logrus.Entry, []string) interface{}
+	regex    *regexp.Regexp
+	uriRegex *regexp.Regexp
+	template *template.Template
+	lookup   func(spotify.Client, *logrus.Entry, []string) interface{}
 }
 
 var spotifyMatchers = []spotifyMatch{
 	{
-		matchCount: 1,
-		regex:      regexp.MustCompile(`^/artist/(.+)$`),
-		uriRegex:   regexp.MustCompile(`\bspotify:artist:(\w+)\b`),
-		template:   internal.TemplateMustCompile("spotifyArtist", `{{- .Name -}}`),
-		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
-			artist, err := s.api.GetArtist(spotify.ID(matches[0]))
+		regex:    regexp.MustCompile(`^/artist/(.+)$`),
+		uriRegex: regexp.MustCompile(`\bspotify:artist:(\w+)\b`),
+		template: internal.TemplateMustCompile("spotifyArtist", `{{- .Name -}}`),
+		lookup: func(api spotify.Client, logger *logrus.Entry, matches []string) interface{} {
+			artist, err := api.GetArtist(spotify.ID(matches[0]))
 			if err != nil {
 				logger.WithError(err).Error("Failed to get artist info from Spotify")
 				return nil
@@ -53,16 +55,15 @@ var spotifyMatchers = []spotifyMatch{
 		},
 	},
 	{
-		matchCount: 1,
-		regex:      regexp.MustCompile(`^/album/(.+)$`),
-		uriRegex:   regexp.MustCompile(`\bspotify:album:(\w+)\b`),
+		regex:    regexp.MustCompile(`^/album/(.+)$`),
+		uriRegex: regexp.MustCompile(`\bspotify:album:(\w+)\b`),
 		template: internal.TemplateMustCompile("spotifyAlbum", `
 			{{- .Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name -}}
 			{{- end }} ({{ pluralize .Tracks.Total "track" }})`),
-		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
-			album, err := s.api.GetAlbum(spotify.ID(matches[0]))
+		lookup: func(api spotify.Client, logger *logrus.Entry, matches []string) interface{} {
+			album, err := api.GetAlbum(spotify.ID(matches[0]))
 			if err != nil {
 				logger.WithError(err).Error("Failed to get album info from Spotify")
 				return nil
@@ -71,16 +72,15 @@ var spotifyMatchers = []spotifyMatch{
 		},
 	},
 	{
-		matchCount: 1,
-		regex:      regexp.MustCompile(`^/track/(.+)$`),
-		uriRegex:   regexp.MustCompile(`\bspotify:track:(\w+)\b`),
+		regex:    regexp.MustCompile(`^/track/(.+)$`),
+		uriRegex: regexp.MustCompile(`\bspotify:track:(\w+)\b`),
 		template: internal.TemplateMustCompile("spotifyTrack", `
 			"{{ .Name }}" from {{ .Album.Name }} by
 			{{- range $index, $element := .Artists }}
 			{{- if $index }},{{ end }} {{ $element.Name }}
 			{{- end }}`),
-		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
-			track, err := s.api.GetTrack(spotify.ID(matches[0]))
+		lookup: func(api spotify.Client, logger *logrus.Entry, matches []string) interface{} {
+			track, err := api.GetTrack(spotify.ID(matches[0]))
 			if err != nil {
 				logger.WithError(err).Error("Failed to get track info from Spotify")
 				return nil
@@ -89,14 +89,12 @@ var spotifyMatchers = []spotifyMatch{
 		},
 	},
 	{
-		matchCount: 2,
-		regex:      regexp.MustCompile(`^/user/([^/]*)/playlist/([^/]*)$`),
-		uriRegex:   regexp.MustCompile(`\bspotify:user:(\w+):playlist:(\w+)\b`),
+		regex:    regexp.MustCompile(`^/playlist/([^/]*)$`),
+		uriRegex: regexp.MustCompile(`\bspotify:playlist:(\w+)\b`),
 		template: internal.TemplateMustCompile("spotifyPlaylist", `
 			"{{- .Name }}" playlist by {{ .Owner.DisplayName }} ({{ pluralize .Tracks.Total "track" }})`),
-		lookup: func(s *spotifyProvider, logger *logrus.Entry, matches []string) interface{} {
-			// playlist, err := s.api.GetPlaylist(matches[0], spotify.ID(matches[1]))
-			playlist, err := s.api.GetPlaylist(spotify.ID(matches[1]))
+		lookup: func(api spotify.Client, logger *logrus.Entry, matches []string) interface{} {
+			playlist, err := api.GetPlaylist(spotify.ID(matches[0]))
 			if err != nil {
 				logger.WithError(err).Error("Failed to get track info from Spotify")
 				return nil
@@ -114,25 +112,26 @@ func newSpotifyProvider(b *seabird.Bot) error {
 	bm := b.BasicMux()
 	urlPlugin := CtxPlugin(b.Context())
 
-	s := &spotifyProvider{}
+	s := &spotifyProvider{
+		lock: &sync.RWMutex{},
+	}
 
 	sc := &spotifyConfig{}
 	if err := b.Config("spotify", sc); err != nil {
 		return err
 	}
 
-	config := &clientcredentials.Config{
+	s.config = &clientcredentials.Config{
 		ClientID:     sc.ClientID,
 		ClientSecret: sc.ClientSecret,
 		TokenURL:     spotify.TokenURL,
 	}
 
-	token, err := config.Token(context.Background())
+	// Ensure we have valid credentials
+	_, err := s.getAPI()
 	if err != nil {
 		return err
 	}
-
-	s.api = spotify.Authenticator{}.NewClient(token)
 
 	bm.Event("PRIVMSG", s.privmsgCallback)
 
@@ -141,17 +140,55 @@ func newSpotifyProvider(b *seabird.Bot) error {
 	return nil
 }
 
+func (s *spotifyProvider) getAPI() (spotify.Client, error) {
+	// If we already have a valid token, we can bail
+	s.lock.RLock()
+	if s.token != nil && s.token.Valid() {
+		s.lock.RUnlock()
+		return spotify.Authenticator{}.NewClient(s.token), nil
+	}
+	s.lock.RUnlock()
+
+	s.lock.Lock()
+	defer s.lock.Unlock()
+
+	token, err := s.config.Token(context.Background())
+	if err != nil {
+		return spotify.Client{}, err
+	}
+
+	s.token = token
+
+	return spotify.Authenticator{}.NewClient(s.token), nil
+}
+
 func (s *spotifyProvider) privmsgCallback(r *seabird.Request) {
+	logger := r.GetLogger("url/spotify")
+
+	api, err := s.getAPI()
+	if err != nil {
+		logger.WithError(err).Error("Failed to get token from Spotify")
+		return
+	}
+
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(r, matcher, matcher.uriRegex, r.Message.Trailing()) {
+		if s.handleTarget(r, api, logger, matcher, matcher.uriRegex, r.Message.Trailing()) {
 			return
 		}
 	}
 }
 
 func (s *spotifyProvider) HandleURL(r *seabird.Request, u *url.URL) bool {
+	logger := r.GetLogger("url/spotify")
+
+	api, err := s.getAPI()
+	if err != nil {
+		logger.WithError(err).Error("Failed to get token from Spotify")
+		return false
+	}
+
 	for _, matcher := range spotifyMatchers {
-		if s.handleTarget(r, matcher, matcher.regex, u.Path) {
+		if s.handleTarget(r, api, logger, matcher, matcher.regex, u.Path) {
 			return true
 		}
 	}
@@ -159,19 +196,17 @@ func (s *spotifyProvider) HandleURL(r *seabird.Request, u *url.URL) bool {
 	return false
 }
 
-func (s *spotifyProvider) handleTarget(r *seabird.Request, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
-	logger := r.GetLogger("url/spotify")
-
+func (s *spotifyProvider) handleTarget(r *seabird.Request, api spotify.Client, logger *logrus.Entry, matcher spotifyMatch, regex *regexp.Regexp, target string) bool {
 	if !regex.MatchString(target) {
 		return false
 	}
 
 	matches := regex.FindStringSubmatch(target)
-	if len(matches) != matcher.matchCount+1 {
+	if len(matches) != 2 {
 		return false
 	}
 
-	data := matcher.lookup(s, logger, matches[1:])
+	data := matcher.lookup(api, logger, matches[1:])
 	if data == nil {
 		return false
 	}

@@ -342,6 +342,9 @@ func (b *Bot) loadPlugin(name string) error {
 	// EnsurePlugin can be called by Plugins which can in turn call loadPlugin.
 	err := plugins[name](b)
 
+	// Mark the plugin as loaded
+	b.loadedPlugins[name] = true
+
 	// Pop the current plugin off the stack
 	b.loadingContext = b.loadingContext[:len(b.loadingContext)-1]
 

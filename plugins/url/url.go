@@ -105,7 +105,7 @@ func (p *Plugin) callback(r *seabird.Request) {
 			// Alternatively, we could require the linkifiers to
 			// register multiple times
 			if strings.HasPrefix(u.Host, "www.") {
-				host := u.Host[4:]
+				host := strings.TrimPrefix(u.Host, "www.")
 				for _, provider := range p.providers[host] {
 					if provider(r, u) {
 						return
