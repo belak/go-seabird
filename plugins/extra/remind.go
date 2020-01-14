@@ -175,7 +175,7 @@ func (p *reminderPlugin) dispatch(r *seabird.Request, reminder *Reminder) {
 	})
 
 	// Nuke the reminder now that it's been sent
-	_, err := p.db.Delete(r)
+	_, err := p.db.Delete(reminder)
 	if err != nil {
 		logger.WithError(err).Error("Failed to remove reminder")
 	}
