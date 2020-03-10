@@ -29,11 +29,11 @@ func newChancePlugin(b *seabird.Bot) error {
 		make(map[string]int),
 	}
 
-	cm.Event("roulette", p.rouletteCallback, &seabird.HelpInfo{
+	cm.Channel("roulette", p.rouletteCallback, &seabird.HelpInfo{
 		Description: "Click... click... BANG!",
 	})
 
-	cm.Event("coin", p.coinCallback, &seabird.HelpInfo{
+	cm.Channel("coin", p.coinCallback, &seabird.HelpInfo{
 		Usage:       "[heads|tails]",
 		Description: "Guess the coin flip. If you guess wrong, you're out!",
 	})
@@ -42,10 +42,6 @@ func newChancePlugin(b *seabird.Bot) error {
 }
 
 func (p *chancePlugin) rouletteCallback(r *seabird.Request) {
-	if !r.FromChannel() {
-		return
-	}
-
 	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		// Invalid message
 		return
@@ -73,10 +69,6 @@ func (p *chancePlugin) rouletteCallback(r *seabird.Request) {
 }
 
 func (p *chancePlugin) coinCallback(r *seabird.Request) {
-	if !r.FromChannel() {
-		return
-	}
-
 	guess := -1
 	guessStr := r.Message.Trailing()
 

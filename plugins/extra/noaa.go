@@ -143,7 +143,7 @@ func NOAALookup(urlFormat, code string) (string, error) {
 	}
 	defer resp.Body.Close()
 
-	if resp.StatusCode != 200 {
+	if resp.StatusCode != http.StatusOK {
 		return "", errors.New("Station does not exist")
 	}
 

@@ -177,7 +177,7 @@ func (p *netToolsPlugin) handleCommand(r *seabird.Request, command string, empty
 		return
 	}
 
-	url, err := p.runCommand("traceroute", r.Message.Trailing())
+	url, err := p.runCommand(command, r.Message.Trailing())
 	if err != nil {
 		r.MentionReply("%s", err)
 		return
