@@ -24,5 +24,7 @@ func mentionsCallback(r *seabird.Request) {
 		r.Reply("Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
 		r.Reply(":)")
+	case "pizzahousesnack":
+		r.Reply("HECK YEAHHHHHHHHHHHH OMG I LOVE U THE WORLD IS GREAT")
 	}
 }
