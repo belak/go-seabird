@@ -2,7 +2,7 @@ package main
 
 import (
 	seabird "github.com/belak/go-seabird"
-	"github.com/belak/go-seabird/plugins/extra"
+	"github.com/belak/go-seabird/plugins/extra/db"
 	"github.com/belak/nut"
 
 	"xorm.io/xorm"
@@ -21,12 +21,12 @@ func openDBs(b *seabird.Bot) (*nut.DB, *xorm.Engine, error) {
 		return nil, nil, err
 	}
 
-	err := extra.NewDBPlugin(b)
+	err := db.NewDBPlugin(b)
 	if err != nil {
 		return nil, nil, err
 	}
 
-	xdb := extra.CtxDB(b.Context())
+	xdb := db.CtxDB(b.Context())
 
 	ndb, err := nut.Open(dbc.Filename, 0700)
 	if err != nil {

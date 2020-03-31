@@ -14,9 +14,9 @@ import (
 	// Load plugins
 	//_ "github.com/belak/go-seabird-bucket"
 	//_ "github.com/belak/go-seabird-uno"
-	_ "github.com/belak/go-seabird/plugins"
-	_ "github.com/belak/go-seabird/plugins/extra"
-	_ "github.com/belak/go-seabird/plugins/url"
+	_ "github.com/belak/go-seabird/plugins/core/all"
+	_ "github.com/belak/go-seabird/plugins/extra/all"
+	_ "github.com/belak/go-seabird/plugins/url/all"
 
 	// Load the core
 	seabird "github.com/belak/go-seabird"
