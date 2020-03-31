@@ -6,7 +6,7 @@ import (
 	"unicode"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 )
 
 func init() {

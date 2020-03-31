@@ -8,7 +8,7 @@ import (
 	"time"
 
 	seabird "github.com/belak/go-seabird"
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 	irc "gopkg.in/irc.v3"
 )
 

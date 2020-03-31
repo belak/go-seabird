@@ -5,7 +5,7 @@ import (
 	"github.com/belak/go-seabird/plugins/extra"
 	"github.com/belak/nut"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 )
 
 type dbConfig struct {

@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 	darksky "github.com/mlbright/darksky/v2"
 	"googlemaps.github.io/maps"
 

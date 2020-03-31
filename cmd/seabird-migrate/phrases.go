@@ -3,7 +3,7 @@ package main
 import (
 	seabird "github.com/belak/go-seabird"
 	"github.com/belak/nut"
-	"github.com/go-xorm/xorm"
+	"xorm.io/xorm"
 )
 
 // Phrase is the v1 xorm model for phrases

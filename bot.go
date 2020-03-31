@@ -375,7 +375,7 @@ func (b *Bot) loadPlugins() error {
 
 // Run starts the bot and loops until it dies. It accepts a ReadWriter. If you
 // wish to use the connection feature from the config, use ConnectAndRun.
-func (b *Bot) Run(c io.ReadWriter) error {
+func (b *Bot) Run(c io.ReadWriteCloser) error {
 	err := b.loadPlugins()
 	if err != nil {
 		return err
