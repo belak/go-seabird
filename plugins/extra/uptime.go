@@ -33,5 +33,5 @@ func newUptimePlugin(b *seabird.Bot) error {
 }
 
 func (p *uptimePlugin) uptimeCallback(r *seabird.Request) {
-	r.MentionReply("I have been running for %s", time.Since(p.startTime).Truncate(time.Second))
+	r.MentionReplyf("I have been running for %s", time.Since(p.startTime).Truncate(time.Second))
 }

@@ -272,7 +272,7 @@ func (p *runescapePlugin) levelCallback(r *seabird.Request) {
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 
@@ -287,7 +287,7 @@ func (p *runescapePlugin) levelCallback(r *seabird.Request) {
 			responses = append(responses, fmt.Sprintf("level %s %s", internal.PrettifyNumber(skill.Level), skill.Skill))
 		}
 
-		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
+		r.MentionReplyf("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
@@ -297,7 +297,7 @@ func (p *runescapePlugin) expCallback(r *seabird.Request) {
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 
@@ -312,7 +312,7 @@ func (p *runescapePlugin) expCallback(r *seabird.Request) {
 			responses = append(responses, fmt.Sprintf("%s experience in %s", internal.PrettifySuffix(skill.Exp), skill.Skill))
 		}
 
-		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
+		r.MentionReplyf("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }
 
@@ -322,7 +322,7 @@ func (p *runescapePlugin) rankCallback(r *seabird.Request) {
 	go func() {
 		skills, err := p.getPlayerSkills(trailing)
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 
@@ -337,6 +337,6 @@ func (p *runescapePlugin) rankCallback(r *seabird.Request) {
 			responses = append(responses, fmt.Sprintf("rank %s in %s", internal.PrettifyNumber(skill.Rank), skill.Skill))
 		}
 
-		r.MentionReply("%s has %s", playerName, strings.Join(responses, ", "))
+		r.MentionReplyf("%s has %s", playerName, strings.Join(responses, ", "))
 	}()
 }

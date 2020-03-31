@@ -129,7 +129,7 @@ func (t *githubProvider) getUser(r *seabird.Request, url string) bool {
 	}
 
 	return internal.RenderRespond(
-		r.Reply, logger, userTemplate, githubPrefix,
+		r.Replyf, logger, userTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 		},
@@ -174,7 +174,7 @@ func (t *githubProvider) getRepo(r *seabird.Request, url string) bool {
 	}
 
 	return internal.RenderRespond(
-		r.Reply, logger, repoTemplate, githubPrefix,
+		r.Replyf, logger, repoTemplate, githubPrefix,
 		map[string]interface{}{
 			"repo": repo,
 		},
@@ -207,7 +207,7 @@ func (t *githubProvider) getIssue(r *seabird.Request, url string) bool {
 	}
 
 	return internal.RenderRespond(
-		r.Reply, logger, issueTemplate, githubPrefix,
+		r.Replyf, logger, issueTemplate, githubPrefix,
 		map[string]interface{}{
 			"issue": issue,
 			"user":  user,
@@ -245,7 +245,7 @@ func (t *githubProvider) getPull(r *seabird.Request, url string) bool {
 	}
 
 	return internal.RenderRespond(
-		r.Reply, logger, prTemplate, githubPrefix,
+		r.Replyf, logger, prTemplate, githubPrefix,
 		map[string]interface{}{
 			"user": user,
 			"repo": repo,
@@ -279,7 +279,7 @@ func (t *githubProvider) getGist(r *seabird.Request, url string) bool {
 	}
 
 	return internal.RenderRespond(
-		r.Reply, logger, gistTemplate, githubPrefix,
+		r.Replyf, logger, gistTemplate, githubPrefix,
 		map[string]interface{}{
 			"gist": gist,
 		},

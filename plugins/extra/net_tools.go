@@ -67,21 +67,21 @@ func newNetToolsPlugin(b *seabird.Bot) error {
 func (p *netToolsPlugin) RDNS(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			r.MentionReply("Argument required")
+			r.MentionReplyf("Argument required")
 			return
 		}
 		names, err := net.LookupAddr(r.Message.Trailing())
 		if err != nil {
-			r.MentionReply(err.Error())
+			r.MentionReplyf(err.Error())
 			return
 		}
 
 		if len(names) == 0 {
-			r.MentionReply("No results found")
+			r.MentionReplyf("No results found")
 			return
 		}
 
-		r.MentionReply(names[0])
+		r.MentionReplyf(names[0])
 
 		if len(names) > 1 {
 			for _, name := range names[1:] {
@@ -94,22 +94,22 @@ func (p *netToolsPlugin) RDNS(r *seabird.Request) {
 func (p *netToolsPlugin) Dig(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			r.MentionReply("Domain required")
+			r.MentionReplyf("Domain required")
 			return
 		}
 
 		addrs, err := net.LookupHost(r.Message.Trailing())
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 
 		if len(addrs) == 0 {
-			r.MentionReply("No results found")
+			r.MentionReplyf("No results found")
 			return
 		}
 
-		r.MentionReply(addrs[0])
+		r.MentionReplyf(addrs[0])
 
 		if len(addrs) > 1 {
 			for _, addr := range addrs[1:] {
@@ -122,25 +122,25 @@ func (p *netToolsPlugin) Dig(r *seabird.Request) {
 func (p *netToolsPlugin) Ping(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			r.MentionReply("Host required")
+			r.MentionReplyf("Host required")
 			return
 		}
 
 		pinger, err := ping.NewPinger(r.Message.Trailing())
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 		pinger.Count = 1
 		pinger.SetPrivileged(p.PrivilegedPing)
 
 		pinger.OnRecv = func(pkt *ping.Packet) {
-			r.MentionReply("%d bytes from %s: icmp_seq=%d time=%s",
+			r.MentionReplyf("%d bytes from %s: icmp_seq=%d time=%s",
 				pkt.Nbytes, pkt.IPAddr, pkt.Seq, pkt.Rtt)
 		}
 		err = pinger.Run()
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 	}()
@@ -173,17 +173,17 @@ func (p *netToolsPlugin) runCommand(cmd string, args ...string) (string, error) 
 
 func (p *netToolsPlugin) handleCommand(r *seabird.Request, command string, emptyMsg string) {
 	if r.Message.Trailing() == "" {
-		r.MentionReply("Host required")
+		r.MentionReplyf("Host required")
 		return
 	}
 
 	url, err := p.runCommand(command, r.Message.Trailing())
 	if err != nil {
-		r.MentionReply("%s", err)
+		r.MentionReplyf("%s", err)
 		return
 	}
 
-	r.MentionReply("%s", url)
+	r.MentionReplyf("%s", url)
 }
 
 func (p *netToolsPlugin) Traceroute(r *seabird.Request) {
@@ -196,11 +196,11 @@ func (p *netToolsPlugin) Whois(r *seabird.Request) {
 
 func (p *netToolsPlugin) DNSCheck(r *seabird.Request) {
 	if r.Message.Trailing() == "" {
-		r.MentionReply("Domain required")
+		r.MentionReplyf("Domain required")
 		return
 	}
 
-	r.MentionReply("https://www.whatsmydns.net/#A/" + r.Message.Trailing())
+	r.MentionReplyf("https://www.whatsmydns.net/#A/" + r.Message.Trailing())
 }
 
 type asnResponse struct {
@@ -214,7 +214,7 @@ type asnResponse struct {
 
 func (p *netToolsPlugin) ASNLookup(r *seabird.Request) {
 	if r.Message.Trailing() == "" {
-		r.MentionReply("IP required")
+		r.MentionReplyf("IP required")
 		return
 	}
 
@@ -224,16 +224,16 @@ func (p *netToolsPlugin) ASNLookup(r *seabird.Request) {
 		"https://api.iptoasn.com/v1/as/ip/"+r.Message.Trailing(),
 		&asnResp)
 	if err != nil {
-		r.MentionReply("%s", err)
+		r.MentionReplyf("%s", err)
 		return
 	}
 
 	if !asnResp.Announced {
-		r.MentionReply("ASN information not available")
+		r.MentionReplyf("ASN information not available")
 		return
 	}
 
-	r.MentionReply(
+	r.MentionReplyf(
 		"#%d (%s - %s) - %s (%s)",
 		asnResp.AsNumber,
 		asnResp.FirstIP,

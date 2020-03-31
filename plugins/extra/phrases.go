@@ -98,64 +98,64 @@ func (p *phrasesPlugin) forgetCallback(r *seabird.Request) {
 	}
 
 	if len(entry.Name) == 0 {
-		r.MentionReply("No key supplied")
+		r.MentionReplyf("No key supplied")
 		return
 	}
 
 	_, err := p.db.InsertOne(entry)
 	if err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
-	r.MentionReply("Forgot %s", entry.Name)
+	r.MentionReplyf("Forgot %s", entry.Name)
 }
 
 func (p *phrasesPlugin) getCallback(r *seabird.Request) {
 	row, err := p.getKey(r.Message.Trailing())
 	if err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
-	r.MentionReply("%s", row.Value)
+	r.MentionReplyf("%s", row.Value)
 }
 
 func (p *phrasesPlugin) giveCallback(r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) < 2 {
-		r.MentionReply("Not enough args")
+		r.MentionReplyf("Not enough args")
 		return
 	}
 
 	row, err := p.getKey(split[1])
 	if err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
-	r.Reply("%s: %s", split[0], row.Value)
+	r.Replyf("%s: %s", split[0], row.Value)
 }
 
 func (p *phrasesPlugin) historyCallback(r *seabird.Request) {
 	search := &Phrase{Name: p.cleanedName(r.Message.Trailing())}
 	if len(search.Name) == 0 {
-		r.MentionReply("No key provided")
+		r.MentionReplyf("No key provided")
 		return
 	}
 
 	var data []Phrase
 
 	if err := p.db.Find(&data, search); err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
 	for _, entry := range data {
 		if entry.Deleted {
-			r.MentionReply("%s deleted by %s", search.Name, entry.Submitter)
+			r.MentionReplyf("%s deleted by %s", search.Name, entry.Submitter)
 		} else {
-			r.MentionReply("%s set by %s to %s", search.Name, entry.Submitter, entry.Value)
+			r.MentionReplyf("%s set by %s to %s", search.Name, entry.Submitter, entry.Value)
 		}
 	}
 }
@@ -163,7 +163,7 @@ func (p *phrasesPlugin) historyCallback(r *seabird.Request) {
 func (p *phrasesPlugin) setCallback(r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) < 2 {
-		r.MentionReply("Not enough args")
+		r.MentionReplyf("Not enough args")
 		return
 	}
 
@@ -174,15 +174,15 @@ func (p *phrasesPlugin) setCallback(r *seabird.Request) {
 	}
 
 	if len(entry.Name) == 0 {
-		r.MentionReply("No key provided")
+		r.MentionReplyf("No key provided")
 		return
 	}
 
 	_, err := p.db.InsertOne(entry)
 	if err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
-	r.MentionReply("%s set to %s", entry.Name, entry.Value)
+	r.MentionReplyf("%s set to %s", entry.Name, entry.Value)
 }

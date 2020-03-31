@@ -55,13 +55,13 @@ func newWeightPlugin(b *seabird.Bot) error {
 
 func (p *weightPlugin) addWeight(r *seabird.Request) {
 	if len(r.Message.Trailing()) == 0 {
-		r.MentionReply("You must specify a new weight measurement")
+		r.MentionReplyf("You must specify a new weight measurement")
 		return
 	}
 
 	weight, err := strconv.ParseFloat(r.Message.Trailing(), 64)
 	if err != nil {
-		r.MentionReply("Invalid weight measurement")
+		r.MentionReplyf("Invalid weight measurement")
 		return
 	}
 
@@ -70,12 +70,12 @@ func (p *weightPlugin) addWeight(r *seabird.Request) {
 	p.db.Transaction(func(s *xorm.Session) (interface{}, error) {
 		res, err := s.Insert(measurement)
 		if err != nil {
-			r.MentionReply("Error inserting new weight measurement: %v", err)
+			r.MentionReplyf("Error inserting new weight measurement: %v", err)
 		}
 		return res, err
 	})
 
-	r.MentionReply("Measurement added")
+	r.MentionReplyf("Measurement added")
 }
 
 func (p *weightPlugin) lastWeight(r *seabird.Request) {
@@ -84,9 +84,9 @@ func (p *weightPlugin) lastWeight(r *seabird.Request) {
 
 	_, err := p.db.Desc("date").Limit(1).Get(measurement)
 	if err != nil {
-		r.MentionReply("Error fetching measurement value: %v", err)
+		r.MentionReplyf("Error fetching measurement value: %v", err)
 		return
 	}
 
-	r.MentionReply("Last measurement for %s was %.2f lbs", user, measurement.Weight)
+	r.MentionReplyf("Last measurement for %s was %.2f lbs", user, measurement.Weight)
 }

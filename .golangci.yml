@@ -6,10 +6,12 @@ linters:
     - gochecknoinits
     - goconst
     - godox
+    - gomnd
     - lll
     - prealloc
     - stylecheck
     - unparam
+    - wsl
 
 linters-settings:
   govet:

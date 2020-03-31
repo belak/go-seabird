@@ -95,33 +95,33 @@ func (p *noaaPlugin) getStation(r *seabird.Request) (string, error) {
 func (p *noaaPlugin) metarCallback(r *seabird.Request) {
 	station, err := p.getStation(r)
 	if err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
 	resp, err := NOAALookup("http://tgftp.nws.noaa.gov/data/observations/metar/stations/%s.TXT", station)
 	if err != nil {
-		r.MentionReply("Error: %s", err)
+		r.MentionReplyf("Error: %s", err)
 		return
 	}
 
-	r.MentionReply("%s", resp)
+	r.MentionReplyf("%s", resp)
 }
 
 func (p *noaaPlugin) tafCallback(r *seabird.Request) {
 	station, err := p.getStation(r)
 	if err != nil {
-		r.MentionReply("%s", err.Error())
+		r.MentionReplyf("%s", err.Error())
 		return
 	}
 
 	resp, err := NOAALookup("http://tgftp.nws.noaa.gov/data/forecasts/taf/stations/%s.TXT", station)
 	if err != nil {
-		r.MentionReply("Error: %s", err)
+		r.MentionReplyf("Error: %s", err)
 		return
 	}
 
-	r.MentionReply("%s", resp)
+	r.MentionReplyf("%s", resp)
 }
 
 // NOAALookup takes the given formatted url and an airport code and tries to

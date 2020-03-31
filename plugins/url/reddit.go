@@ -113,7 +113,7 @@ func redditGetUser(r *seabird.Request, text string) bool {
 		gold = " [gold]"
 	}
 
-	r.Reply("%s %s%s has %d link karma and %d comment karma", redditPrefix, ru.Data.Name, gold, ru.Data.LinkKarma, ru.Data.CommentKarma)
+	r.Replyf("%s %s%s has %d link karma and %d comment karma", redditPrefix, ru.Data.Name, gold, ru.Data.LinkKarma, ru.Data.CommentKarma)
 
 	return true
 }
@@ -127,7 +127,7 @@ func redditGetComment(r *seabird.Request, text string) bool {
 	cm := rc[0].Data.Children[0].Data
 
 	// Title title - jsvana (/r/vim, score: 5)
-	r.Reply("%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
+	r.Replyf("%s %s - %s (/r/%s, score: %d)", redditPrefix, cm.Title, cm.Author, cm.Subreddit, cm.Score)
 
 	return true
 }
@@ -139,7 +139,7 @@ func redditGetSub(r *seabird.Request, text string) bool {
 	}
 
 	// /r/vim - Description description (1 subscriber, 2 actives)
-	r.Reply("%s %s - %s (%s %s, %s %s)",
+	r.Replyf("%s %s - %s (%s %s, %s %s)",
 		redditPrefix,
 		rs.Data.URL,
 		rs.Data.Description,

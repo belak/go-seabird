@@ -54,7 +54,7 @@ func newFccPlugin(b *seabird.Bot) error {
 func (p *fccPlugin) Search(r *seabird.Request) {
 	go func() {
 		if r.Message.Trailing() == "" {
-			r.MentionReply("Callsign required")
+			r.MentionReplyf("Callsign required")
 			return
 		}
 
@@ -63,16 +63,16 @@ func (p *fccPlugin) Search(r *seabird.Request) {
 		fr := &fccResponse{}
 		err := internal.GetJSON(url, fr)
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 			return
 		}
 
 		if len(fr.LicenseData.Licenses) == 0 {
-			r.MentionReply("No licenses found")
+			r.MentionReplyf("No licenses found")
 			return
 		}
 
 		license := fr.LicenseData.Licenses[0]
-		r.MentionReply("%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
+		r.MentionReplyf("%s (%s): %s, %s, expires %s", license.Callsign, license.Service, license.Name, license.Status, license.ExpireDate)
 	}()
 }

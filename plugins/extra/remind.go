@@ -223,13 +223,13 @@ func (p *reminderPlugin) ParseTime(timeStr string) (time.Duration, error) {
 func (p *reminderPlugin) RemindCommand(r *seabird.Request) {
 	split := strings.SplitN(r.Message.Trailing(), " ", 2)
 	if len(split) != 2 {
-		r.MentionReply("Not enough args")
+		r.MentionReplyf("Not enough args")
 		return
 	}
 
 	dur, err := p.ParseTime(split[0])
 	if err != nil {
-		r.MentionReply("Invalid duration: %s", err)
+		r.MentionReplyf("Invalid duration: %s", err)
 		return
 	}
 
@@ -249,11 +249,11 @@ func (p *reminderPlugin) RemindCommand(r *seabird.Request) {
 
 	_, err = p.db.Insert(rem)
 	if err != nil {
-		r.MentionReply("Failed to store reminder: %s", err)
+		r.MentionReplyf("Failed to store reminder: %s", err)
 		return
 	}
 
-	r.MentionReply("Event stored")
+	r.MentionReplyf("Event stored")
 
 	logger := r.GetLogger("remind")
 	logger.WithField("reminder", rem).Debug("Stored reminder")

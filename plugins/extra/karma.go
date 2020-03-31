@@ -94,7 +94,7 @@ func (p *karmaPlugin) karmaCallback(r *seabird.Request) {
 		term = r.Message.Prefix.Name
 	}
 
-	r.MentionReply("%s's karma is %d", term, p.GetKarmaFor(term))
+	r.MentionReplyf("%s's karma is %d", term, p.GetKarmaFor(term))
 }
 
 func (p *karmaPlugin) callback(r *seabird.Request) {
@@ -140,14 +140,14 @@ func (p *karmaPlugin) callback(r *seabird.Request) {
 			diff = -5
 		}
 
-		r.Reply("%s's karma is now %d", name, p.UpdateKarma(name, diff))
+		r.Replyf("%s's karma is now %d", name, p.UpdateKarma(name, diff))
 	}
 
 	if buzzkillTriggered {
-		r.Reply("Buzzkill Mode (tm) enforced a maximum karma change of 5")
+		r.Replyf("Buzzkill Mode (tm) enforced a maximum karma change of 5")
 	}
 
 	if jerkModeTriggered {
-		r.Reply("Don't Be a Jerk Mode (tm) enforced a maximum karma change of 5")
+		r.Replyf("Don't Be a Jerk Mode (tm) enforced a maximum karma change of 5")
 	}
 }

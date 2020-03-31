@@ -142,7 +142,7 @@ func defaultLinkProvider(url string, r *seabird.Request) bool {
 	// If we got a result, pull the text from it
 	if ok {
 		title := newlineRegex.ReplaceAllLiteralString(scrape.Text(n), " ")
-		r.Reply("Title: %s", title)
+		r.Replyf("Title: %s", title)
 	}
 
 	return ok
@@ -152,7 +152,7 @@ func isItDownCallback(r *seabird.Request) {
 	go func() {
 		url, err := url.Parse(r.Message.Trailing())
 		if err != nil {
-			r.Reply("URL doesn't appear to be valid")
+			r.Replyf("URL doesn't appear to be valid")
 			return
 		}
 
@@ -166,10 +166,10 @@ func isItDownCallback(r *seabird.Request) {
 		}
 
 		if err != nil || resp.StatusCode != 200 {
-			r.Reply("It's not just you! %s looks down from here.", url)
+			r.Replyf("It's not just you! %s looks down from here.", url)
 			return
 		}
 
-		r.Reply("It's just you! %s looks up from here!", url)
+		r.Replyf("It's just you! %s looks up from here!", url)
 	}()
 }

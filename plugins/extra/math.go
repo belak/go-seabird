@@ -34,9 +34,9 @@ func exprCallback(r *seabird.Request) {
 	for _, expr := range strings.Split(r.Message.Trailing(), ";") {
 		res, err = mc.Run(expr)
 		if err != nil {
-			r.MentionReply("%s", err)
+			r.MentionReplyf("%s", err)
 		}
 	}
 
-	r.MentionReply("%s", res.RatString())
+	r.MentionReplyf("%s", res.RatString())
 }

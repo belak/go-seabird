@@ -55,13 +55,13 @@ func newLastSeenPlugin(b *seabird.Bot) error {
 func (p *lastSeenPlugin) activeCallback(r *seabird.Request) {
 	nick := r.Message.Trailing()
 	if nick == "" {
-		r.MentionReply("Nick required")
+		r.MentionReplyf("Nick required")
 		return
 	}
 
 	channel := r.Message.Params[0]
 
-	r.MentionReply("%s", p.getLastSeen(nick, channel))
+	r.MentionReplyf("%s", p.getLastSeen(nick, channel))
 }
 
 func (p *lastSeenPlugin) getLastSeen(rawNick, rawChannel string) string {

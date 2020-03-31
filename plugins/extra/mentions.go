@@ -19,12 +19,12 @@ func newMentionsPlugin(b *seabird.Bot) error {
 func mentionsCallback(r *seabird.Request) {
 	switch r.Message.Trailing() {
 	case "ping":
-		r.MentionReply("pong")
+		r.MentionReplyf("pong")
 	case "scoobysnack", "scooby snack":
-		r.Reply("Scooby Dooby Doo!")
+		r.Replyf("Scooby Dooby Doo!")
 	case "botsnack", "bot snack":
-		r.Reply(":)")
+		r.Replyf(":)")
 	case "pizzahousesnack":
-		r.Reply("HECK YEAHHHHHHHHHHHH OMG I LOVE U THE WORLD IS GREAT")
+		r.Replyf("HECK YEAHHHHHHHHHHHH OMG I LOVE U THE WORLD IS GREAT")
 	}
 }

@@ -9,7 +9,7 @@ import (
 )
 
 // Reply to a Request with a convenience wrapper around fmt.Sprintf
-func (r *Request) Reply(format string, v ...interface{}) error {
+func (r *Request) Replyf(format string, v ...interface{}) error {
 	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		return errors.New("Invalid IRC message")
 	}
@@ -36,7 +36,7 @@ func (r *Request) Reply(format string, v ...interface{}) error {
 
 // MentionReply acts the same as Bot.Reply but it will prefix it with the user's
 // nick if we are in a channel.
-func (r *Request) MentionReply(format string, v ...interface{}) error {
+func (r *Request) MentionReplyf(format string, v ...interface{}) error {
 	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		return errors.New("Invalid IRC message")
 	}
@@ -65,7 +65,7 @@ func (r *Request) MentionReply(format string, v ...interface{}) error {
 }
 
 // PrivateReply is similar to Reply, but it will always send privately.
-func (r *Request) PrivateReply(format string, v ...interface{}) {
+func (r *Request) PrivateReplyf(format string, v ...interface{}) {
 	r.WriteMessage(&irc.Message{
 		Prefix:  &irc.Prefix{},
 		Command: "PRIVMSG",
@@ -77,7 +77,7 @@ func (r *Request) PrivateReply(format string, v ...interface{}) {
 }
 
 // CTCPReply is a convenience function to respond to CTCP requests.
-func (r *Request) CTCPReply(format string, v ...interface{}) error {
+func (r *Request) CTCPReplyf(format string, v ...interface{}) error {
 	if r.Message.Command != "CTCP" {
 		return errors.New("Invalid CTCP message")
 	}

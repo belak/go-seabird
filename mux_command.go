@@ -57,28 +57,28 @@ func (m *CommandMux) help(r *Request) {
 
 		if r.FromChannel() {
 			// If they said "!help" in a channel, list all available commands
-			r.Reply("Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
+			r.Replyf("Available commands: %s. Use %shelp [command] for more info.", strings.Join(keys, ", "), m.prefix)
 		} else {
 			for _, v := range keys {
 				h := m.cmdHelp[v]
 				if h.Usage != "" {
-					r.Reply("%s %s: %s", v, h.Usage, h.Description)
+					r.Replyf("%s %s: %s", v, h.Usage, h.Description)
 				} else {
-					r.Reply("%s: %s", v, h.Description)
+					r.Replyf("%s: %s", v, h.Description)
 				}
 			}
 		}
 	} else if help, ok := m.cmdHelp[cmd]; ok {
 		if help == nil {
-			r.Reply("There is no help available for command %q", cmd)
+			r.Replyf("There is no help available for command %q", cmd)
 		} else {
 			lines := help.format(m.prefix, cmd)
 			for _, line := range lines {
-				r.Reply("%s", line)
+				r.Replyf("%s", line)
 			}
 		}
 	} else {
-		r.MentionReply("There is no help available for command %q", cmd)
+		r.MentionReplyf("There is no help available for command %q", cmd)
 	}
 }
 

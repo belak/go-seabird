@@ -57,7 +57,7 @@ func (p *watchdogPlugin) checkDb(r *seabird.Request, nonce string) bool {
 	})
 
 	if err != nil {
-		r.MentionReply("Error writing check to DB: \"%s\"", err)
+		r.MentionReplyf("Error writing check to DB: \"%s\"", err)
 		return false
 	}
 
@@ -69,7 +69,7 @@ func (p *watchdogPlugin) check(r *seabird.Request) {
 	defer timer.Done()
 
 	if len(r.Message.Trailing()) == 0 {
-		r.MentionReply("Error: missing nonce argument")
+		r.MentionReplyf("Error: missing nonce argument")
 		return
 	}
 
@@ -79,5 +79,5 @@ func (p *watchdogPlugin) check(r *seabird.Request) {
 		return
 	}
 
-	r.MentionReply("%d %s", time.Now().Unix(), nonce)
+	r.MentionReplyf("%d %s", time.Now().Unix(), nonce)
 }

@@ -211,5 +211,5 @@ func (s *spotifyProvider) handleTarget(r *seabird.Request, api spotify.Client, l
 		return false
 	}
 
-	return internal.RenderRespond(r.Reply, logger, matcher.template, spotifyPrefix, data)
+	return internal.RenderRespond(r.Replyf, logger, matcher.template, spotifyPrefix, data)
 }
