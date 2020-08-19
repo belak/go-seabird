@@ -1,29 +1,30 @@
-package seabird
+package seabird_test
 
 import (
 	"context"
 	"testing"
 
 	"github.com/stretchr/testify/require"
-
 	irc "gopkg.in/irc.v3"
+
+	"github.com/belak/go-seabird"
 )
 
 type messageHandler struct {
 	count int
 }
 
-func (mh *messageHandler) Handle(r *Request) {
+func (mh *messageHandler) Handle(r *seabird.Request) {
 	mh.count++
 }
 
 func TestBasicMux(t *testing.T) {
-	r := NewRequest(context.TODO(), nil, "bot", irc.MustParseMessage("001"))
-	r2 := NewRequest(context.TODO(), nil, "bot", irc.MustParseMessage("002"))
+	r := seabird.NewRequest(context.TODO(), nil, "bot", irc.MustParseMessage("001"))
+	r2 := seabird.NewRequest(context.TODO(), nil, "bot", irc.MustParseMessage("002"))
 
 	// Single message, single handler
 	mh := &messageHandler{}
-	mux := NewBasicMux()
+	mux := seabird.NewBasicMux()
 	mux.Event("001", mh.Handle)
 	mux.HandleEvent(r)
 	require.Equal(t, 1, mh.count)
@@ -33,7 +34,7 @@ func TestBasicMux(t *testing.T) {
 	// Single message, multiple handlers
 	mh = &messageHandler{}
 	mh2 := &messageHandler{}
-	mux = NewBasicMux()
+	mux = seabird.NewBasicMux()
 	mux.Event("001", mh.Handle)
 	mux.Event("001", mh2.Handle)
 	mux.HandleEvent(r)
@@ -45,7 +46,7 @@ func TestBasicMux(t *testing.T) {
 
 	// Different messages, wildcard handler
 	mh = &messageHandler{}
-	mux = NewBasicMux()
+	mux = seabird.NewBasicMux()
 	mux.Event("*", mh.Handle)
 	mux.HandleEvent(r)
 	require.Equal(t, 1, mh.count)
@@ -54,6 +55,6 @@ func TestBasicMux(t *testing.T) {
 
 	// No handlers
 	// mh = &messageHandler{}
-	mux = NewBasicMux()
+	mux = seabird.NewBasicMux()
 	mux.HandleEvent(r)
 }

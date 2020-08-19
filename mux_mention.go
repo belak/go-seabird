@@ -6,7 +6,7 @@ import (
 	"unicode"
 )
 
-// MentionMux is a simple IRC event multiplexer, based on a slice of Handlers
+// MentionMux is a simple IRC event multiplexer, based on a slice of Handlers.
 //
 // The MentionMux uses the current Nick and punctuation to determine if the
 // Client has been mentioned. The nick, punctuation and any leading or
@@ -24,7 +24,7 @@ func NewMentionMux() *MentionMux {
 	}
 }
 
-// Event will register a Handler
+// Event will register a Handler.
 func (m *MentionMux) Event(h HandlerFunc) {
 	m.lock.Lock()
 	defer m.lock.Unlock()
@@ -32,7 +32,7 @@ func (m *MentionMux) Event(h HandlerFunc) {
 	m.handlers = append(m.handlers, h)
 }
 
-// HandleEvent strips off the nick punctuation and spaces and runs the handlers
+// HandleEvent strips off the nick punctuation and spaces and runs the handlers.
 func (m *MentionMux) HandleEvent(r *Request) {
 	if r.Message.Command != "PRIVMSG" {
 		// TODO: Log this

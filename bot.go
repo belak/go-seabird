@@ -10,9 +10,9 @@ import (
 
 	"github.com/BurntSushi/toml"
 	"github.com/sirupsen/logrus"
+	irc "gopkg.in/irc.v3"
 
 	"github.com/belak/go-seabird/internal"
-	irc "gopkg.in/irc.v3"
 )
 
 //nolint:maligned
@@ -43,17 +43,6 @@ type coreConfig struct {
 	SendBurst int
 }
 
-type InfluxDbConfig struct {
-	Enabled        bool
-	URL            string
-	Username       string
-	Password       string
-	Database       string
-	Precision      string
-	SubmitInterval internal.Duration
-	BufferSize     int
-}
-
 // A Bot is our wrapper around the irc.Client. It could be used for a general
 // client, but the provided convenience functions are designed around using this
 // package to write a bot.
@@ -63,10 +52,9 @@ type Bot struct {
 	mentionMux *MentionMux
 
 	// Config stuff
-	confValues     map[string]toml.Primitive
-	md             toml.MetaData
-	config         coreConfig
-	influxDbConfig InfluxDbConfig
+	confValues map[string]toml.Primitive
+	md         toml.MetaData
+	config     coreConfig
 
 	// Internal things
 	client         *irc.Client
@@ -149,7 +137,7 @@ func (b *Bot) MentionMux() *MentionMux {
 }
 
 // Config will decode the config section for the given name into the given
-// interface{}
+// interface{}.
 func (b *Bot) Config(name string, c interface{}) error {
 	if v, ok := b.confValues[name]; ok {
 		return b.md.PrimitiveDecode(v, c)
@@ -322,17 +310,17 @@ func (b *Bot) Run(c io.ReadWriteCloser) error {
 	return b.client.Run()
 }
 
-// Send is a simple function to send an IRC event
+// Send is a simple function to send an IRC event.
 func (b *Bot) WriteMessage(m *irc.Message) {
 	b.client.WriteMessage(m)
 }
 
-// Write will write an raw IRC message to the stream
+// Write will write an raw IRC message to the stream.
 func (b *Bot) Write(line string) {
 	b.client.Write(line)
 }
 
-// Writef is a convenience method around fmt.Sprintf and Bot.Write
+// Writef is a convenience method around fmt.Sprintf and Bot.Write.
 func (b *Bot) Writef(format string, args ...interface{}) {
 	b.client.Writef(format, args...)
 }

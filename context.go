@@ -3,9 +3,10 @@ package seabird
 import (
 	"context"
 
-	"github.com/belak/go-seabird/internal"
 	"github.com/google/uuid"
 	"github.com/sirupsen/logrus"
+
+	"github.com/belak/go-seabird/internal"
 )
 
 const (
@@ -29,6 +30,7 @@ func CtxBot(ctx context.Context) *Bot {
 
 func CtxLogger(ctx context.Context, name string) *logrus.Entry {
 	logger := ctx.Value(contextKeyLogger).(*logrus.Entry)
+
 	return logger.WithField("category", name)
 }
 

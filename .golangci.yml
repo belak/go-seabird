@@ -13,6 +13,12 @@ linters:
     - unparam
     - wsl
 
+    # Newer linters should be investigated
+    - goerr113
+    - nestif
+
 linters-settings:
+  goimports:
+    local-prefixes: github.com/belak/go-seabird
   govet:
     check-shadowing: true

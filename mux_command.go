@@ -8,7 +8,7 @@ import (
 // CommandMux is a simple IRC event multiplexer, based on the BasicMux.
 
 // HelpInfo is a collection of instructions for command usage that
-// is formatted with <prefix>help
+// is formatted with <prefix>help.
 type HelpInfo struct {
 	name        string
 	Usage       string
@@ -100,7 +100,7 @@ func (h *HelpInfo) format(prefix, command string) []string {
 	return ret
 }
 
-// Event will register a Handler as both a private and public command
+// Event will register a Handler as both a private and public command.
 func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
 	if help != nil {
 		help.name = c
@@ -114,7 +114,7 @@ func (m *CommandMux) Event(c string, h HandlerFunc, help *HelpInfo) {
 	m.cmdHelp[c] = help
 }
 
-// Channel will register a handler as a public command
+// Channel will register a handler as a public command.
 func (m *CommandMux) Channel(c string, h HandlerFunc, help *HelpInfo) {
 	if help != nil {
 		help.name = c
@@ -127,7 +127,7 @@ func (m *CommandMux) Channel(c string, h HandlerFunc, help *HelpInfo) {
 	m.cmdHelp[c] = help
 }
 
-// Private will register a handler as a private command
+// Private will register a handler as a private command.
 func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 	if help != nil {
 		help.name = c
@@ -141,7 +141,7 @@ func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 }
 
 // HandleEvent strips off the prefix, pulls the command out
-// and runs HandleEvent on the internal BasicMux
+// and runs HandleEvent on the internal BasicMux.
 func (m *CommandMux) HandleEvent(r *Request) {
 	if r.Message.Command != "PRIVMSG" {
 		// TODO: Log this

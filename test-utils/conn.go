@@ -16,7 +16,7 @@ type TestClientServer struct {
 	server *bytes.Buffer
 }
 
-// NewTestClientServer returns a new TestClientServer
+// NewTestClientServer returns a new TestClientServer.
 func NewTestClientServer() *TestClientServer {
 	return &TestClientServer{
 		client: &bytes.Buffer{},
@@ -24,12 +24,12 @@ func NewTestClientServer() *TestClientServer {
 	}
 }
 
-// Read is what will be coming from the "server"
+// Read is what will be coming from the "server".
 func (cs *TestClientServer) Read(p []byte) (int, error) {
 	return cs.server.Read(p)
 }
 
-// Write is what will be going to the "server"
+// Write is what will be going to the "server".
 func (cs *TestClientServer) Write(p []byte) (int, error) {
 	return cs.client.Write(p)
 }
@@ -53,7 +53,7 @@ func (cs *TestClientServer) CheckLines(t *testing.T, expected []string) bool {
 
 	// Split all the lines
 	lines := strings.Split(cs.client.String(), "\r\n")
-	//lines := strings.Split(strings.TrimRight(cs.client.String(), "\r\n"), "\r\n")
+	// lines := strings.Split(strings.TrimRight(cs.client.String(), "\r\n"), "\r\n")
 
 	// Loop through all the expected lines
 	var line, clientLine string
@@ -72,7 +72,7 @@ func (cs *TestClientServer) CheckLines(t *testing.T, expected []string) bool {
 	return ok
 }
 
-// Reset clears the contents of the internal buffers
+// Reset clears the contents of the internal buffers.
 func (cs *TestClientServer) Reset() {
 	cs.client.Reset()
 	cs.server.Reset()

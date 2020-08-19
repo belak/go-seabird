@@ -20,7 +20,7 @@ type Handler interface {
 // is a Handler object that calls f.
 type HandlerFunc func(r *Request)
 
-// HandleEvent calls f(c, e)
+// HandleEvent calls f(c, e).
 func (f HandlerFunc) HandleEvent(r *Request) {
 	f(r)
 }

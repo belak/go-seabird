@@ -14,7 +14,7 @@ type TestHandler struct {
 	lock     sync.Mutex
 }
 
-// Handle implements the Handler interface
+// Handle implements the Handler interface.
 func (th *TestHandler) Handle(ctx context.Context, m *irc.Message) {
 	th.lock.Lock()
 	defer th.lock.Unlock()

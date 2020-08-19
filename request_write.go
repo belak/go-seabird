@@ -8,7 +8,7 @@ import (
 	irc "gopkg.in/irc.v3"
 )
 
-// Reply to a Request with a convenience wrapper around fmt.Sprintf
+// Reply to a Request with a convenience wrapper around fmt.Sprintf.
 func (r *Request) Replyf(format string, v ...interface{}) error {
 	if len(r.Message.Params) < 1 || len(r.Message.Params[0]) < 1 {
 		return errors.New("Invalid IRC message")
@@ -94,17 +94,17 @@ func (r *Request) CTCPReplyf(format string, v ...interface{}) error {
 	return nil
 }
 
-// Send is a simple function to send an IRC event
+// Send is a simple function to send an IRC event.
 func (r *Request) WriteMessage(m *irc.Message) {
 	r.bot.WriteMessage(m)
 }
 
-// Write will write an raw IRC message to the stream
+// Write will write an raw IRC message to the stream.
 func (r *Request) Write(line string) {
 	r.bot.Write(line)
 }
 
-// Writef is a convenience method around fmt.Sprintf and Bot.Write
+// Writef is a convenience method around fmt.Sprintf and Bot.Write.
 func (r *Request) Writef(format string, args ...interface{}) {
 	r.bot.Writef(format, args...)
 }

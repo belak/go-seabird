@@ -23,7 +23,7 @@ func NewBasicMux() *BasicMux {
 	}
 }
 
-// Event will register a Handler
+// Event will register a Handler.
 func (mux *BasicMux) Event(c string, h HandlerFunc) {
 	mux.mu.Lock()
 	defer mux.mu.Unlock()
@@ -31,9 +31,9 @@ func (mux *BasicMux) Event(c string, h HandlerFunc) {
 	mux.m[c] = append(mux.m[c], h)
 }
 
-// HandleEvent allows us to be a Handler so we can nest Handlers
+// HandleEvent allows us to be a Handler so we can nest Handlers.
 //
-// The BasicMux simply dispatches all the Handler commands as needed
+// The BasicMux simply dispatches all the Handler commands as needed.
 func (mux *BasicMux) HandleEvent(r *Request) {
 	// Lock our handlers so we don't crap bricks if a
 	// handler is added or removed from under our feet.
