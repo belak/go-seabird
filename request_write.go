@@ -96,15 +96,15 @@ func (r *Request) CTCPReplyf(format string, v ...interface{}) error {
 
 // Send is a simple function to send an IRC event
 func (r *Request) WriteMessage(m *irc.Message) {
-	r.bot.client.WriteMessage(m)
+	r.bot.WriteMessage(m)
 }
 
 // Write will write an raw IRC message to the stream
 func (r *Request) Write(line string) {
-	r.bot.client.Write(line)
+	r.bot.Write(line)
 }
 
 // Writef is a convenience method around fmt.Sprintf and Bot.Write
 func (r *Request) Writef(format string, args ...interface{}) {
-	r.bot.client.Writef(format, args...)
+	r.bot.Writef(format, args...)
 }

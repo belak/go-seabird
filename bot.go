@@ -418,3 +418,18 @@ func (b *Bot) Run(c io.ReadWriteCloser) error {
 	// Start the main loop
 	return b.client.Run()
 }
+
+// Send is a simple function to send an IRC event
+func (b *Bot) WriteMessage(m *irc.Message) {
+	b.client.WriteMessage(m)
+}
+
+// Write will write an raw IRC message to the stream
+func (b *Bot) Write(line string) {
+	b.client.Write(line)
+}
+
+// Writef is a convenience method around fmt.Sprintf and Bot.Write
+func (b *Bot) Writef(format string, args ...interface{}) {
+	b.client.Writef(format, args...)
+}
