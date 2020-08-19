@@ -143,9 +143,6 @@ func (m *CommandMux) Private(c string, h HandlerFunc, help *HelpInfo) {
 // HandleEvent strips off the prefix, pulls the command out
 // and runs HandleEvent on the internal BasicMux
 func (m *CommandMux) HandleEvent(r *Request) {
-	timer := r.Timer("command_mux")
-	defer timer.Done()
-
 	if r.Message.Command != "PRIVMSG" {
 		// TODO: Log this
 		return
@@ -157,7 +154,6 @@ func (m *CommandMux) HandleEvent(r *Request) {
 		return
 	}
 
-	// TODO(jsvana): this loses multi-plugin timing information.
 	// Copy it into a new Event
 	newRequest := r.Copy()
 

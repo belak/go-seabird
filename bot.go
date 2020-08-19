@@ -7,10 +7,8 @@ import (
 	"io"
 	"net"
 	"strings"
-	"time"
 
 	"github.com/BurntSushi/toml"
-	client "github.com/influxdata/influxdb1-client/v2"
 	"github.com/sirupsen/logrus"
 
 	"github.com/belak/go-seabird/internal"
@@ -76,9 +74,6 @@ type Bot struct {
 	context        context.Context
 	loadedPlugins  map[string]bool
 	loadingContext []string
-
-	influxDbClient client.Client
-	points         chan *client.Point
 }
 
 // NewBot will return a new Bot given an io.Reader pointing to a
@@ -122,11 +117,6 @@ func NewBot(confReader io.Reader) (*Bot, error) {
 		b.log.Logger.Level = logrus.DebugLevel
 	}
 
-	err = b.setupInfluxDb()
-	if err != nil {
-		return nil, err
-	}
-
 	b.commandMux = NewCommandMux(b.config.Prefix)
 	b.mentionMux = NewMentionMux()
 
@@ -144,28 +134,6 @@ func (b *Bot) Context() context.Context {
 
 func (b *Bot) SetValue(key interface{}, value interface{}) {
 	b.context = context.WithValue(b.context, key, value)
-}
-
-func (b *Bot) setupInfluxDb() error {
-	// Set up InfluxDB logging
-	err := b.Config("influxdb", &b.influxDbConfig)
-	if err != nil || !b.influxDbConfig.Enabled {
-		b.influxDbConfig.Enabled = false
-		b.log.Debug("InfluxDB logging is disabled")
-
-		return nil
-	}
-
-	b.log.Debug("InfluxDB logging is enabled")
-
-	b.points = make(chan *client.Point, b.influxDbConfig.BufferSize)
-	b.influxDbClient, err = client.NewHTTPClient(client.HTTPConfig{
-		Addr:     b.influxDbConfig.URL,
-		Username: b.influxDbConfig.Username,
-		Password: b.influxDbConfig.Password,
-	})
-
-	return err
 }
 
 func (b *Bot) BasicMux() *BasicMux {
@@ -193,8 +161,6 @@ func (b *Bot) Config(name string, c interface{}) error {
 func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	r := NewRequest(b.context, b, c.CurrentNick(), m)
 
-	timer := r.Timer("total_request")
-
 	// Handle the event and pass it along
 	if r.Message.Command == "001" {
 		b.log.Info("Connected")
@@ -213,65 +179,6 @@ func (b *Bot) handler(c *irc.Client, m *irc.Message) {
 	}
 
 	b.mux.HandleEvent(r)
-	timer.Done()
-
-	r.Log(b)
-}
-
-func (b *Bot) loggingThread() {
-	b.log.Debug("Starting logging thread")
-
-	// Ensure that we're pushing partial batches of data by not blocking
-	for {
-		batch, _ := client.NewBatchPoints(client.BatchPointsConfig{
-			Database:  b.influxDbConfig.Database,
-			Precision: b.influxDbConfig.Precision,
-		})
-
-		// This allows us to avoid busywaiting by setting a timer instead of sleeping
-		// in a loop.
-		point, ok := <-b.points
-		if !ok {
-			b.log.Error("InfluxDB datapoint channel closed unexpectedly")
-			break
-		}
-
-		batch.AddPoint(point)
-
-		timer := time.After(b.influxDbConfig.SubmitInterval.Duration)
-
-		done := false
-		for !done {
-			select {
-			case point = <-b.points:
-				if len(batch.Points()) < b.influxDbConfig.BufferSize {
-					batch.AddPoint(point)
-				} else {
-					b.log.Warning("InfluxDB datapoint queue is full. Dropping datapoint and attempting to flush the queue by submitting.")
-					done = true
-				}
-			case <-timer:
-				done = true
-			}
-		}
-
-		b.log.Debugf("Submitting a batch of %d point(s) to InfluxDB", len(batch.Points()))
-		b.submit(batch)
-	}
-}
-
-func (b *Bot) submit(batch client.BatchPoints) {
-	submittedPoints := len(batch.Points())
-	if submittedPoints == 0 {
-		return
-	}
-
-	err := b.influxDbClient.Write(batch)
-	if err != nil {
-		b.log.Warning("Error submitting data to InfluxDB: ", err.Error())
-	}
-
-	b.log.Debugf("Submitted a batch of %d point(s) to InfluxDB", submittedPoints)
 }
 
 // ConnectAndRun is a convenience function which will pull the connection
@@ -409,10 +316,6 @@ func (b *Bot) Run(c io.ReadWriteCloser) error {
 		}
 
 		b.log.Debug("--> ", strings.Trim(line, "\r\n"))
-	}
-
-	if b.influxDbConfig.Enabled {
-		go b.loggingThread()
 	}
 
 	// Start the main loop

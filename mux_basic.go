@@ -1,7 +1,6 @@
 package seabird
 
 import (
-	"fmt"
 	"sync"
 )
 
@@ -36,9 +35,6 @@ func (mux *BasicMux) Event(c string, h HandlerFunc) {
 //
 // The BasicMux simply dispatches all the Handler commands as needed
 func (mux *BasicMux) HandleEvent(r *Request) {
-	timer := r.Timer("basic_mux")
-	defer timer.Done()
-
 	// Lock our handlers so we don't crap bricks if a
 	// handler is added or removed from under our feet.
 	mux.mu.Lock()
@@ -49,15 +45,9 @@ func (mux *BasicMux) HandleEvent(r *Request) {
 		h(r)
 	}
 
-	allHandlersTimer := r.Timer("basic_mux_all_handlers")
-
 	// Now that we've done the global handlers, we can run the ones specific to
 	// this command.
-	for idx, handler := range mux.m[r.Message.Command] {
-		handlerTimer := r.Timer(fmt.Sprintf("basic_mux_handler:%s:%d", r.Message.Command, idx))
+	for _, handler := range mux.m[r.Message.Command] {
 		handler(r)
-		handlerTimer.Done()
 	}
-
-	allHandlersTimer.Done()
 }

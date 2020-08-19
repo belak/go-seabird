@@ -7,17 +7,18 @@
 * go >= 1.12
 * gcc
 
-# Running
-
-```
-SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
-```
-
 # Documentation
 
 We've got some docs [here](./docs/README.md).
 
 This documentation contains pages on configuration, plugin development, and other goodies.
+
+# Plugins
+
+The default set of plugins can be found
+[here](https://github.com/belak/go-seabird-plugins). While they may not be
+useful to everyone directly, at the very least they are a good repository of
+examples.
 
 # License
 

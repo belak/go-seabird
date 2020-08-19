@@ -3,21 +3,7 @@
 Seabird has a single configuration file that combines general bot configuration options with plugin-specific options.
 
 A sample config file is provided [here](../_extra/config.sample.toml). Note that
-this config file only has values specified for plugins. Some may not be needed.
-
-**How do I use a specific configuration file?**
-
-Configuration is pulled from the environment variable `SEABIRD_CONFIG`. Set for a session with
-
-```
-export SEABIRD_CONFIG=$HOME/config.toml
-```
-
-To run one time with a specific configuration, run as:
-
-```
-SEABIRD_CONFIG=$HOME/config.toml go run cmd/seabird/main.go
-```
+this config file only has values specified for the core.
 
 **How do I enable a plugin?**
 
@@ -48,35 +34,6 @@ plugins = [
 ```
 
 In this example the `db` is enabled, as well as all plugins whose names start with `"url/"`.
-
-**What plugins are available in Seabird?**
-
-Standard:
-
-| Plugin | Description |
-|--------|-------------|
-|`bulkcnam` | This plugin is currently broken.|
-|`chance` | This plugin adds support for flipping a coin and Russian Roulette.|
-|`db` | This plugin adds support for other plugins to use a database. It doesn't expose commands.|
-|`dice` | This plugin listens for [D&D](https://dnd.wizards.com)-style dice rolls and actions on them.|
-|`fcc` | This plugin adds support for querying [HAM radio](http://www.arrl.org/what-is-ham-radio) licenses.|
-|`forecast` | This plugin adds support for querying weather information for a location.|
-|`google` | This plugin links to a Google search page for a specific query.|
-|`issues` | This plugin adds support for Seabird GitHub issue search and creation.|
-|`karma` | This plugin adds support for tracking karma points for things.|
-|`lastseen` | This plugin adds support for showing when users last spoke in a channel.|
-|`math` | This plugin adds basic support for mathematical expression evaluation.|
-|`mentions` | This plugin enables Seabird to respond to certain fun messages.|
-|`net_tools` | This plugin adds support for various network information commands.|
-|`noaa` | This plugin adds support for querying [aviation weather information](https://en.wikipedia.org/wiki/METAR).|
-|`phrases` | This plugin adds support for key-value tracking and delivery of user-defined phrases.|
-|`remind` | This plugin adds support for user reminders.|
-|`runescape` | This plugin adds support for querying [Old School RuneScape](https://oldschool.runescape.com) account information.|
-|`stock` | This plugin adds support for querying stock information from the [IEX Cloud API](https://iexcloud.io/docs/api/).|
-|`tiny` | This plugin adds support for shortening URLs.|
-|`watchdog` | This plugin adds support for checking whether or not Seabird is alive and responding to commands.|
-|`weight_tracker` | This plugin adds support for tracking weight over time.|
-|`wikipedia` | This plugin adds support for querying Wikipedia.|
 
 **What configuration options exist for Seabird?**
 
@@ -149,31 +106,5 @@ plugins = [
 ```
 loglevel = "info"
 ```
-
-InfluxDB time series logging configuration:
-
-```
-# Enable or disable InfluxDB connections
-enabled = true
-
-# InfluxDB connection information
-url = "my.influx.installation:1337"
-username = "my_username"
-password = "my_password"
-database = "my_database"
-
-# Precision of submitted datapoints. Realistically shouldn't be changed from "second".
-precision = "s"
-
-# Time interval to use when submitting points. Datapoints will be buffered up to
-# `buffersize` before submitting.
-submitinterval = "10s"
-
-# Maximum number of points to queue before submitting to InfluxDB. Points
-# gathered after this maximum size will be dropped.
-buffersize = 50
-```
-
-For plugin-specific configuration see [this](./plugin_configuration_options.md).
 
 [documentation index](./README.md)

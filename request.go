@@ -25,8 +25,6 @@ func NewRequest(ctx context.Context, b *Bot, currentNick string, m *irc.Message)
 		ctx,
 	}
 
-	r.SetTimingMap(make(map[string]*Timing))
-
 	return r
 }
 

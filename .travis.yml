@@ -16,7 +16,3 @@ script:
    # Linting
   - golangci-lint run
   - go-consistent ./...
-
-  # Build
-  - go build ./cmd/seabird/*.go
-  - go build ./cmd/seabird-migrate/*.go
